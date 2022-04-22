@@ -133,12 +133,11 @@ local function isProp(plr)
     return plr.Team ~= nil and plr.Team.Name == "Hider"
 end
 
-setsimulationradius(1000000000) -- // cool thing for network ownership kek
-
-local function forceReset() 
+local function requestSelfDamage(health) 
     local requestSelfDamage = game:GetService("ReplicatedStorage")["events-@easy-games/damage:shared/damage-networking@DamageNetEvents"].requestSelfDamage
-    requestSelfDamage:FireServer(1000)
+    requestSelfDamage:FireServer(health)
 end
+
 
 local function killall() 
     for i = 1, 10 do 
@@ -163,17 +162,37 @@ end
 
 do 
     local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "KillProps",
+        ["Function"] = function(callback) 
+            if callback then
+                killall()
+                PropKill["Toggle"](false, true)
+            end
+        end
+    })
+end
+
+do
+    if not isfile("Future/autowintimes.txt") then 
+        writefile("Future/autowintimes.txt", "")
+    end
+    
+    local timeStart = nil
+    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "AutoWin",
         ["Function"] = function(callback) 
             spawn(function()
                 repeat task.wait(0.05) 
                     if isAlive() then
                         if lplr.Team ~= nil and (lplr.Team.Name:find("Hider")) then 
+                            timeStart = timeStart or WORKSPACE:GetServerTimeNow()
                             forceReset()
                         elseif lplr.Team ~= nil then
                             killall()
                             if (state() == 2) then 
                                 game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
+                                GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
+                                appendfile("Future/autowintimes.txt", tostring(WORKSPACE:GetServerTimeNow() - timeStart).."\n")
                                 break
                             end
                         end
@@ -184,3 +203,46 @@ do
     })
 end
 
+
+do 
+    local AutoSwapProp = {["Enabled"] = false}; AutoSwapProp = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "AutoProp",
+        ["Function"] = function(callback) 
+            if callback and lplr.Team ~= nil then 
+                spawn(function()
+                    repeat task.wait() 
+                            for i,v in pairs(WORKSPACE.Map.Props:children()) do --//credits to my friend liam lol
+                                if isAlive() then
+                                    task.wait(1)
+                                    local oldhrp = lplr.Character.HumanoidRootPart.CFrame
+                                    local old = cam.CFrame
+                                    game:GetService("ReplicatedStorage")["events-shared/networking@NetEvents"].disguiseProp:FireServer(v.Name, v)
+                                    cam.CFrame = old
+                                    lplr.Character.HumanoidRootPart.CFrame = oldhrp
+                                    if AutoSwapProp["Enabled"] == false then break end
+                                end
+                            end
+                    until AutoSwapProp["Enabled"] == false
+                end)
+            end
+        end
+    })
+end
+
+do 
+    local Value = {["Value"] = 1}
+    local God = {["Enabled"] = false}; God = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "InstantHealth",
+        ["Function"] = function(callback) 
+            if callback then
+                requestSelfDamage(-tonumber(Value["Value"]))
+                God["Toggle"](false, true)
+            end
+        end
+    })
+    Value = God.CreateTextbox({
+        ["Name"] = "Health",
+        ["Function"] = function() end,
+        ["Default"] = 99
+    })
+end

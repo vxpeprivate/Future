@@ -136,6 +136,7 @@ end
 do 
     local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Lagger",
+        ["DisableOnLeave"] = true;
         ["Function"] = function(callback) 
             if callback then 
                 GuiLibrary["CreateNotification"]("Lagger discovered by Fern#5747 // fern.wtf")
@@ -151,7 +152,7 @@ do
                             
                             game:GetService("ReplicatedStorage"):FindFirstChild("functions-@easy-games/projectile:shared/projectile-networking@ProjectileNetFunctions"):FindFirstChild("s:fireProjectile"):FireServer(unpack(args))
                         end
-                        task.wait(2.5)
+                        task.wait()
                     until Lagger["Enabled"] == false
                 end)
             end

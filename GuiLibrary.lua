@@ -203,7 +203,7 @@ GuiLibrary["SaveConfig"] = function(name)
     local name = (name == nil or name == "") and "default" or name
     local config = {}
     for i,v in next, GuiLibrary["Objects"] do 
-        if v.Type == "OptionsButton" and not table.find(exclusionList2, i) then 
+        if v.Type == "OptionsButton" and not table.find(exclusionList2, i) and not v.DisableOnLeave then 
             config[i] = {["Enabled"] = v.API.Enabled, ["Keybind"] = v.API.Keybind, ["Type"] = v.Type, ["Window"] = v.Window}
         elseif v.Type == "Toggle" and not table.find(exclusionList2, v.OptionsButton) then
             config[i] = {["Enabled"] = v.API.Enabled, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
@@ -915,7 +915,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
         end
 
 
-        GuiLibrary["Objects"][argstable.Name.."OptionsButton"] = {["API"] = buttonapi, ["Instance"] = OptionsButton, ["Type"] = "OptionsButton", ["Window"] = Window.Name}
+        GuiLibrary["Objects"][argstable.Name.."OptionsButton"] = {["API"] = buttonapi, ["Instance"] = OptionsButton, ["Type"] = "OptionsButton", ["Window"] = Window.Name, ["DisableOnLeave"] = argstable.DisableOnLeave}
         return buttonapi
     end
 
