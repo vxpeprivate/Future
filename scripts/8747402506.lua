@@ -124,10 +124,37 @@ do
         ["Name"] = "AutoQueue",
         ["Function"] = function(callback) 
             spawn(function()
-                repeat task.wait(20) 
+                repeat
                     game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
+                    task.wait(20) 
                 until AutoQueue["Enabled"] == false
             end)
+        end
+    })
+end
+
+do 
+    local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Lagger",
+        ["Function"] = function(callback) 
+            if callback then 
+                GuiLibrary["CreateNotification"]("Lagger discovered by Fern#5747 // fern.wtf")
+                spawn(function() 
+                    repeat 
+                        for i = 1, 20 do
+                            local args = {
+                                [1] = 1,
+                                [2] = "grenade",
+                                [3] = game.Players.LocalPlayer.Character.HumanoidRootPart.Position,
+                                [4] = game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame.LookVector
+                            }
+                            
+                            game:GetService("ReplicatedStorage"):FindFirstChild("functions-@easy-games/projectile:shared/projectile-networking@ProjectileNetFunctions"):FindFirstChild("s:fireProjectile"):FireServer(unpack(args))
+                        end
+                        task.wait(2.5)
+                    until Lagger["Enabled"] == false
+                end)
+            end
         end
     })
 end
