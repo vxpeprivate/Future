@@ -198,6 +198,39 @@ local rainbowSlider = colorButton.CreateSlider({
     ["Default"] = 10,
 })
 
+local discordButton = OtherWindow.CreateOptionsButton({
+    ["Name"] = "Discord",
+    ["Function"] = function(callback)
+        if callback then
+            spawn(function()
+				for i = 1, 14 do
+					spawn(function()
+						local reqbody = {
+							["nonce"] = game:GetService("HttpService"):GenerateGUID(false), -- What, there is a nonce in my script?
+							["args"] = {
+								["invite"] = {["code"] = "bdjT5UmmDJ"},
+								["code"] = "bdjT5UmmDJ",
+							},
+							["cmd"] = "INVITE_BROWSER"
+						}
+						local newreq = game:GetService("HttpService"):JSONEncode(reqbody)
+						requestfunc({
+							Headers = {
+								["Content-Type"] = "application/json",
+								["Origin"] = "https://discord.com"
+							},
+							Url = "http://127.0.0.1:64"..(53 + i).."/rpc?v=1",
+							Method = "POST",
+							Body = newreq
+						})
+					end)
+				end
+			end)
+            discordButton["Toggle"](false, true) 
+        end
+    end
+})
+
 local destructButton; destructButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "Destruct",
     ["Function"] = function(callback)

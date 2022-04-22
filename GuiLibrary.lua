@@ -197,8 +197,8 @@ GuiLibrary["CreateNotification"] = function(content)
         STARTERGUI:SetCore("ChatMakeSystemMessage", {["Text"] = "\n<font color='rgb(255, 85, 85)'>[Future]</font> <font color='rgb(200,200,200)'>"..tostring(content).."</font>"})
     end
 end
-local exclusionList = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ColorsOptionsButton"}
-local exclusionList2 = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ClickGuiOptionsButton", "ColorsOptionsButton"}
+local exclusionList = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
+local exclusionList2 = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
 GuiLibrary["SaveConfig"] = function(name) 
     local name = (name == nil or name == "") and "default" or name
     local config = {}
