@@ -160,7 +160,9 @@ local function getAllPlrsNear()
     local t = {}
     for i,v in next, PLAYERS:GetPlayers() do 
         if isAlive(v) and v~=lplr then 
-            if v.Character.HumanoidRootPart then table.insert(t, (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude, v) end
+            if v.Character:FindFirstChild("HumanoidRootPart") ~= nil then
+                 table.insert(t, (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude, v) 
+            end
         end
     end
     return t
@@ -217,48 +219,46 @@ local function killall()
 end
 
 do 
-    do 
-        local aura = {["Enabled"] = false}
-        local auraswing = {["Enabled"] = false}
-        local auraswingsound = {["Enabled"] = false}    
-        local soundtick = tick()
-        local auradist = {["Value"] = 14 }
-        aura = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
-            ["Name"] = "Aura",
-            ["Function"] = function(callback) 
-                spawn(function()
-                    repeat wait() 
-                        for i,v in next, getAllPlrsNear() do 
-                            if isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
-                                local weapon = getSword()
-                                if weapon ~= nil then
-                                    ClientHandler.NetFunctions.client.swordHit:invoke(weapon.item, v.Character, {isRaycast = true}, 0)
-                                    if auraswingsound["Enabled"] then 
-                                        if soundtick < tick()+0.1 then
-                                            playsound("rbxassetid://6760544639")
-                                            soundtick = tick()
-                                        end
+    local aura = {["Enabled"] = false}
+    local auraswing = {["Enabled"] = false}
+    local auraswingsound = {["Enabled"] = false}    
+    local soundtick = tick()
+    local auradist = {["Value"] = 14 }
+    aura = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Aura",
+        ["Function"] = function(callback) 
+            spawn(function()
+                repeat wait() 
+                    for i,v in next, getAllPlrsNear() do 
+                        if isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
+                            local weapon = getSword()
+                            if weapon ~= nil then
+                                ClientHandler.NetFunctions.client.swordHit:invoke(weapon.item, v.Character, {isRaycast = true}, 0)
+                                if auraswingsound["Enabled"] then 
+                                    if soundtick < tick()+0.1 then
+                                        playsound("rbxassetid://6760544639")
+                                        soundtick = tick()
                                     end
                                 end
                             end
                         end
-                    until aura["Enabled"] == false
-                end)
-            end,
-        })
-        auraswingsound = aura.CreateToggle({
-            ["Name"] = "SwingSound",
-            ["Function"] = function() end,
-        })
-        auradist = aura.CreateSlider({
-            ["Name"] = "Range",
-            ["Function"] = function() end,
-            ["Min"] = 1,
-            ["Max"] = 14,
-            ["Default"] = 14
-        })
-    
-    end
+                    end
+                until aura["Enabled"] == false
+            end)
+        end,
+    })
+    auraswingsound = aura.CreateToggle({
+        ["Name"] = "SwingSound",
+        ["Function"] = function() end,
+    })
+    auradist = aura.CreateSlider({
+        ["Name"] = "Range",
+        ["Function"] = function() end,
+        ["Min"] = 1,
+        ["Max"] = 14,
+        ["Default"] = 14
+    })
+
 end
 
 do 
@@ -291,6 +291,7 @@ do
                         elseif lplr.Team ~= nil then
                             killall()
                             if (state() == 2) then 
+                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, visit dsc.gg/engo in google now!","All")
                                 game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
                                 GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
                                 appendfile("Future/autowintimes.txt", tostring(WORKSPACE:GetServerTimeNow() - timeStart).."\n")
