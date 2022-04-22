@@ -117,7 +117,26 @@ end
 local function getColorFromPlayer(v) 
     if v.Team ~= nil then return v.TeamColor.Color end
 end
+
+local function playsound(id, volume) 
+    local sound = Instance.new("Sound")
+    sound.Parent = workspace
+    sound.SoundId = id
+    sound.PlayOnRemove = true 
+    if volume then 
+        sound.Volume = volume
+    end
+    sound:Destroy()
+end
  
+local function playanimation(id) 
+    if isAlive() then 
+        local animation = Instance.new("Animation")
+        animation.AnimationId = id
+        local animatior = lplr.Character.Humanoid.Animator
+        animatior:LoadAnimation(animation):Play()
+    end
+end
 
 do 
     local AutoQueue = {["Enabled"] = false}; AutoQueue = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({

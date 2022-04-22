@@ -198,7 +198,7 @@ local rainbowSlider = colorButton.CreateSlider({
     ["Default"] = 10,
 })
 
-local discordButton = OtherWindow.CreateOptionsButton({
+local discordButton = {["Toggle"] = function(...) end} discordButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "Discord",
     ["Function"] = function(callback)
         if callback then

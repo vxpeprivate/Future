@@ -115,6 +115,12 @@ local function fprint(...)
     GuiLibrary["CreateNotification"]("<font color='rgb(200, 200, 200)'>"..str.."</font>")
 end
 
+local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
+repeat task.wait() until Flamework.isInitialized
+local ClientHandler = require(game:GetService("ReplicatedStorage").TS.networking)
+local InventoryHandler = Flamework.resolveDependency("client/controllers/game/active-item/active-item-manager-controller@ActiveItemManagerController")
+
+
 local function getColorFromPlayer(v) 
     if v.Team ~= nil then return v.TeamColor.Color end
 end
@@ -133,11 +139,61 @@ local function isProp(plr)
     return plr.Team ~= nil and plr.Team.Name == "Hider"
 end
 
+local function canBeTargeted(plr, doTeamCheck) 
+    if isAlive(plr) and plr~=lplr and (doTeamCheck and plr.Team ~=lplr.Team or not doTeamCheck) then 
+        return true
+    end
+    return false
+end
+
 local function requestSelfDamage(health) 
     local requestSelfDamage = game:GetService("ReplicatedStorage")["events-@easy-games/damage:shared/damage-networking@DamageNetEvents"].requestSelfDamage
     requestSelfDamage:FireServer(health)
 end
 
+local function getInventory() 
+    return InventoryHandler.inventoryController:getPlayerInventory()~=nil and InventoryHandler.inventoryController:getPlayerInventory():getAllItems() or {}
+end
+
+local function getAllPlrsNear()
+    if not isAlive() then return {} end
+    local t = {}
+    for i,v in next, PLAYERS:GetPlayers() do 
+        if isAlive(v) and v~=lplr then 
+            if v.Character.HumanoidRootPart then table.insert(t, (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude, v) end
+        end
+    end
+    return t
+end
+
+local function playsound(id, volume) 
+    local sound = Instance.new("Sound")
+    sound.Parent = workspace
+    sound.SoundId = id
+    sound.PlayOnRemove = true 
+    if volume then 
+        sound.Volume = volume
+    end
+    sound:Destroy()
+end
+
+local function playanimation(id) 
+    if isAlive() then 
+        local animation = Instance.new("Animation")
+        animation.AnimationId = id
+        local animatior = lplr.Character.Humanoid.Animator
+        animatior:LoadAnimation(animation):Play()
+    end
+end
+
+local function getSword()
+    local items = getInventory()
+    for i,v in pairs(items) do 
+		if v.item:find("sword") then 
+			return v
+		end
+	end
+end
 
 local function killall() 
     for i = 1, 10 do 
@@ -157,6 +213,51 @@ local function killall()
                 game:GetService("ReplicatedStorage")["events-shared/networking@NetEvents"].shoot:FireServer(unpack(args))
             end)
         end
+    end
+end
+
+do 
+    do 
+        local aura = {["Enabled"] = false}
+        local auraswing = {["Enabled"] = false}
+        local auraswingsound = {["Enabled"] = false}    
+        local soundtick = tick()
+        local auradist = {["Value"] = 14 }
+        aura = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+            ["Name"] = "Aura",
+            ["Function"] = function(callback) 
+                spawn(function()
+                    repeat wait() 
+                        for i,v in next, getAllPlrsNear() do 
+                            if isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
+                                local weapon = getSword()
+                                if weapon ~= nil then
+                                    ClientHandler.NetFunctions.client.swordHit:invoke(weapon.item, v.Character, {isRaycast = true}, 0)
+                                    if auraswingsound["Enabled"] then 
+                                        if soundtick < tick()+0.1 then
+                                            playsound("rbxassetid://6760544639")
+                                            soundtick = tick()
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    until aura["Enabled"] == false
+                end)
+            end,
+        })
+        auraswingsound = aura.CreateToggle({
+            ["Name"] = "SwingSound",
+            ["Function"] = function() end,
+        })
+        auradist = aura.CreateSlider({
+            ["Name"] = "Range",
+            ["Function"] = function() end,
+            ["Min"] = 1,
+            ["Max"] = 14,
+            ["Default"] = 14
+        })
+    
     end
 end
 
@@ -186,7 +287,7 @@ do
                     if isAlive() then
                         if lplr.Team ~= nil and (lplr.Team.Name:find("Hider")) then 
                             timeStart = timeStart or WORKSPACE:GetServerTimeNow()
-                            forceReset()
+                            requestSelfDamage(1000)
                         elseif lplr.Team ~= nil then
                             killall()
                             if (state() == 2) then 
