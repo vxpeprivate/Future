@@ -141,19 +141,23 @@ local function forceReset()
 end
 
 local function killall() 
-    for i,v in next, getPlrProps() do 
-        local args = {
-            [1] = lplr.Character.HumanoidRootPart.CFrame.p,
-            [2] = CFrame.lookAt(lplr.Character.HumanoidRootPart.CFrame.p, v.HumanoidRootPart.CFrame.p).lookVector * (v.HumanoidRootPart.CFrame.p - lplr.Character.HumanoidRootPart.CFrame.p).magnitude,
-            [3] = {
-                ["instance"] = v.HumanoidRootPart,
-                ["normal"] = Vector3.new(1, 0, 0),
-                ["position"] = v.HumanoidRootPart.Position
-            },
-            [4] = 0,
-            [5] = false
-        }
-        game:GetService("ReplicatedStorage")["events-shared/networking@NetEvents"].shoot:FireServer(unpack(args))
+    for i = 1, 10 do 
+        for i,v in next, getPlrProps() do 
+            pcall(function()
+                local args = {
+                    [1] = lplr.Character.HumanoidRootPart.CFrame.p,
+                    [2] = CFrame.lookAt(lplr.Character.HumanoidRootPart.CFrame.p, v.HumanoidRootPart.CFrame.p).lookVector * (v.HumanoidRootPart.CFrame.p - lplr.Character.HumanoidRootPart.CFrame.p).magnitude,
+                    [3] = {
+                        ["instance"] = v.HumanoidRootPart,
+                        ["normal"] = Vector3.new(1, 0, 0),
+                        ["position"] = v.HumanoidRootPart.Position
+                    },
+                    [4] = 0,
+                    [5] = false
+                }
+                game:GetService("ReplicatedStorage")["events-shared/networking@NetEvents"].shoot:FireServer(unpack(args))
+            end)
+        end
     end
 end
 
@@ -167,10 +171,10 @@ do
                         if lplr.Team ~= nil and (lplr.Team.Name:find("Hider")) then 
                             forceReset()
                         elseif lplr.Team ~= nil then
-                            task.wait(1)
                             killall()
                             if (state() == 2) then 
                                 game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
+                                break
                             end
                         end
                     end
