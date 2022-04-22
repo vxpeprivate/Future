@@ -117,8 +117,27 @@ end
 
 local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
 repeat task.wait() until Flamework.isInitialized
-local ClientHandler = require(game:GetService("ReplicatedStorage").TS.networking)
-local InventoryHandler = Flamework.resolveDependency("client/controllers/game/active-item/active-item-manager-controller@ActiveItemManagerController")
+local PS = lplr.PlayerScripts
+local RS = game:GetService("ReplicatedStorage")
+local dependencies = {
+    -- normal dependencys:
+    ClientHandler = require(RS.TS.networking),
+    ItemMeta = require(RS.TS.item["item-meta"]).ProphuntItemMeta,
+    GunController = require(PS.TS.controllers.game.items.gun["gun-controller"]),
+    VelocityUtil = require(RS.rbxts_include["node_modules"]["@easy-games"]["game-core"].out.shared.util["velocity-util"]).VelocityUtil,
+    ClientSyncEvents = require(PS.TS["client-sync-events"]).ClientSyncEvents,
+
+    -- flamework dependencys:
+    InventoryHandlerF = Flamework.resolveDependency("client/controllers/game/active-item/active-item-manager-controller@ActiveItemManagerController"),
+    GunControllerF = Flamework.resolveDependency("client/controllers/game/items/gun/gun-controller@GunController"),
+    ShiftLockControllerF = Flamework.resolveDependency("client/controllers/global/camera/shift-lock-controller@ShiftLockController"),
+    ProjectileControllerF = Flamework.resolveDependency("@easy-games/projectile:client/controllers/projectile-controller@ProjectileController"),
+    CombatControllerF = Flamework.resolveDependency("client/controllers/game/combat/combat-controller@CombatController"),
+    GunControllerF = Flamework.resolveDependency("client/controllers/game/items/gun/gun-controller@GunController"),
+    SwordControllerF = Flamework.resolveDependency("client/controllers/game/items/sword/sword-controller@SwordController")
+
+
+}
 
 
 local function getColorFromPlayer(v) 
@@ -129,7 +148,7 @@ local function getPlrProps()
     local p = {}
     for i,v in next, PLAYERS:GetPlayers() do 
         if isAlive(v) and (v.Character:FindFirstChild("Head") == nil or (v.Team ~= nil and v.Team.Name == "Hider")) then 
-            p[v.Name] = v.Character
+            p[v.Name] = v
         end
     end
     return p
@@ -152,7 +171,9 @@ local function requestSelfDamage(health)
 end
 
 local function getInventory() 
-    return InventoryHandler.inventoryController:getPlayerInventory()~=nil and InventoryHandler.inventoryController:getPlayerInventory():getAllItems() or {}
+    return dependencies.InventoryHandlerF.inventoryController:getPlayerInventory()~=nil 
+    and dependencies.InventoryHandlerF.inventoryController:getPlayerInventory():getAllItems() 
+    or {}
 end
 
 local function getAllPlrsNear()
@@ -161,7 +182,9 @@ local function getAllPlrsNear()
     for i,v in next, PLAYERS:GetPlayers() do 
         if isAlive(v) and v~=lplr then 
             if v.Character:FindFirstChild("HumanoidRootPart") ~= nil then
-                 table.insert(t, (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude, v) 
+                pcall(function()
+                    table.insert(t, (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude, v) 
+                end)
             end
         end
     end
@@ -202,17 +225,17 @@ local function killall()
         for i,v in next, getPlrProps() do 
             pcall(function()
                 local args = {
-                    [1] = lplr.Character.HumanoidRootPart.CFrame.p,
-                    [2] = CFrame.lookAt(lplr.Character.HumanoidRootPart.CFrame.p, v.HumanoidRootPart.CFrame.p).lookVector * (v.HumanoidRootPart.CFrame.p - lplr.Character.HumanoidRootPart.CFrame.p).magnitude,
-                    [3] = {
-                        ["instance"] = v.HumanoidRootPart,
+                    v.Character.HumanoidRootPart.Position, -- bedwars dev iq = 0
+                    CFrame.lookAt(lplr.Character.HumanoidRootPart.CFrame.p, v.Character.HumanoidRootPart.CFrame.p).lookVector * (v.Character.HumanoidRootPart.CFrame.p - lplr.Character.HumanoidRootPart.CFrame.p).magnitude,
+                    {
+                        ["instance"] = v.Character.HumanoidRootPart,
                         ["normal"] = Vector3.new(1, 0, 0),
-                        ["position"] = v.HumanoidRootPart.Position
+                        ["position"] = v.Character.HumanoidRootPart.Position
                     },
-                    [4] = 0,
-                    [5] = false
+                    math.random(),
+                    false
                 }
-                game:GetService("ReplicatedStorage")["events-shared/networking@NetEvents"].shoot:FireServer(unpack(args))
+                dependencies.ClientHandler.NetEvents.client.shoot(unpack(args))  
             end)
         end
     end
@@ -233,7 +256,7 @@ do
                         if isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
                             local weapon = getSword()
                             if weapon ~= nil then
-                                ClientHandler.NetFunctions.client.swordHit:invoke(weapon.item, v.Character, {isRaycast = true}, 0)
+                                dependencies.ClientHandler.NetFunctions.client.swordHit:invoke(weapon.item, v.Character, {isRaycast = true}, 0)
                                 if auraswingsound["Enabled"] then 
                                     if soundtick < tick()+0.1 then
                                         playsound("rbxassetid://6760544639")
@@ -262,12 +285,28 @@ do
 end
 
 do 
+    local old = dependencies.VelocityUtil.applyVelocity
+    local Velocity = {["Enabled"] = false}; Velocity = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Velocity",
+        ["Function"] = function(callback) 
+            dependencies.VelocityUtil.applyVelocity = callback and function(...) end or old
+        end
+    })
+end
+
+
+
+do 
     local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "KillProps",
         ["Function"] = function(callback) 
             if callback then
-                killall()
-                PropKill["Toggle"](false, true)
+                spawn(function()
+                    killall()
+                end)
+                if PropKill["Enabled"] then
+                    PropKill["Toggle"](false, true)
+                end
             end
         end
     })
@@ -278,20 +317,24 @@ do
         writefile("Future/autowintimes.txt", "")
     end
     
+    local messages = {}
+
     local timeStart = nil
     local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "AutoWin",
         ["Function"] = function(callback) 
             spawn(function()
-                repeat task.wait(0.05) 
+                repeat task.wait(0.01)
+                    if PropKill["Enabled"] == false then break end 
                     if isAlive() then
                         if lplr.Team ~= nil and (lplr.Team.Name:find("Hider")) then 
                             timeStart = timeStart or WORKSPACE:GetServerTimeNow()
                             requestSelfDamage(1000)
                         elseif lplr.Team ~= nil then
                             killall()
+                            task.wait(0.05)
                             if (state() == 2) then 
-                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, visit dsc.gg/engo in google now!","All")
+                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, goto engoalt.github.io today!","All")
                                 game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
                                 GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
                                 appendfile("Future/autowintimes.txt", tostring(WORKSPACE:GetServerTimeNow() - timeStart).."\n")
@@ -304,6 +347,39 @@ do
         end
     })
 end
+
+--[[
+do
+    if not isfile("Future/autowintimes.txt") then 
+        writefile("Future/autowintimes.txt", "")
+    end
+    
+    local timeStart = nil
+    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "AutoWinRewrite",
+        ["Function"] = function(callback) 
+            spawn(function()
+                repeat task.wait() until state() == 1
+                if isProp(lplr) then 
+                    repeat task.wait()
+                    requestSelfDamage(1000)
+                    until not isProp(lplr)
+                end
+                repeat task.wait() until isAlive() and not isProp(lplr)
+                timeStart = timeStart or WORKSPACE:GetServerTimeNow()
+                repeat task.wait(0.05) 
+                    killall()
+                until state() == 2 
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, visit dsc.gg/engo in google now!","All")
+                game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
+                pcall(function()
+                    GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
+                    appendfile("Future/autowintimes.txt", tostring(WORKSPACE:GetServerTimeNow() - timeStart).."\n")
+                end)
+            end)
+        end
+    })
+end]]
 
 
 do 
@@ -347,4 +423,21 @@ do
         ["Function"] = function() end,
         ["Default"] = 99
     })
+end
+
+do 
+
+    local GunMode = {["Enabled"] = false}; GunMode = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "GunMod",
+        ["Function"] = function(callback) 
+            if callback then 
+                spawn(function()
+                    repeat task.wait(.1) 
+                        
+                    until not GunMode["Enabled"]
+                end)
+            end          
+        end
+    })
+
 end
