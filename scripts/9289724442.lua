@@ -73,7 +73,7 @@ local RenderStepTable = {}
 local SteppedTable = {}
 local function isAlive(plr)
     local plr = plr or lplr
-    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) or (plr.Character:FindFirstChild("HumanoidRootPart"))) then
+    if plr and plr.Character and (plr.Character:FindFirstChild("HumanoidRootPart")) then
         return true
     end
 end
@@ -162,6 +162,25 @@ local function playanimation(id)
     end
 end
 
+local function getPlrNearMouse(max)
+    local max = max or 99999999999999
+    local nearestval, nearestnum = nil,max
+    for i,v in next, PLAYERS:GetPlayers() do 
+        if isAlive(v) and v~=lplr then 
+            local pos, vis = WORKSPACE.CurrentCamera:WorldToScreenPoint(v.Character.HumanoidRootPart.Position)
+            if vis and pos then 
+                local diff = (UIS:GetMouseLocation() - Vector2.new(pos.X, pos.Y)).Magnitude
+                if diff < nearestnum then 
+                    nearestnum = diff 
+                    nearestval = v
+                end
+            end
+        end
+    end
+    return nearestval
+end
+
+
 local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
 repeat task.wait() until Flamework.isInitialized
 local PS = lplr.PlayerScripts
@@ -179,6 +198,8 @@ local dependencies = {
     DamageIndicatorController = require(PS.TS.controllers.game.combat["damage-indicator-controller"]).DamageIndicatorController,
     ActiveItemController = require(PS.TS.controllers.game["active-item"]["active-item-controller"]).ActiveItemController,
     SprintController = require(PS.TS.controllers.global.movement["sprint-controller"]).SprintController,
+    GunUtil = require(RS.TS.gun["gun-util"]).GunUtil,
+    GameQueryUtil = require(RS.rbxts_include["node_modules"]["@easy-games"]["game-core"].out.shared["game-world-query"]["game-query-util"]).GameQueryUtil,
 
     -- flamework dependencys:
     SprintControllerF = RD("client/controllers/global/movement/sprint-controller@SprintController"),
@@ -222,19 +243,26 @@ local function getMap()
     end
     return "CUBA"
 end
-
+--[[
 local function getMapAutowinPosition() 
     if getMap() == "CUBA" then
         return CFrame.new(-160.108078, 40.878952, -150.817886, -0.000178738439, 0, -1, 0, 1, 0, 1, 0, -0.000178738439)
     end
     return CFrame.new(-94.5189819, 14.1403761, 113.373901, -0.110669941, 0, -0.993857205, 0, 1, 0, 0.993857205, 0, -0.110669941)
-end
+end]]
 
 local function canBeTargeted(plr, doTeamCheck) 
     if isAlive(plr) and plr~=lplr and (doTeamCheck and plr.Team ~=lplr.Team or not doTeamCheck) then 
         return true
     end
     return false
+end
+
+local function vischeck(char, part, ignorelist)
+	local rayparams = RaycastParams.new()
+	rayparams.FilterDescendantsInstances = {lplr.Character, char, cam, table.unpack(ignorelist or {})}
+	local ray = workspace.Raycast(workspace, cam.CFrame.p, CFrame.lookAt(cam.CFrame.p, char[part].Position).lookVector.Unit * (cam.CFrame.p - char[part].Position).Magnitude, rayparams)
+	return not ray
 end
 
 local function requestSelfDamage(health) 
@@ -282,24 +310,23 @@ local function getPistol()
     end
 end
 
+
 local function killall() 
-    for i = 1, 10 do 
-        for i,v in next, getHiders() do 
-            pcall(function()
-                local args = {
-                    lplr.Character.HumanoidRootPart.Position, -- bedwars dev iq = 0
-                    CFrame.lookAt(lplr.Character.HumanoidRootPart.CFrame.p, v.Character.HumanoidRootPart.CFrame.p).lookVector * (v.Character.HumanoidRootPart.CFrame.p - lplr.Character.HumanoidRootPart.CFrame.p).magnitude,
-                    {
-                        ["instance"] = v.Character.HumanoidRootPart,
-                        ["normal"] = Vector3.new(1, 0, 0),
-                        ["position"] = v.Character.HumanoidRootPart.Position
-                    },
-                    math.random(),
-                    false
-                }
-                dependencies.ClientHandler.NetEvents.client.shoot(unpack(args))  
-            end)
-        end
+    for i,v in next, getHiders() do
+        pcall(function()
+            local args = {
+                lplr.Character.HumanoidRootPart.Position,
+                CFrame.lookAt(lplr.Character.HumanoidRootPart.CFrame.p, v.Character.HumanoidRootPart.CFrame.p).lookVector * (v.Character.HumanoidRootPart.CFrame.p - lplr.Character.HumanoidRootPart.CFrame.p).magnitude,
+                {
+                    ["instance"] = v.Character.HumanoidRootPart,
+                    ["normal"] = Vector3.new(1, 0, 0),
+                    ["position"] = v.Character.HumanoidRootPart.Position
+                },
+                math.random(),
+                false
+            }
+            dependencies.ClientHandler.NetEvents.client.shoot(unpack(args))  
+        end)    
     end
 end
 
@@ -386,13 +413,13 @@ end
 
 
 do 
-    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
         ["Name"] = "GunAura",
         ["Function"] = function(callback) 
             if callback then
                 spawn(function()
-                    repeat task.wait(0.1) 
-                    killall()
+                    repeat task.wait(0.05) 
+                    killnear()
                     until PropKill["Enabled"] == false
                 end)
             end
@@ -413,7 +440,7 @@ do
                     if PropKill["Enabled"] == false then break end 
                     if isAlive() and lplr.Team ~= nil then
                         if getPistol() then 
-                            killall()
+                            killnear()
                             task.wait(0.05)
                             if (state() == 2) then 
                                 if (AutoAdvertise["Enabled"]) then
@@ -567,7 +594,7 @@ end
 do 
     local old, old2, old3 = dependencies.HighlightController.highlight, dependencies.DamageIndicatorController.spawnDamageIndicator, dependencies.WorldIndicatorController.addIndicator
     local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "AntiFPSLagger",
+        ["Name"] = "AntiFPSLag",
         ["Function"] = function(callback) 
             if callback then 
                 dependencies.HighlightController.highlight = function(...) end

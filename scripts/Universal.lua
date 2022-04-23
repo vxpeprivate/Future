@@ -227,34 +227,23 @@ do
         ["Name"] = "Phase",
         ["Function"] = function(callback) 
             if callback then 
-                if phasemode["Value"] == "Normal" then
-                    if isAlive() then
-                        for i,v in next, lplr.Character:GetDescendants() do 
-                            if v:IsA("BasePart") then 
-                                v.CanCollide = false
+                BindToStepped("Phase", 1, function()
+                    if phasemode["Value"] == "Normal" then
+                        if isAlive() then
+                            for i,v in next, lplr.Character:GetDescendants() do 
+                                if v:IsA("BasePart") and v.CanCollide then 
+                                    cachedparts[v] = v
+                                    v.CanCollide = false
+                                end
                             end
                         end
                     end
-                else
-                    BindToStepped("Phase", function() 
-                        if isAlive() then
-                            local raycastparameters = RaycastParams.new()
-                            raycastparameters.FilterType = Enum.RaycastFilterType.Blacklist
-                            raycastparameters.FilterDescendantsInstances = getCharacters()
-                            local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.CFrame.Position, lplr.Character.Humanoid.MoveDirection, raycastparameters)
-                            local dir = (ray and ray.Normal.Z ~= 0) and "Z" or "X"
-                            if ray and ray.Instance and ray.Instance.Size[dir] < 5 then 
-                                lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame + (ray.Normal * (-(ray.Instance.Size[dir]) - 2))
-                            end
-                        end
-                    end)
-                end
+                end)
             else
                 for i,v in next, cachedparts do 
-                    v.part.CanCollide = v.old
+                    v.CanCollide = true
                 end
                 cachedparts = {}
-                UnbindFromStepped("Phase")
             end
         end,
     })
@@ -262,11 +251,11 @@ do
         ["Name"] = "Mode",
         ["Function"] = function()
             if phase.Enabled then
-                phase.Toggle()
-                phase.Toggle()
+                phase.Toggle(nil, true)
+                phase.Toggle(nil, true)
             end
         end,
-        ["List"] = {"Normal", "AC"}
+        ["List"] = {"Normal"}
     })
 end
 
