@@ -144,6 +144,7 @@ do
         ["Function"] = function(callback) 
             spawn(function()
                 repeat
+                    if AutoQueue["Enabled"] == false then break end
                     game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
                     task.wait(20) 
                 until AutoQueue["Enabled"] == false
