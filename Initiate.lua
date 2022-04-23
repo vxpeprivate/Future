@@ -109,6 +109,7 @@ local configBox; configBox = configButton.CreateTextbox({
         end
         GuiLibrary["CurrentConfig"] = value
     end,
+    ["Default"] = "default"
 })
 local clickGuiButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "ClickGui",
@@ -311,10 +312,22 @@ spawn(function()
         textlabel.TextSize = 25
         textlabel.Font = Enum.Font.SourceSans
         textlabel.TextColor3 = Color3.new(1, 1, 1)
-        textlabel.Position = UDim2.new(0, 0, 0, -30)
+        textlabel.Position = UDim2.new(0, 0, 0, -40)
         textlabel.Parent = GuiLibrary["ScreenGui"]
-        task.wait(12)
+        local textlabel2 = Instance.new("TextLabel")
+        textlabel2.Size = UDim2.new(1, 0, 0, 36)
+        textlabel2.RichText = true
+        textlabel2.Text = [[<stroke thickness="2">Always use alts when exploiting.</stroke>]]
+        textlabel2.BackgroundTransparency = 1
+        textlabel2.TextStrokeTransparency = 0
+        textlabel2.TextSize = 25
+        textlabel2.Font = Enum.Font.SourceSans
+        textlabel2.TextColor3 = Color3.new(1, 1, 1)
+        textlabel2.Position = UDim2.new(0, 0, 0, -20)
+        textlabel2.Parent = GuiLibrary["ScreenGui"]
+        task.wait(7.5)
         textlabel:Destroy()
+        textlabel2:Destroy()
     end
 end)
 

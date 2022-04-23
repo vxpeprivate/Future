@@ -157,6 +157,13 @@ local function aimAt(pos,smooth)
 end
 
 
+local function canBeTargeted(plr, doTeamCheck) 
+    if isAlive(plr) and plr~=lplr and (doTeamCheck and plr.Team ~=lplr.Team or not doTeamCheck) then 
+        return true
+    end
+    return false
+end
+
 -- // CombatWindow
 
 do 
@@ -173,7 +180,7 @@ do
                 BindToStepped("SmoothAim", function() 
                     local aimpart = smoothaimpart["Value"] == "Root" and "HumanoidRootPart" or "Head"
                     local plr = getPlrNearMouse(smoothaimfov["Value"] * 10)
-                    if plr and isAlive(plr) and UIS:IsMouseButtonPressed(smoothaimheld["Value"] == "LMB" and 0 or 1) then 
+                    if plr and canBeTargeted(plr, true) and UIS:IsMouseButtonPressed(smoothaimheld["Value"] == "LMB" and 0 or 1) then 
                         aimAt(plr.Character[aimpart].Position, smoothaimsmoothness["Value"])
                     end
                 end)

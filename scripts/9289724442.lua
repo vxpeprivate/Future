@@ -6,6 +6,7 @@ local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local WORKSPACE = game:GetService("Workspace")
 local PLAYERS = game:GetService("Players")
+local CAS = game:GetService("ContextActionService")
 local lplr = PLAYERS.LocalPlayer
 local mouse = lplr:GetMouse()
 local cam = WORKSPACE.CurrentCamera
@@ -115,6 +116,26 @@ local function fprint(...)
     GuiLibrary["CreateNotification"]("<font color='rgb(200, 200, 200)'>"..str.."</font>")
 end
 
+local function playsound(id, volume) 
+    local sound = Instance.new("Sound")
+    sound.Parent = workspace
+    sound.SoundId = id
+    sound.PlayOnRemove = true 
+    if volume then 
+        sound.Volume = volume
+    end
+    sound:Destroy()
+end
+
+local function playanimation(id) 
+    if isAlive() then 
+        local animation = Instance.new("Animation")
+        animation.AnimationId = id
+        local animatior = lplr.Character.Humanoid.Animator
+        animatior:LoadAnimation(animation):Play()
+    end
+end
+
 local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
 repeat task.wait() until Flamework.isInitialized
 local PS = lplr.PlayerScripts
@@ -177,6 +198,7 @@ local function canBeTargeted(plr, doTeamCheck)
 end
 
 local function requestSelfDamage(health) 
+    GuiLibrary["Debug"](("Requesting self damage for %s health"):format(tostring(health)))
     local requestSelfDamage = game:GetService("ReplicatedStorage")["events-@easy-games/damage:shared/damage-networking@DamageNetEvents"].requestSelfDamage
     requestSelfDamage:FireServer(health)
 end
@@ -200,26 +222,6 @@ local function getAllPlrsNear()
         end
     end
     return t
-end
-
-local function playsound(id, volume) 
-    local sound = Instance.new("Sound")
-    sound.Parent = workspace
-    sound.SoundId = id
-    sound.PlayOnRemove = true 
-    if volume then 
-        sound.Volume = volume
-    end
-    sound:Destroy()
-end
-
-local function playanimation(id) 
-    if isAlive() then 
-        local animation = Instance.new("Animation")
-        animation.AnimationId = id
-        local animatior = lplr.Character.Humanoid.Animator
-        animatior:LoadAnimation(animation):Play()
-    end
 end
 
 local function getSword()
@@ -265,11 +267,20 @@ do
     local Sprint = {["Enabled"] = false}; Sprint = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Sprint",
         ["Function"] = function(callback) 
-            spawn(function()
-                repeat task.wait()
-                dependencies.SprintControllerF:toggleSprint({sprinting = not callback})
-                until Sprint["Enabled"] == false
-            end)
+            if callback then 
+                dependencies.SprintControllerF:toggleSprint({sprinting = false})
+                CAS:UnbindAction("sprint")
+            else
+                CAS:BindAction("sprint", function(_, inputstate, _)
+                    if inputstate == Enum.UserInputState.Begin then
+                        dependencies.SprintControllerF:startSprinting()
+                        return
+                    end
+                    if inputstate == Enum.UserInputState.End then
+                        dependencies.SprintControllerF:stopSprinting()
+                    end;
+                end, false, Enum.KeyCode.LeftShift);
+            end
         end
     })
 end
@@ -423,7 +434,7 @@ end]]
 
 
 do 
-    local AutoSwapProp = {["Enabled"] = false}; AutoSwapProp = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+    local AutoSwapProp = {["Enabled"] = false}; AutoSwapProp = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
         ["Name"] = "AutoProp",
         ["Function"] = function(callback) 
             if callback and lplr.Team ~= nil then 
@@ -448,31 +459,17 @@ do
 end
 
 do 
-    local Value = {["Value"] = 1}
-    local God = {["Enabled"] = false}; God = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "InstantHealth",
+    local God = {["Enabled"] = false}; God = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Godmode",
         ["Function"] = function(callback) 
-            if callback then
-            local s, e  = pcall(function()
-                local num = Value["Value"]
-                if num == nil then 
-                    num = -100000
-                else
-                    num = -tonumber(num)
+            spawn(function()
+                if callback then
+                    repeat task.wait(0.5) 
+                        requestSelfDamage(-10000)
+                    until not God.Enabled
                 end
-                spawn(function() 
-                    repeat task.wait() until isHider() or isSeeker() 
-                    requestSelfDamage(num)
-                end)
             end)
-            if not s then error(e) end
-            end
         end
-    })
-    Value = God.CreateTextbox({
-        ["Name"] = "Health",
-        ["Function"] = function() end,
-        ["Default"] = 99
     })
 end
 
@@ -481,20 +478,17 @@ do
         ["Name"] = "GunMod",
         ["Function"] = function(callback) 
             if callback then 
-                dependencies.GunControllerF.ammo = math.huge
-                dependencies.ItemMeta.pistol.gun.fireRate = 0
-                dependencies.ItemMeta.bow.ammo.maxClipSize = math.huge
-                dependencies.ItemMeta.crossbow.ammo.maxClipSize = math.huge
-                dependencies.ItemMeta.bow.projectileSource.cooldownId = nil
-                dependencies.ItemMeta.crossbow.projectileSource.cooldownId = nil
-                dependencies.ItemMeta.pistol.gun.aimcone.bulletSpread = 0
+                spawn(function()
+                    repeat task.wait(0.5) 
+                        if not GunMode.Enabled then break end
+                        dependencies.GunControllerF.ammo = math.huge
+                        dependencies.ItemMeta.pistol.gun.fireRate = 0
+                        dependencies.ItemMeta.pistol.gun.aimcone.bulletSpread = 0
+                    until not GunMod["Enabled"]
+                end)
             else
                 dependencies.GunControllerF.ammo = math.huge
                 dependencies.ItemMeta.pistol.gun.fireRate = 0.14
-                dependencies.ItemMeta.bow.ammo.maxClipSize = 2
-                dependencies.ItemMeta.crossbow.ammo.maxClipSize = 5
-                dependencies.ItemMeta.bow.projectileSource.cooldownId = "arrow"
-                dependencies.ItemMeta.crossbow.projectileSource.cooldownId = "crossbow_arrow"
                 dependencies.ItemMeta.pistol.gun.aimcone.bulletSpread = 0.015
             end          
         end
@@ -572,7 +566,7 @@ end
 
 do 
     local old, old2, old3 = dependencies.HighlightController.highlight, dependencies.DamageIndicatorController.spawnDamageIndicator, dependencies.WorldIndicatorController.addIndicator
-    local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+    local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({
         ["Name"] = "AntiFPSLagger",
         ["Function"] = function(callback) 
             if callback then 

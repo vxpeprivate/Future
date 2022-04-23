@@ -199,12 +199,13 @@ GuiLibrary["CreateNotification"] = function(content)
 end
 GuiLibrary["Debug"] = function(content) 
     if not shared.FutureDeveloper then return end
-    GuiLibrary["CreateNotification"]("<font color='rgb(255, 148, 41)'> [DEBUG] "..content.."</font>")
+    print("[Future] [DEBUG] "..content)
 end
 local exclusionList = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
 local exclusionList2 = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
 GuiLibrary["SaveConfig"] = function(name) 
     local name = (name == nil or name == "") and "default" or name
+    GuiLibrary["Debug"]("save Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     local config = {}
     for i,v in next, GuiLibrary["Objects"] do 
         if v.Type == "OptionsButton" and not table.find(exclusionList2, i) and not v.DisableOnLeave then 
@@ -259,7 +260,11 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
                 elseif i == "ColorsOptionsButtonLightnessSlider" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Set(config.ColorTheme.V * 100)
                 elseif i == "ColorsOptionsButtonRainbowToggle" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
-                    v.API.Toggle(config.Rainbow, true)
+                    if config.Rainbow then
+                        v.API.Toggle(true, true)
+                    else
+                        v.API.Toggle(false, true)
+                    end
                 elseif i == "ColorsOptionsButtonRBSpeedSlider" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Set(config.RainbowSpeed)
                 end
@@ -283,6 +288,7 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
 end
 GuiLibrary["LoadConfig"] = function(name) 
     local name = name or "default"
+    GuiLibrary["Debug"]("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     if isfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 
         print("[Future] Loading configuration "..name)
         local success, config = pcall(function() 
@@ -904,13 +910,15 @@ GuiLibrary["CreateWindow"] = function(argstable)
             RealTextbox.TextSize = 19.000
             RealTextbox.TextXAlignment = Enum.TextXAlignment.Left
 
-            textboxapi["Set"] = function(value) 
+            textboxapi["Set"] = function(value, skipfunction) 
                 local value = tostring(value)
                 textboxapi["Value"] = value
                 RealTextbox.Text = value
-                argstable.Function(value)
+                if not skipfunction then
+                    argstable.Function(value)
+                end
             end
-
+            textboxapi.Set(argstable.Default or "", true)
             RealTextbox.FocusLost:Connect(function()
                 textboxapi.Set(RealTextbox.Text)
             end)
