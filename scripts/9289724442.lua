@@ -17,7 +17,9 @@ local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or flux
 local state = function() return workspace.MatchDocument:GetAttribute("matchState") end
 
 local UnixTime = os.time()
-if UnixTime >= 1650736786 then 
+local UpdateTime = math.huge
+if UnixTime >= UpdateTime then 
+    print(" game has updated. ")
     if not shared.FutureDeveloper then 
         local textlabel = Instance.new("TextLabel")
         textlabel.Size = UDim2.new(1, 0, 0, 36)
@@ -271,7 +273,7 @@ local function killall()
         for i,v in next, getHiders() do 
             pcall(function()
                 local args = {
-                    v.Character.HumanoidRootPart.Position, -- bedwars dev iq = 0
+                    lplr.Character.HumanoidRootPart.Position, -- bedwars dev iq = 0
                     CFrame.lookAt(lplr.Character.HumanoidRootPart.CFrame.p, v.Character.HumanoidRootPart.CFrame.p).lookVector * (v.Character.HumanoidRootPart.CFrame.p - lplr.Character.HumanoidRootPart.CFrame.p).magnitude,
                     {
                         ["instance"] = v.Character.HumanoidRootPart,
@@ -415,47 +417,46 @@ do
             end)
         end
     })
+end
+
+--[[
+do
+    local timeStart = nil
+    local AutoAdvertise = {["Enabled"] = false}
+    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "AutoWin",
+        ["Function"] = function(callback) 
+            timeStart = timeStart or WORKSPACE:GetServerTimeNow()
+            spawn(function()
+                repeat task.wait()
+                    if PropKill["Enabled"] == false then break end 
+                    if isAlive() and lplr.Team ~= nil then
+                        if getPistol() then 
+                            killall()
+                            task.wait(0.05)
+                            if (state() == 2) then 
+                                if (AutoAdvertise["Enabled"]) then
+                                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, search engoalt.github.io today!","All")
+                                end
+                                game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
+                                GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
+                                break
+                            end
+                        elseif lplr.Team ~= nil then
+                            requestSelfDamage(math.huge)
+                        end
+                    end
+                until PropKill["Enabled"] == false
+            end)
+        end
+    })
     AutoAdvertise = PropKill.CreateToggle({
         ["Name"] = "AutoAdvertise",
         ["Function"] = function(callback) end,
         ["Default"] = true
     })
-
 end
-
---[[
-do
-    if not isfile("Future/autowintimes.txt") then 
-        writefile("Future/autowintimes.txt", "")
-    end
-    
-    local timeStart = nil
-    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "AutoWinRewrite",
-        ["Function"] = function(callback) 
-            spawn(function()
-                repeat task.wait() until state() == 1
-                if isHider(lplr) then 
-                    repeat task.wait()
-                    requestSelfDamage(1000)
-                    until not isHider(lplr)
-                end
-                repeat task.wait() until isAlive() and not isHider(lplr)
-                timeStart = timeStart or WORKSPACE:GetServerTimeNow()
-                repeat task.wait(0.05) 
-                    killall()
-                until state() == 2 
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, visit dsc.gg/engo in google now!","All")
-                game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
-                pcall(function()
-                    GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
-                    appendfile("Future/autowintimes.txt", tostring(WORKSPACE:GetServerTimeNow() - timeStart).."\n")
-                end)
-            end)
-        end
-    })
-end]]
-
+]]
 
 do 
     local AutoSwapProp = {["Enabled"] = false}; AutoSwapProp = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
@@ -498,13 +499,13 @@ do
 end
 
 do 
-    local GunMode = {["Enabled"] = false}; GunMode = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+    local GunMod = {["Enabled"] = false}; GunMod = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "GunMod",
         ["Function"] = function(callback) 
             if callback then 
                 spawn(function()
                     repeat task.wait(0.5) 
-                        if not GunMode.Enabled then break end
+                        if not GunMod.Enabled then break end
                         dependencies.GunControllerF.ammo = math.huge
                         dependencies.ItemMeta.pistol.gun.fireRate = 0
                         dependencies.ItemMeta.pistol.gun.aimcone.bulletSpread = 0
