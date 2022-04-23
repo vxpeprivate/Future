@@ -126,6 +126,9 @@ local dependencies = {
     GunController = require(PS.TS.controllers.game.items.gun["gun-controller"]),
     VelocityUtil = require(RS.rbxts_include["node_modules"]["@easy-games"]["game-core"].out.shared.util["velocity-util"]).VelocityUtil,
     ClientSyncEvents = require(PS.TS["client-sync-events"]).ClientSyncEvents,
+    HighlightController = require(PS.TS.controllers.global.highlight["highlight-controller"]).HighlightController,
+    WorldIndicatorController = require(RS.rbxts_include["node_modules"]["@easy-games"]["game-core"].out.client.controllers.indicators["world-indicator-controller"]).WorldIndicatorController,
+    DamageIndicatorController = require(PS.TS.controllers.game.combat["damage-indicator-controller"]).DamageIndicatorController,
 
     -- flamework dependencys:
     InventoryHandlerF = Flamework.resolveDependency("client/controllers/game/active-item/active-item-manager-controller@ActiveItemManagerController"),
@@ -133,8 +136,8 @@ local dependencies = {
     ShiftLockControllerF = Flamework.resolveDependency("client/controllers/global/camera/shift-lock-controller@ShiftLockController"),
     ProjectileControllerF = Flamework.resolveDependency("@easy-games/projectile:client/controllers/projectile-controller@ProjectileController"),
     CombatControllerF = Flamework.resolveDependency("client/controllers/game/combat/combat-controller@CombatController"),
-    GunControllerF = Flamework.resolveDependency("client/controllers/game/items/gun/gun-controller@GunController"),
-    SwordControllerF = Flamework.resolveDependency("client/controllers/game/items/sword/sword-controller@SwordController")
+    SwordControllerF = Flamework.resolveDependency("client/controllers/game/items/sword/sword-controller@SwordController"),
+    AmmoControllerF = Flamework.resolveDependency("client/controllers/game/ammo/ammo-controller@AmmoController"),
 
 
 }
@@ -214,7 +217,7 @@ end
 local function getSword()
     local items = getInventory()
     for i,v in pairs(items) do 
-		if v.item:find("sword") then 
+		if v.item:find("sword") or v.item:find("pan") or v.item:find("bat") then 
 			return v
 		end
 	end
@@ -324,13 +327,13 @@ do
         ["Name"] = "AutoWin",
         ["Function"] = function(callback) 
             spawn(function()
-                repeat task.wait(0.01)
+                repeat task.wait()
                     if PropKill["Enabled"] == false then break end 
                     if isAlive() then
                         if lplr.Team ~= nil and (lplr.Team.Name:find("Hider")) then 
-                            timeStart = timeStart or WORKSPACE:GetServerTimeNow()
                             requestSelfDamage(1000)
                         elseif lplr.Team ~= nil then
+                            timeStart = timeStart or WORKSPACE:GetServerTimeNow()
                             killall()
                             task.wait(0.05)
                             if (state() == 2) then 
@@ -413,8 +416,9 @@ do
         ["Name"] = "InstantHealth",
         ["Function"] = function(callback) 
             if callback then
-                requestSelfDamage(-tonumber(Value["Value"]))
-                God["Toggle"](false, true)
+                local num = tonumber(Value["Value"])
+                if num == nil then num = 99999 end
+                requestSelfDamage(-(num))
             end
         end
     })
@@ -426,18 +430,117 @@ do
 end
 
 do 
-
     local GunMode = {["Enabled"] = false}; GunMode = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "GunMod",
         ["Function"] = function(callback) 
             if callback then 
-                spawn(function()
-                    repeat task.wait(.1) 
-                        
-                    until not GunMode["Enabled"]
-                end)
+                dependencies.GunControllerF.ammo = math.huge
+                dependencies.ItemMeta.pistol.gun.fireRate = 0
+                dependencies.ItemMeta.bow.ammo.maxClipSize = math.huge
+                dependencies.ItemMeta.crossbow.ammo.maxClipSize = math.huge
+                dependencies.ItemMeta.bow.projectileSource.cooldownId = nil
+                dependencies.ItemMeta.crossbow.projectileSource.cooldownId = nil
+                dependencies.ItemMeta.pistol.gun.aimcone.bulletSpread = 0
+            else
+                dependencies.GunControllerF.ammo = math.huge
+                dependencies.ItemMeta.pistol.gun.fireRate = 0.14
+                dependencies.ItemMeta.bow.ammo.maxClipSize = 2
+                dependencies.ItemMeta.crossbow.ammo.maxClipSize = 5
+                dependencies.ItemMeta.bow.projectileSource.cooldownId = "arrow"
+                dependencies.ItemMeta.crossbow.projectileSource.cooldownId = "crossbow_arrow"
+                dependencies.ItemMeta.pistol.gun.aimcone.bulletSpread = 0.015
             end          
         end
     })
+end
 
+
+do 
+    local AutoLeave = {["Enabled"] = false}; AutoLeave = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "AutoRequeue",
+        ["Function"] = function(callback) 
+            if callback then 
+                spawn(function() 
+                    repeat task.wait() until state() == 2
+                    if AutoLeave.Enabled then 
+                        game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
+                    end
+                end)
+            end
+        end
+    })
+end
+
+do 
+    local CoinGrab = {["Enabled"] = false}; CoinGrab = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "CoinGrab",
+        ["Function"] = function(callback) 
+            if callback then 
+                spawn(function() 
+                    repeat task.wait(0.25)
+                        for i,v in next, WORKSPACE.GroundItems:GetChildren() do 
+                            if isnetworkowner(v) and isAlive() then 
+                                v.CFrame = lplr.Character.HumanoidRootPart.CFrame
+                            end
+                        end
+                    until CoinGrab["Enabled"] == false
+                end)
+            end
+        end,
+    })
+end
+
+do
+    local cached
+    local FastCrate = {["Enabled"] = false}; FastCrate = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "FastCrate",
+        ["Function"] = function(callback) 
+            for i,v in next, WORKSPACE:WaitForChild("Map"):WaitForChild("Configuration"):WaitForChild("Crates"):GetChildren() do 
+                local proxPrompt = v.PromptLocation.OpenCrate
+                cached = cached or proxPrompt.HoldDuration
+                proxPrompt.HoldDuration = callback and 0 or cached
+            end
+        end,
+    })
+end
+
+do 
+    local old, old2, old3 = dependencies.HighlightController.highlight, dependencies.DamageIndicatorController.spawnDamageIndicator, dependencies.WorldIndicatorController.addIndicator
+    local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "FPSLagger",
+        ["Function"] = function(callback) 
+            if callback then 
+                dependencies.HighlightController.highlight = function(...) end
+                dependencies.WorldIndicatorController.addIndicator = function(...) end
+                dependencies.DamageIndicatorController.spawnDamageIndicator = function(...) end
+                spawn(function() 
+                    repeat task.wait(0.05)
+                        spawn(function() 
+                            repeat task.wait()
+                                requestSelfDamage(0)
+                            until Lagger["Enabled"] == false
+                        end)
+                    until Lagger["Enabled"] == false
+                end)
+            end
+        end,
+    })
+end
+
+do 
+    local old, old2, old3 = dependencies.HighlightController.highlight, dependencies.DamageIndicatorController.spawnDamageIndicator, dependencies.WorldIndicatorController.addIndicator
+    local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "AntiFPSLagger",
+        ["Function"] = function(callback) 
+            if callback then 
+                dependencies.HighlightController.highlight = function(...) end
+                dependencies.WorldIndicatorController.addIndicator = function(...) end
+                dependencies.DamageIndicatorController.spawnDamageIndicator = function(...) end
+            else
+                dependencies.HighlightController.highlight = old
+                dependencies.WorldIndicatorController.addIndicator = old2
+                dependencies.DamageIndicatorController.spawnDamageIndicator = old3
+            end
+        end,
+    })
 end
