@@ -119,6 +119,7 @@ local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"][
 repeat task.wait() until Flamework.isInitialized
 local PS = lplr.PlayerScripts
 local RS = game:GetService("ReplicatedStorage")
+local RD = Flamework.resolveDependency
 local dependencies = {
     -- normal dependencys:
     ClientHandler = require(RS.TS.networking),
@@ -129,25 +130,27 @@ local dependencies = {
     HighlightController = require(PS.TS.controllers.global.highlight["highlight-controller"]).HighlightController,
     WorldIndicatorController = require(RS.rbxts_include["node_modules"]["@easy-games"]["game-core"].out.client.controllers.indicators["world-indicator-controller"]).WorldIndicatorController,
     DamageIndicatorController = require(PS.TS.controllers.game.combat["damage-indicator-controller"]).DamageIndicatorController,
+    ActiveItemController = require(PS.TS.controllers.game["active-item"]["active-item-controller"]).ActiveItemController,
+    SprintController = require(PS.TS.controllers.global.movement["sprint-controller"]).SprintController,
 
     -- flamework dependencys:
-    InventoryHandlerF = Flamework.resolveDependency("client/controllers/game/active-item/active-item-manager-controller@ActiveItemManagerController"),
-    GunControllerF = Flamework.resolveDependency("client/controllers/game/items/gun/gun-controller@GunController"),
-    ShiftLockControllerF = Flamework.resolveDependency("client/controllers/global/camera/shift-lock-controller@ShiftLockController"),
-    ProjectileControllerF = Flamework.resolveDependency("@easy-games/projectile:client/controllers/projectile-controller@ProjectileController"),
-    CombatControllerF = Flamework.resolveDependency("client/controllers/game/combat/combat-controller@CombatController"),
-    SwordControllerF = Flamework.resolveDependency("client/controllers/game/items/sword/sword-controller@SwordController"),
-    AmmoControllerF = Flamework.resolveDependency("client/controllers/game/ammo/ammo-controller@AmmoController"),
-
+    SprintControllerF = RD("client/controllers/global/movement/sprint-controller@SprintController"),
+    InventoryHandlerF = RD("client/controllers/game/active-item/active-item-manager-controller@ActiveItemManagerController"),
+    GunControllerF = RD("client/controllers/game/items/gun/gun-controller@GunController"),
+    ShiftLockControllerF = RD("client/controllers/global/camera/shift-lock-controller@ShiftLockController"),
+    ProjectileControllerF = RD("@easy-games/projectile:client/controllers/projectile-controller@ProjectileController"),
+    CombatControllerF = RD("client/controllers/game/combat/combat-controller@CombatController"),
+    SwordControllerF = RD("client/controllers/game/items/sword/sword-controller@SwordController"),
+    AmmoControllerF = RD("client/controllers/game/ammo/ammo-controller@AmmoController"),
+    
 
 }
-
 
 local function getColorFromPlayer(v) 
     if v.Team ~= nil then return v.TeamColor.Color end
 end
  
-local function getPlrProps() 
+local function getHiders() 
     local p = {}
     for i,v in next, PLAYERS:GetPlayers() do 
         if isAlive(v) and (v.Character:FindFirstChild("Head") == nil or (v.Team ~= nil and v.Team.Name == "Hider")) then 
@@ -157,8 +160,13 @@ local function getPlrProps()
     return p
 end
 
-local function isProp(plr) 
+local function isHider(plr) 
+    local plr = plr or lplr
     return plr.Team ~= nil and plr.Team.Name == "Hider"
+end
+
+local function isSeeker(plr) 
+    return not isHider(plr)
 end
 
 local function canBeTargeted(plr, doTeamCheck) 
@@ -223,9 +231,18 @@ local function getSword()
 	end
 end
 
+local function getPistol()
+    local items = getInventory()
+    for i,v in next, items do 
+        if v.item:find("pistol") then 
+            return v
+        end
+    end
+end
+
 local function killall() 
     for i = 1, 10 do 
-        for i,v in next, getPlrProps() do 
+        for i,v in next, getHiders() do 
             pcall(function()
                 local args = {
                     v.Character.HumanoidRootPart.Position, -- bedwars dev iq = 0
@@ -245,6 +262,19 @@ local function killall()
 end
 
 do 
+    local Sprint = {["Enabled"] = false}; Sprint = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Sprint",
+        ["Function"] = function(callback) 
+            spawn(function()
+                repeat task.wait()
+                dependencies.SprintControllerF:toggleSprint({sprinting = not callback})
+                until Sprint["Enabled"] == false
+            end)
+        end
+    })
+end
+
+do 
     local aura = {["Enabled"] = false}
     local auraswing = {["Enabled"] = false}
     local auraswingsound = {["Enabled"] = false}    
@@ -259,6 +289,7 @@ do
                         if isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
                             local weapon = getSword()
                             if weapon ~= nil then
+                                GuiLibrary["Debug"]("Attacking "..v.Name.." with magnitude of "..tostring((lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude))
                                 dependencies.ClientHandler.NetFunctions.client.swordHit:invoke(weapon.item, v.Character, {isRaycast = true}, 0)
                                 if auraswingsound["Enabled"] then 
                                     if soundtick < tick()+0.1 then
@@ -292,7 +323,11 @@ do
     local Velocity = {["Enabled"] = false}; Velocity = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Velocity",
         ["Function"] = function(callback) 
-            dependencies.VelocityUtil.applyVelocity = callback and function(...) end or old
+            if callback then
+                dependencies.VelocityUtil.applyVelocity = function(...) end
+            else
+                dependencies.VelocityUtil.applyVelocity = old
+            end 
         end
     })
 end
@@ -301,7 +336,7 @@ end
 
 do 
     local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "KillProps",
+        ["Name"] = "KillHiders",
         ["Function"] = function(callback) 
             if callback then
                 spawn(function()
@@ -316,39 +351,41 @@ do
 end
 
 do
-    if not isfile("Future/autowintimes.txt") then 
-        writefile("Future/autowintimes.txt", "")
-    end
-    
-    local messages = {}
-
     local timeStart = nil
+    local AutoAdvertise = {["Enabled"] = false}
     local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "AutoWin",
         ["Function"] = function(callback) 
+            timeStart = timeStart or WORKSPACE:GetServerTimeNow()
             spawn(function()
                 repeat task.wait()
                     if PropKill["Enabled"] == false then break end 
-                    if isAlive() then
-                        if lplr.Team ~= nil and (lplr.Team.Name:find("Hider")) then 
-                            requestSelfDamage(1000)
-                        elseif lplr.Team ~= nil then
-                            timeStart = timeStart or WORKSPACE:GetServerTimeNow()
+                    if isAlive() and lplr.Team ~= nil then
+                        if getPistol() then 
                             killall()
                             task.wait(0.05)
                             if (state() == 2) then 
-                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, goto engoalt.github.io today!","All")
+                                if (AutoAdvertise["Enabled"]) then
+                                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, search engoalt.github.io today!","All")
+                                end
                                 game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
                                 GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
-                                appendfile("Future/autowintimes.txt", tostring(WORKSPACE:GetServerTimeNow() - timeStart).."\n")
                                 break
                             end
+                        elseif lplr.Team ~= nil then
+                            requestSelfDamage(math.huge)
                         end
                     end
                 until PropKill["Enabled"] == false
             end)
         end
     })
+    AutoAdvertise = PropKill.CreateToggle({
+        ["Name"] = "AutoAdvertise",
+        ["Function"] = function(callback) end,
+        ["Default"] = true
+    })
+
 end
 
 --[[
@@ -363,12 +400,12 @@ do
         ["Function"] = function(callback) 
             spawn(function()
                 repeat task.wait() until state() == 1
-                if isProp(lplr) then 
+                if isHider(lplr) then 
                     repeat task.wait()
                     requestSelfDamage(1000)
-                    until not isProp(lplr)
+                    until not isHider(lplr)
                 end
-                repeat task.wait() until isAlive() and not isProp(lplr)
+                repeat task.wait() until isAlive() and not isHider(lplr)
                 timeStart = timeStart or WORKSPACE:GetServerTimeNow()
                 repeat task.wait(0.05) 
                     killall()
@@ -416,9 +453,19 @@ do
         ["Name"] = "InstantHealth",
         ["Function"] = function(callback) 
             if callback then
-                local num = tonumber(Value["Value"])
-                if num == nil then num = 99999 end
-                requestSelfDamage(-(num))
+            local s, e  = pcall(function()
+                local num = Value["Value"]
+                if num == nil then 
+                    num = -100000
+                else
+                    num = -tonumber(num)
+                end
+                spawn(function() 
+                    repeat task.wait() until isHider() or isSeeker() 
+                    requestSelfDamage(num)
+                end)
+            end)
+            if not s then error(e) end
             end
         end
     })
@@ -479,7 +526,7 @@ do
                 spawn(function() 
                     repeat task.wait(0.25)
                         for i,v in next, WORKSPACE.GroundItems:GetChildren() do 
-                            if isnetworkowner(v) and isAlive() then 
+                            if isnetworkowner(v) and isAlive() and isHider() then 
                                 v.CFrame = lplr.Character.HumanoidRootPart.CFrame
                             end
                         end
@@ -496,7 +543,7 @@ do
         ["Name"] = "FastCrate",
         ["Function"] = function(callback) 
             for i,v in next, WORKSPACE:WaitForChild("Map"):WaitForChild("Configuration"):WaitForChild("Crates"):GetChildren() do 
-                local proxPrompt = v.PromptLocation.OpenCrate
+                local proxPrompt = v:WaitForChild("PromptLocation").OpenCrate
                 cached = cached or proxPrompt.HoldDuration
                 proxPrompt.HoldDuration = callback and 0 or cached
             end
@@ -505,14 +552,10 @@ do
 end
 
 do 
-    local old, old2, old3 = dependencies.HighlightController.highlight, dependencies.DamageIndicatorController.spawnDamageIndicator, dependencies.WorldIndicatorController.addIndicator
     local Lagger = {["Enabled"] = false}; Lagger = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
         ["Name"] = "FPSLagger",
         ["Function"] = function(callback) 
-            if callback then 
-                dependencies.HighlightController.highlight = function(...) end
-                dependencies.WorldIndicatorController.addIndicator = function(...) end
-                dependencies.DamageIndicatorController.spawnDamageIndicator = function(...) end
+            if callback then
                 spawn(function() 
                     repeat task.wait(0.05)
                         spawn(function() 

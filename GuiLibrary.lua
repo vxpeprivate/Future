@@ -197,6 +197,10 @@ GuiLibrary["CreateNotification"] = function(content)
         STARTERGUI:SetCore("ChatMakeSystemMessage", {["Text"] = "\n<font color='rgb(255, 85, 85)'>[Future]</font> <font color='rgb(200,200,200)'>"..tostring(content).."</font>"})
     end
 end
+GuiLibrary["Debug"] = function(content) 
+    if not shared.FutureDeveloper then return end
+    GuiLibrary["CreateNotification"]("<font color='rgb(255, 148, 41)'> [DEBUG] "..content.."</font>")
+end
 local exclusionList = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
 local exclusionList2 = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
 GuiLibrary["SaveConfig"] = function(name) 
@@ -539,7 +543,8 @@ GuiLibrary["CreateWindow"] = function(argstable)
             if boolean==nil then doToggle = not buttonapi.Enabled end
             OptionsButton.BackgroundTransparency = doToggle and 0 or 0.7
             buttonapi.Enabled = doToggle
-            argstable.Function(doToggle)
+            local suc, err = pcall(argstable.Function, doToggle)
+            if not suc then warn("[FUTURE] "..err) if shared.FutureDeveloper then error("[FUTURE] Module error: "..err)end end
             if not stopclick then
                 playclicksound()
             end

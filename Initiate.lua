@@ -1,4 +1,5 @@
 -- // credits to anyones code i used/looked at.
+getgenv()._FUTUREVERSION = "1.02"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
 if shared.Future~=nil then print("[Future] Detected future already executed, not executing!") return end
@@ -202,6 +203,7 @@ local discordButton = {["Toggle"] = function(...) end} discordButton = OtherWind
     ["Name"] = "Discord",
     ["Function"] = function(callback)
         if callback then
+            pcall(function() setclipboard("https://discord.com/invite/bdjT5UmmDJ") end)
             spawn(function()
 				for i = 1, 14 do
 					spawn(function()
@@ -299,9 +301,28 @@ GuiLibrary.Signals.onDestroy:connect(function()
 end)
 
 spawn(function()
+    if GuiLibrary["AllowNotifications"] then
+        local textlabel = Instance.new("TextLabel")
+        textlabel.Size = UDim2.new(1, 0, 0, 36)
+        textlabel.RichText = true
+        textlabel.Text = [[<stroke thickness="2">Please join the Future discord server for updates and to leave feedback. discord.gg/bdjT5UmmDJ</stroke>]]
+        textlabel.BackgroundTransparency = 1
+        textlabel.TextStrokeTransparency = 0
+        textlabel.TextSize = 25
+        textlabel.Font = Enum.Font.SourceSans
+        textlabel.TextColor3 = Color3.new(1, 1, 1)
+        textlabel.Position = UDim2.new(0, 0, 0, -30)
+        textlabel.Parent = GuiLibrary["ScreenGui"]
+        task.wait(12)
+        textlabel:Destroy()
+    end
+end)
+
+spawn(function()
     repeat wait(3)
         GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
         wait(7)
     until not shared.Future
 end)
-fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.")
+fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.\nPlease join the discord for changelogs and to report bugs. \ndiscord.gg/bdjT5UmmDJ\nEnjoy using Future v".._FUTUREVERSION.."")
+shared._FUTURECACHED = true
