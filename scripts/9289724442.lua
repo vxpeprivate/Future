@@ -216,6 +216,20 @@ local function isSeeker(plr)
     return not isHider(plr)
 end
 
+local function getMap() 
+    if WORKSPACE.Map.Build:FindFirstChild("PropTownSign") then
+        return "MALL"
+    end
+    return "CUBA"
+end
+
+local function getMapAutowinPosition() 
+    if getMap() == "CUBA" then
+        return CFrame.new(-160.108078, 40.878952, -150.817886, -0.000178738439, 0, -1, 0, 1, 0, 1, 0, -0.000178738439)
+    end
+    return CFrame.new(-94.5189819, 14.1403761, 113.373901, -0.110669941, 0, -0.993857205, 0, 1, 0, 0.993857205, 0, -0.110669941)
+end
+
 local function canBeTargeted(plr, doTeamCheck) 
     if isAlive(plr) and plr~=lplr and (doTeamCheck and plr.Team ~=lplr.Team or not doTeamCheck) then 
         return true
@@ -373,48 +387,15 @@ end
 
 do 
     local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "KillHiders",
+        ["Name"] = "GunAura",
         ["Function"] = function(callback) 
             if callback then
                 spawn(function()
+                    repeat task.wait(0.1) 
                     killall()
+                    until PropKill["Enabled"] == false
                 end)
-                if PropKill["Enabled"] then
-                    PropKill["Toggle"](false, true)
-                end
             end
-        end
-    })
-end
-
-do
-    local timeStart = nil
-    local AutoAdvertise = {["Enabled"] = false}
-    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "AutoWin",
-        ["Function"] = function(callback) 
-            timeStart = timeStart or WORKSPACE:GetServerTimeNow()
-            spawn(function()
-                repeat task.wait()
-                    if PropKill["Enabled"] == false then break end 
-                    if isAlive() and lplr.Team ~= nil then
-                        if getPistol() then 
-                            killall()
-                            task.wait(0.05)
-                            if (state() == 2) then 
-                                if (AutoAdvertise["Enabled"]) then
-                                    game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("Future AutoWin is simply the best, search engoalt.github.io today!","All")
-                                end
-                                game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
-                                GuiLibrary["CreateNotification"]("AutoWin completed in ".. tostring(WORKSPACE:GetServerTimeNow() - timeStart) .. "s")
-                                break
-                            end
-                        elseif lplr.Team ~= nil then
-                            requestSelfDamage(math.huge)
-                        end
-                    end
-                until PropKill["Enabled"] == false
-            end)
         end
     })
 end
@@ -450,13 +431,7 @@ do
             end)
         end
     })
-    AutoAdvertise = PropKill.CreateToggle({
-        ["Name"] = "AutoAdvertise",
-        ["Function"] = function(callback) end,
-        ["Default"] = true
-    })
-end
-]]
+end]]
 
 do 
     local AutoSwapProp = {["Enabled"] = false}; AutoSwapProp = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
