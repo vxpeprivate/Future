@@ -5,6 +5,7 @@ local HTTPSERVICE = game:GetService("HttpService")
 local STARTERGUI = game:GetService("StarterGui")
 local COREGUI = game:GetService("CoreGui")
 local PLAYERS = game:GetService("Players")
+local lplr = PLAYERS.LocalPlayer
 local getcustomasset = getsynasset or getcustomasset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local chatchildaddedconnection
@@ -20,11 +21,44 @@ local GuiLibrary = {
     ["GuiKeybind"] = "RightShift",
     ["CurrentConfig"] = "default",
     ["AllowNotifications"] = true,
-    ["HUDEnabled"] = true
+    ["HUDEnabled"] = true,
+    ["CurrentToast"] = nil,
+    ["ArrayList"] = false,
+    ["ListBackground"] = false,
+    ["ListLines"] = false,
+    ["DrawWatermark"] = false,
+    ["WatermarkBackground"] = false,
+    ["WatermarkLine"] = false,
+    ["Rendering"] = "Up",
+    ["DrawCoords"] = false,
+    ["DrawSpeed"] = false,
+    ["DrawFPS"] = false,
+    ["DrawPing"] = false,
+    ["TargetHUDEnabled"] = false,
+    ["TargetHUD"] = {
+        ["Position"] = {
+            ["X"] = {
+                ["Scale"] = 0,
+                ["Offset"] = 0,
+            },
+            ["Y"] = {
+                ["Scale"] = 0,
+                ["Offset"] = 0,
+            },
+        },
+    }
+}
+local exclusionList = {
+    "ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", 
+    "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton",
+     "NotificationsToggle", "RainbowToggle", "ClickSoundsToggle",
+     "ArrayListToggle", "ListBackgroundToggle", "ListLinesToggle", "WatermarkToggle",
+     "WMLineToggle", "WMBackgroundToggle", "HUDOptionsButtonRenderingSelector",
+     "FPSToggle", "SpeedToggle", "CoordsToggle", "PingToggle", "TargetHUDToggle"
 }
 
 local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
-ScreenGui.Name = "FutureUI"
+ScreenGui.Name = tostring(math.random(1,10))
 local ClickGUI = Instance.new("Frame", ScreenGui)
 ClickGUI.Size = UDim2.new(1,0,1,0)
 ClickGUI.BackgroundTransparency = 1
@@ -59,6 +93,7 @@ local function getasset(path)
 		})
         print("[Future] downloading "..path.." asset.")
 		writefile(path, req.Body)
+        repeat task.wait() until isfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end
 	return getcustomasset(path) 
@@ -80,6 +115,15 @@ local function tabletocolor(tab)
     else
         return Color3.fromRGB(tab.r, tab.g, tab.b)
     end
+end
+
+local function HSVtoRGB(color) 
+    local r,g,b = math.floor((color.R*255)+0.5),math.floor((color.G*255)+0.5),math.floor((color.B*255)+0.5)
+    return Color3.fromRGB(r,g,b)
+end
+
+local function colorToRichText(color) 
+    return " rgb("..tostring(color.R*255)..", "..tostring(color.G*255)..", "..tostring(color.B*255)..")"
 end
 
 local function RelativeXY(GuiObject, location)
@@ -131,6 +175,7 @@ local function dragGUI(gui, dragpart)
         end)
     end)
 end
+GuiLibrary["DragGUI"] = dragGUI
 local SignalLib = loadstring(requesturl("roblox/main/SignalLib.lua", true))()
 local function createsignal(name) 
     local signal = SignalLib.new()
@@ -138,6 +183,9 @@ local function createsignal(name)
     return signal
 end
 local onDestroySignal = createsignal("onDestroy")
+local hudUpdate = createsignal("HUDUpdate")
+local statsUpdate = createsignal("statsUpdate")
+local clickGuiToggle = createsignal("clickGuiToggle")
 -- // Color Management
 local updatecolor = createsignal("UpdateColor")
 spawn(function() 
@@ -173,20 +221,644 @@ local function playclicksound()
     end
 end
 
+local function prepareTableForArrayList(t) 
+    local t = t or {}
+    local newT = {}
+    for i,v in pairs(t) do 
+        if v.Type == "OptionsButton" and not table.find(exclusionList, v.Name.."OptionsButton") and v.API.Enabled then 
+            newT[#newT+1] = v
+        end
+    end
+    table.sort(newT, function(a,b)
+        local atext = a.Name.." "
+        if type(a.ArrayText)=="function" then
+            atext = atext.."["..tostring(a.ArrayText()).."] "
+        end
+        local btext = b.Name.." "
+        if type(b.ArrayText)=="function" then
+            btext = btext.."["..tostring(b.ArrayText()).."] "
+        end
+        local vec = game:GetService("TextService"):GetTextSize(atext, 20, Enum.Font.GothamSemibold, Vector2.new(99999, 99999))
+        local vec2 = game:GetService("TextService"):GetTextSize(btext, 20, Enum.Font.GothamSemibold, Vector2.new(99999, 99999))
+        if GuiLibrary.Rendering == "Down" then 
+            return vec.X < vec2.X
+        else
+            return vec.X > vec2.X 
+        end
+    end)
+    return newT
+end
+
 local function textbound(instance, xadd, yadd) 
-    local xadd,yadd = xadd or 0,yadd or 0
+
+    instance.AutomaticSize = Enum.AutomaticSize.X
+
+    --[[local xadd,yadd = xadd or 0,yadd or 0
     if not instance.ClassName:find("Text") then return end
     local function doIt()
-        local vec = game:GetService("TextService"):GetTextSize(instance.Text, instance.TextSize, instance.Font, Vector2.new(99999, 99999))
-        instance.Size = UDim2.new(0, vec.X+xadd, 0, vec.Y+yadd)
+        local X,Y = instance.TextBounds.X, instance.TextBounds.Y
+        instance.Size = UDim2.new(instance.Size.X.Scale, X+xadd, instance.Size.Y.Scale, Y+yadd)
     end
     doIt()
     local connection = instance:GetPropertyChangedSignal("Text"):Connect(doIt)
-    return connection
+    return connection]]
 end
 GuiLibrary["GetColor"] = function() 
     return Color3.fromHSV(GuiLibrary.ColorTheme.H, GuiLibrary.ColorTheme.S, GuiLibrary.ColorTheme.V)
 end
+GuiLibrary["CreateToast"] = function(title, text, showtime) 
+    spawn(function()
+
+        local showtime = showtime or .7
+        local title = title or "Notification"
+        local text = text or "No text has been put here..."
+    
+        if GuiLibrary["CurrentToast"] ~= nil then 
+            repeat task.wait() until GuiLibrary["CurrentToast"] == nil
+        end
+
+        if not GuiLibrary["AllowNotifications"] or not GuiLibrary.HUDEnabled then
+            return
+        end
+
+        local ToastNotification = Instance.new("Frame")
+        local Topbar = Instance.new("Frame")
+        local Title = Instance.new("TextLabel")
+        local Text = Instance.new("TextLabel")
+        ToastNotification.Name = "ToastNotification"
+        ToastNotification.Parent = GuiLibrary["ScreenGui"]
+        ToastNotification.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+        ToastNotification.BackgroundTransparency = 0.250
+        ToastNotification.BorderSizePixel = 0
+        ToastNotification.Position = UDim2.new(0.75, 0, 1, 0)
+        ToastNotification.Size = UDim2.new(0, 228, 0, 79)
+        Topbar.Name = "Topbar"
+        Topbar.Parent = ToastNotification
+        Topbar.BackgroundColor3 = GuiLibrary["GetColor"]()
+        Topbar.BackgroundTransparency = 0.6
+        Topbar.BorderSizePixel = 0
+        Topbar.Size = UDim2.new(0, 228, 0, 25)
+        Title.Name = "Title"
+        Title.Parent = Topbar
+        Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        Title.BackgroundTransparency = 1.000
+        Title.Position = UDim2.new(0.0260000005, 0, 0, 0)
+        Title.Size = UDim2.new(0, 196, 0, 25)
+        Title.Font = Enum.Font.GothamBold
+        Title.Text = title
+        Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Title.TextSize = 16.000
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Text.Name = "Text"
+        Text.Parent = ToastNotification
+        Text.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        Text.BackgroundTransparency = 1.000
+        Text.Position = UDim2.new(0.0260000005, 0, 0, 26)
+        Text.Size = UDim2.new(0, 200, 0, 75)
+        Text.Font = Enum.Font.GothamSemibold
+        Text.Text = text
+        Text.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Text.TextSize = 16.000
+        Text.TextWrapped = true
+        Text.TextXAlignment = Enum.TextXAlignment.Left
+        Text.TextYAlignment = Enum.TextYAlignment.Top
+        local toDis = GuiLibrary["Signals"]["UpdateColor"]:connect(function() 
+            Topbar.BackgroundColor3 = GuiLibrary["GetColor"]()
+        end)
+
+        GuiLibrary["CurrentToast"] = ToastNotification
+        local Tween = TS:Create(ToastNotification, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0), {Position = UDim2.new(0.75, 0, 0.91, 0)})
+        Tween:Play()
+        Tween.Completed:Wait()
+        task.wait(showtime)
+        local Tween2 = TS:Create(ToastNotification, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.In, 0, false, 0), {Position = UDim2.new(0.75, 0, 1, 0)})
+        Tween2:Play()
+        Tween2.Completed:Wait()
+        GuiLibrary["CurrentToast"] = nil
+        ToastNotification:Destroy()
+        toDis:Disconnect()
+    end)
+end
+
+GuiLibrary["PrepareTargetHUD"] = function() 
+    local api = {}
+
+    local TargetHUD = Instance.new("Frame")
+    local Topbar = Instance.new("Frame")
+    local Title = Instance.new("TextLabel")
+    local MainContainer = Instance.new("Frame")
+    local Headshot = Instance.new("ImageLabel")
+    local Name = Instance.new("TextLabel")
+    local Health = Instance.new("TextLabel")
+    local Distance = Instance.new("TextLabel")
+
+    TargetHUD.Name = "TargetHUD"
+    TargetHUD.Parent = GuiLibrary["ScreenGui"]
+    TargetHUD.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    TargetHUD.BackgroundTransparency = 0.250
+    TargetHUD.BorderSizePixel = 0
+    TargetHUD.Position = UDim2.new(0.795097411, 0, 0.838947356, 0)
+    TargetHUD.Size = UDim2.new(0, 204, 0, 100)
+    TargetHUD.Visible = false
+
+    Topbar.Name = "Topbar"
+    Topbar.Parent = TargetHUD
+    Topbar.BackgroundColor3 = GuiLibrary["GetColor"]()
+    Topbar.BackgroundTransparency = 0.600
+    Topbar.BorderSizePixel = 0
+    Topbar.Size = UDim2.new(0, 204, 0, 23)
+
+    Title.Name = "Title"
+    Title.Parent = Topbar
+    Title.AnchorPoint = Vector2.new(0.5, 0.5)
+    Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Title.BackgroundTransparency = 1.000
+    Title.BorderSizePixel = 0
+    Title.Position = UDim2.new(0.05, 0, 0.5, 0)
+    Title.Size = UDim2.new(0, 10, 0, 23)
+    Title.Font = Enum.Font.GothamSemibold
+    Title.Text = "Target"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 14.000
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+
+    MainContainer.Name = "MainContainer"
+    MainContainer.Parent = TargetHUD
+    MainContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    MainContainer.BackgroundTransparency = 1.000
+    MainContainer.BorderSizePixel = 0
+    MainContainer.Position = UDim2.new(0, 0, 0.230000004, 0)
+    MainContainer.Size = UDim2.new(0, 204, 0, 77)
+
+    Headshot.Name = "Headshot"
+    Headshot.Parent = MainContainer
+    Headshot.AnchorPoint = Vector2.new(0, 0.5)
+    Headshot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Headshot.BackgroundTransparency = 1.000
+    Headshot.Position = UDim2.new(0.0500000007, 0, 0.5, 0)
+    Headshot.Size = UDim2.new(0, 50, 0, 50)
+    --Headshot.Image = "rbxthumb://type=AvatarHeadShot&id=1&w=420&h=420"
+
+    Name.Name = "Name"
+    Name.Parent = MainContainer
+    Name.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Name.BackgroundTransparency = 1.000
+    Name.Position = UDim2.new(0.328431368, 0, 0.175324678, 0)
+    Name.Size = UDim2.new(0, 130, 0, 16)
+    Name.Font = Enum.Font.Gotham
+    Name.Text = ""
+    Name.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Name.TextSize = 14.000
+    Name.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    Name.TextXAlignment = Enum.TextXAlignment.Left
+
+    Health.Name = "Health"
+    Health.Parent = MainContainer
+    Health.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Health.BackgroundTransparency = 1.000
+    Health.Position = UDim2.new(0.328431368, 0, 0.396103919, 0)
+    Health.Size = UDim2.new(0, 130, 0, 16)
+    Health.Font = Enum.Font.Gotham
+    Health.Text = ""
+    Health.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Health.TextSize = 14.000
+    Health.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    Health.TextXAlignment = Enum.TextXAlignment.Left
+
+    Distance.Name = "Distance"
+    Distance.Parent = MainContainer
+    Distance.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Distance.BackgroundTransparency = 1.000
+    Distance.Position = UDim2.new(0.328431368, 0, 0.603896141, 0)
+    Distance.Size = UDim2.new(0, 130, 0, 16)
+    Distance.Font = Enum.Font.Gotham
+    Distance.Text = ""
+    Distance.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Distance.TextSize = 14.000
+    Distance.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    Distance.TextXAlignment = Enum.TextXAlignment.Left
+
+    local toDis = GuiLibrary["Signals"]["UpdateColor"]:connect(function() 
+        Topbar.BackgroundColor3 = GuiLibrary["GetColor"]()
+    end)
+
+    dragGUI(TargetHUD, Topbar)
+
+    function api.draw() 
+        TargetHUD.Visible = true
+    end
+
+    function api.undraw() 
+        TargetHUD.Visible = false
+    end
+
+    function api.update(plr, health, distance) 
+        api.target = plr
+        TargetHUD.Visible = true
+        Headshot.Image = "rbxthumb://type=AvatarHeadShot&id="..tostring(plr.UserId).."&w=420&h=420"
+        Name.Text = plr.Name
+        Health.Text = tostring(health or plr.Character:FindFirstChildOfClass("Humanoid").Health).." HP"
+        Distance.Text = tostring((math.round((tonumber(distance) or (plr.Character.PrimaryPart.Position - lplr.Character.PrimaryPart.Position).Magnitude)*100)/100)).." studs away"
+    end
+
+    function api.clear() 
+        --[[
+        api.target = nil
+        Headshot.Image = ""
+        Name.Text = ""
+        Health.Text = ""
+        Distance.Text = ""]]
+    end
+
+    function api.setPosition(pos) 
+        TargetHUD.Position = UDim2.new(pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset)
+    end
+
+    function api.getPosition() 
+        return TargetHUD.Position
+    end
+
+    return api
+end
+GuiLibrary["TargetHUDAPI"] = GuiLibrary["PrepareTargetHUD"]()
+
+GuiLibrary["PrepareHUDAPI"] = function() 
+    local api = {}
+
+    local Coords = Instance.new("TextLabel")
+    local Speed = Instance.new("TextLabel")
+    local FPS = Instance.new("TextLabel")
+    local Ping = Instance.new("TextLabel")
+    local HUDElements = Instance.new("Frame")
+    local UIListLayout = Instance.new("UIListLayout")
+
+    HUDElements.Name = "HUDElements"
+    HUDElements.Parent = GuiLibrary["ScreenGui"]
+    HUDElements.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    HUDElements.BackgroundTransparency = 1.000
+    HUDElements.Position = UDim2.new(0.874921441, 0, 0, 0)
+    HUDElements.Size = UDim2.new(0, 197, 0, 346)
+
+    UIListLayout.Parent = HUDElements
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+    function api.draw(CoordsBool, SpeedBool, FPSBool, PingBool)
+
+        if CoordsBool then
+            Coords.Name = "Coords"
+            Coords.Visible = true
+            Coords.Parent = HUDElements
+            Coords.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Coords.BackgroundTransparency = 1.000
+            Coords.Size = UDim2.new(0, 200, 0, 20)
+            Coords.Font = Enum.Font.GothamSemibold
+            Coords.RichText = true
+            Coords.Text = ""
+            Coords.TextStrokeTransparency = 0
+            Coords.TextColor3 = Color3.fromRGB(255,255,255)
+            Coords.TextSize = 20.000
+            Coords.TextXAlignment = Enum.TextXAlignment.Right
+        end
+        
+        if SpeedBool then
+            Speed.Name = "Speed"
+            Speed.Visible = true
+            Speed.Parent = HUDElements
+            Speed.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Speed.BackgroundTransparency = 1.000
+            Speed.Position = UDim2.new(0, 0, 0.195512831, 0)
+            Speed.Size = UDim2.new(0, 200, 0, 20)
+            Speed.Font = Enum.Font.GothamSemibold
+            Speed.RichText = true
+            Speed.Text = ""
+            Speed.TextStrokeTransparency = 0.2
+            Speed.TextColor3 = Color3.fromRGB(255,255,255)
+            Speed.TextSize = 20.000
+            Speed.TextXAlignment = Enum.TextXAlignment.Right
+        end
+
+        if PingBool then 
+            Ping.Name = "Ping"
+            Ping.Visible = true
+            Ping.Parent = HUDElements
+            Ping.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Ping.BackgroundTransparency = 1.000
+            Ping.Position = UDim2.new(0, 0, 0.391025662, 0)
+            Ping.Size = UDim2.new(0, 200, 0, 20)
+            Ping.Font = Enum.Font.GothamSemibold
+            Ping.RichText = true
+            Ping.Text = ""
+            Ping.TextStrokeTransparency = 0
+            Ping.TextColor3 = Color3.fromRGB(255,255,255)
+            Ping.TextSize = 20.000
+            Ping.TextXAlignment = Enum.TextXAlignment.Right
+        end
+        
+        if FPSBool then
+            FPS.Name = "FPS"
+            FPS.Visible = true
+            FPS.Parent = HUDElements
+            FPS.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            FPS.BackgroundTransparency = 1.000
+            FPS.Position = UDim2.new(0, 0, 0.391025662, 0)
+            FPS.Size = UDim2.new(0, 200, 0, 20)
+            FPS.Font = Enum.Font.GothamSemibold
+            FPS.RichText = true
+            FPS.Text = ""
+            FPS.TextStrokeTransparency = 0
+            FPS.TextColor3 = Color3.fromRGB(255,255,255)
+            FPS.TextSize = 20.000
+            FPS.TextXAlignment = Enum.TextXAlignment.Right
+        end
+
+        if FPSBool or CoordsBool or SpeedBool or PingBool then
+            local Connection = GuiLibrary["Signals"]["statsUpdate"]:connect(function(curCoords, curSpeed, curFPS, curPing) 
+                if CoordsBool then 
+                    local x = math.round(curCoords.X *10)/10
+                    x = (math.round(x) == x and tostring(x)..".0") or tostring(x)
+                    local y = math.round(curCoords.Y *10)/10
+                    y = (math.round(y) == y and tostring(y)..".0") or tostring(y)
+                    local z = math.round(curCoords.Z *10)/10
+                    z = (math.round(z) == z and tostring(z)..".0") or tostring(z)
+                    Coords.Text = ("<font color='rgb(190,190,190)'>XYZ</font> <font color='rgb(255,255,255)'>%s</font>"):format(x..", "..y..", "..z)
+                end
+
+                if SpeedBool then
+                    Speed.Text = "<font color='rgb(190,190,190)'>Speed</font> <font color='rgb(255,255,255)'>"..tostring(curSpeed).."km/h</font>"
+                end
+
+                if FPSBool then 
+                    FPS.Text = "<font color='rgb(190,190,190)'>FPS</font> <font color='rgb(255,255,255)'>"..tostring(curFPS).."</font>"
+                end
+
+                if PingBool then 
+                    Ping.Text = "<font color='rgb(190,190,190)'>Ping</font> <font color='rgb(255,255,255)'>"..tostring(math.round(curPing)).."</font>"
+                end
+            end)
+        end
+    end
+
+            
+    function api.undraw() 
+        if Coords then 
+            Coords.Visible = false
+        end
+        if Speed then 
+            Speed.Visible = false
+        end
+        if FPS then 
+            FPS.Visible = false
+        end
+        if Ping then 
+            Ping.Visible = false
+        end
+    end
+
+    api.Instance = HUDElements
+    api.UIListLayout = UIListLayout
+
+    return api
+end
+GuiLibrary["HUDAPI"] = GuiLibrary["PrepareHUDAPI"]()
+
+GuiLibrary["PrepareWatermark"] = function()
+    local api = {}
+
+    local connection, Watermark, Shadow, Line
+
+    function api.draw() 
+        Watermark = Instance.new("TextLabel")
+        Watermark.Name = "Watermark"
+        Watermark.Parent = GuiLibrary["ScreenGui"]
+        Watermark.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        Watermark.BackgroundTransparency = 1.000
+        Watermark.Position = UDim2.new(0, 110, 0, -27)
+        Watermark.Size = UDim2.new(0, 0, 0, 20)
+        Watermark.Font = Enum.Font.GothamSemibold
+        Watermark.Text = "Future v"..tostring(_FUTUREVERSION)
+        Watermark.BorderSizePixel = 0
+        Watermark.TextSize = 20.000
+        Watermark.TextStrokeTransparency = 0.4
+        Watermark.TextXAlignment = Enum.TextXAlignment.Center
+        Watermark.TextColor3 = GuiLibrary["GetColor"]()
+        Watermark.AutomaticSize = Enum.AutomaticSize.X
+
+        Shadow = Instance.new("TextLabel")
+        Shadow.Name = "Background"
+        Shadow.Parent = Watermark
+        Shadow.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        Shadow.BackgroundTransparency = GuiLibrary["WatermarkBackground"] and 0.5 or 1
+        Shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+        Shadow.AnchorPoint = Vector2.new(0.5,0.5)
+        local vec = Watermark.AbsoluteSize + Vector2.new(5, 0)
+        Shadow.Size = UDim2.new(0, vec.X, 0, vec.Y)
+        Shadow.Font = Enum.Font.GothamSemibold
+        Shadow.Text = ""
+        Shadow.BorderSizePixel = 0
+        Shadow.ZIndex = -1
+        Shadow.TextSize = 20.000
+        Shadow.TextXAlignment = Enum.TextXAlignment.Center
+
+        Line = Instance.new("TextLabel")
+        Line.Name = "Line"
+        Line.Parent = Watermark
+        Line.BackgroundColor3 = GuiLibrary["GetColor"]()
+        Line.BackgroundTransparency = GuiLibrary["WatermarkLine"] and 0 or 1
+        Line.Position = UDim2.new(0, -5, 0.5, 0)
+        Line.AnchorPoint = Vector2.new(0, 0.5)
+        Line.Size = UDim2.new(0, 3, 0, 20)
+        Line.Font = Enum.Font.GothamSemibold
+        Line.Text = ""
+        Line.BorderSizePixel = 0
+        Line.TextSize = 20.000
+        Line.TextXAlignment = Enum.TextXAlignment.Center
+
+        connection = GuiLibrary["Signals"]["UpdateColor"]:connect(function() 
+            if Watermark then
+                Watermark.TextColor3 = GuiLibrary["GetColor"]()
+            end
+            if Line then 
+                Line.BackgroundColor3 = GuiLibrary["GetColor"]()
+            end
+        end)
+    end
+
+    function api.undraw() 
+        if connection then 
+            connection:Disconnect()
+            connection = nil
+        end
+        if Watermark then 
+            Watermark:Destroy()
+            Watermark = nil
+        end
+        if Shadow then 
+            Shadow:Destroy()
+            Shadow = nil
+        end
+        if Line then 
+            Line:Destroy()
+            Line = nil
+        end
+    end
+
+    api.Instance = Watermark
+
+    return api
+end
+GuiLibrary["WatermarkAPI"] = GuiLibrary["PrepareWatermark"]()
+
+GuiLibrary["CreateArrayList"] = function() 
+    local api = {}
+    local connections = {}
+    local shadows = {}
+    local lines = {}
+    local arrayobjects = {}
+
+    local ArrayList = Instance.new("Frame")
+    local UIListLayout = Instance.new("UIListLayout")
+
+    ArrayList.Name = "ArrayList"
+    ArrayList.Parent = GuiLibrary["ScreenGui"]
+    ArrayList.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    ArrayList.BackgroundTransparency = 1.000
+    ArrayList.Position = UDim2.new(0.893, 0, 0.03, 0)
+    ArrayList.Size = UDim2.new(0, 197, 0, 346)
+    ArrayList.Visible = false
+
+    UIListLayout.Parent = ArrayList
+    UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    UIListLayout.Padding = UDim.new(0, 0)
+
+    function api.createArrayObject(name,label)
+        local Shadow = Instance.new("TextLabel")
+        local ArrayObject = Instance.new("TextLabel")
+        local Line = Instance.new("TextLabel")
+        ArrayObject.Name = name
+        ArrayObject.Parent = ArrayList
+        ArrayObject.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        ArrayObject.BackgroundTransparency = 1.000
+        ArrayObject.Position = UDim2.new(-0.0152284261, 0, 0, 0)
+        ArrayObject.Size = UDim2.new(0, 0, 0, 20)
+        ArrayObject.Font = Enum.Font.GothamSemibold
+        ArrayObject.RichText = true
+        local text = name.." "
+        if type(label)=="function" then
+            text = text.."<font color='rgb(130,130,130)'>[</font><font color='rgb(170,170,170)'>"..tostring(label()).."</font><font color='rgb(130,130,130)'>]</font> "
+        end
+        ArrayObject.Text = text
+        ArrayObject.BorderSizePixel = 0
+        ArrayObject.TextStrokeTransparency = 0.4
+        ArrayObject.TextColor3 = GuiLibrary["GetColor"]()
+        local insertme = GuiLibrary["Signals"]["UpdateColor"]:connect(function() 
+            ArrayObject.TextColor3 = GuiLibrary["GetColor"]()
+            Line.BackgroundColor3 = GuiLibrary["GetColor"]()
+        end)
+        connections[name] = insertme
+        local connectionTextbound = textbound(ArrayObject)
+        ArrayObject.TextSize = 20.000
+        ArrayObject.TextXAlignment = Enum.TextXAlignment.Center
+        arrayobjects[name] = ArrayObject
+
+        Shadow.Name = "Background"
+        Shadow.Parent = ArrayObject
+        Shadow.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        Shadow.BackgroundTransparency = 1.000
+        Shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
+        Shadow.AnchorPoint = Vector2.new(0.5,0.5)
+        local vec = ArrayObject.AbsoluteSize + Vector2.new(5, 0)
+        Shadow.Size = UDim2.new(0, vec.X, 0, vec.Y)
+        Shadow.Font = Enum.Font.GothamSemibold
+        Shadow.Text = ""
+        Shadow.BorderSizePixel = 0
+        Shadow.ZIndex = -1
+        local insertme = ArrayObject:GetPropertyChangedSignal("Size"):connect(function()
+            local vec = ArrayObject.AbsoluteSize + Vector2.new(7, 0)
+            Shadow.Size = UDim2.new(0, vec.X, 0, vec.Y)
+        end)
+        connections["Shadow"..name] = insertme
+        Shadow.TextSize = 20.000
+        Shadow.TextXAlignment = Enum.TextXAlignment.Center
+        shadows[name] = Shadow
+
+        Line.Name = "Line"
+        Line.Parent = ArrayObject
+        Line.BackgroundColor3 = GuiLibrary["GetColor"]()
+        Line.BackgroundTransparency = 0
+        Line.Position = UDim2.new(1, 1, 0.5, 0)
+        Line.AnchorPoint = Vector2.new(-1, 0.5)
+        Line.Size = UDim2.new(0, 3, 0, 20)
+        Line.Font = Enum.Font.GothamSemibold
+        Line.Text = ""
+        Line.BorderSizePixel = 0
+        Line.TextSize = 20.000
+        Line.TextXAlignment = Enum.TextXAlignment.Center
+        lines[name] = Line
+
+        return ArrayObject
+    end
+
+    function api.removeArrayObject(name)
+        if arrayobjects[name] then 
+            arrayobjects[name]:Destroy()
+            arrayobjects[name] = nil
+        end
+        if shadows[name] then 
+            shadows[name]:Destroy()
+            shadows[name] = nil
+        end
+        if lines[name] then 
+            lines[name]:Destroy()
+            lines[name] = nil
+        end
+        if connections[name] then
+            connections[name]:Disconnect()
+            connections[name] = nil
+        end
+        if connections["Shadow"..name] then
+            connections["Shadow"..name]:Disconnect()
+            connections["Shadow"..name] = nil
+        end
+    end
+
+    function api.clearArrayObjects()
+        for i,v in next, arrayobjects do 
+            api.removeArrayObject(i)
+        end
+    end
+
+    function api.findArrayObject(name)
+        if arrayobjects[name] then 
+            return true
+        end
+    end
+
+    function api.getArrayObjects() 
+        return arrayobjects
+    end
+
+    function api.renderShadows(transparency) 
+        local transparency = transparency or 0.5
+        for i,v in next, shadows do 
+            v.BackgroundTransparency = transparency
+        end
+    end
+
+    function api.renderLines(transparency) 
+        local transparency = transparency or 0
+        for i,v in next, lines do 
+            v.BackgroundTransparency = transparency
+        end
+    end
+
+    api.Instance = ArrayList
+    api.UIListLayout = UIListLayout
+
+    return api
+end
+GuiLibrary["ArrayListAPI"] = GuiLibrary.CreateArrayList()
+
 GuiLibrary["CreateNotification"] = function(content)
     if GuiLibrary["AllowNotifications"] then
         chatchildaddedconnection = chatchildaddedconnection or PLAYERS.LocalPlayer.PlayerGui.Chat.Frame.ChatChannelParentFrame["Frame_MessageLogDisplay"].Scroller.ChildAdded:Connect(function(child) 
@@ -198,25 +870,23 @@ GuiLibrary["CreateNotification"] = function(content)
     end
 end
 GuiLibrary["Debug"] = function(content) 
-    if not shared.FutureDeveloper then return end
+    if not shared.FutureDebug then return end
     print("[Future] [DEBUG] "..content)
 end
-local exclusionList = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
-local exclusionList2 = {"ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton"}
-GuiLibrary["SaveConfig"] = function(name) 
+GuiLibrary["SaveConfig"] = function(name, isAutosave) 
     local name = (name == nil or name == "") and "default" or name
     GuiLibrary["Debug"]("save Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     local config = {}
     for i,v in next, GuiLibrary["Objects"] do 
-        if v.Type == "OptionsButton" and not table.find(exclusionList2, i) and not v.DisableOnLeave then 
+        if v.Type == "OptionsButton" and not table.find(exclusionList, i) and not v.DisableOnLeave then 
             config[i] = {["Enabled"] = v.API.Enabled, ["Keybind"] = v.API.Keybind, ["Type"] = v.Type, ["Window"] = v.Window}
-        elseif v.Type == "Toggle" and not table.find(exclusionList2, v.OptionsButton) then
+        elseif v.Type == "Toggle" and --[[not table.find(exclusionList, v.OptionsButton) and]] not table.find(exclusionList, i) then
             config[i] = {["Enabled"] = v.API.Enabled, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
-        elseif v.Type == "Slider" and not table.find(exclusionList2, v.OptionsButton) then
+        elseif v.Type == "Slider" and not table.find(exclusionList, v.OptionsButton) then
             config[i] = {["Value"] = v.API.Value, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
-        elseif v.Type == "Selector" and not table.find(exclusionList2, v.OptionsButton) then
+        elseif v.Type == "Selector" and not table.find(exclusionList, v.OptionsButton) then
             config[i] = {["Value"] = v.API.Value, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
-        elseif v.Type == "Textbox" and not table.find(exclusionList2, v.OptionsButton) then
+        elseif v.Type == "Textbox" and not table.find(exclusionList, v.OptionsButton) then
             config[i] = {["Value"] = v.API.Value, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
         end
     end
@@ -227,12 +897,47 @@ GuiLibrary["SaveConfig"] = function(name)
         ["Rainbow"] = GuiLibrary.Rainbow, 
         ["RainbowSpeed"] = GuiLibrary.RainbowSpeed, 
         ["ClickSounds"] = GuiLibrary.ClickSounds, 
-        ["GuiKeybind"] = GuiLibrary.GuiKeybind
+        ["GuiKeybind"] = GuiLibrary.GuiKeybind,
+        ["ArrayList"] = GuiLibrary.ArrayList,
+        ["ListBackground"] = GuiLibrary.ListBackground,
+        ["ListLines"] = GuiLibrary.ListLines,
+        ["DrawWatermark"] = GuiLibrary.DrawWatermark,
+        ["WatermarkLine"] = GuiLibrary.WatermarkLine,
+        ["WatermarkBackground"] = GuiLibrary.WatermarkBackground,
+        ["Rendering"] = GuiLibrary.Rendering,
+        ["DrawCoords"] = GuiLibrary.DrawCoords,
+        ["DrawSpeed"] = GuiLibrary.DrawSpeed, 
+        ["DrawFPS"] = GuiLibrary.DrawFPS,
+        ["DrawPing"] = GuiLibrary.DrawPing,
+        ["TargetHUD"] = GuiLibrary.TargetHUD,
+        ["TargetHUDEnabled"] = GuiLibrary.TargetHUDEnabled,
     }
+    local path = "Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json"
     makefolder("Future/configs")
     makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
-    writefile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json", HTTPSERVICE:JSONEncode(config))
+    if isfile((path)) then 
+        delfile(path)
+    end
+
+    local pos = GuiLibrary["TargetHUDAPI"].getPosition()
+    guiconfig.TargetHUD.Position = {
+        ["X"] = {
+            ["Scale"] = pos.X.Scale,
+            ["Offset"] = pos.X.Offset,
+        },
+        ["Y"] = {
+            ["Scale"] = pos.Y.Scale,
+            ["Offset"] = pos.Y.Offset,
+        },
+    }
+
+    writefile(path, HTTPSERVICE:JSONEncode(config))
+    repeat task.wait() until isfile((path))
+    if isfile("Future/configs/GUIconfig.json") then 
+        delfile("Future/configs/GUIconfig.json")
+    end
     writefile("Future/configs/GUIconfig.json", HTTPSERVICE:JSONEncode(guiconfig))
+    repeat task.wait() until isfile("Future/configs/GUIconfig.json")
 end
 GuiLibrary["LoadOnlyGuiConfig"] = function() 
     if isfile("Future/configs/GUIconfig.json") then 
@@ -246,12 +951,58 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
             end
             for i,v in next, GuiLibrary.Objects do 
                 if i == "HUDOptionsButton" then 
-                    v.API.Toggle(config.HUDEnabled, true)
+                    v.API.Toggle(config.HUDEnabled, true, true)
                 elseif i == "ClickGuiOptionsButton" then
                     v.API.SetKeybind(config.GuiKeybind)
-                elseif i == "HUDOptionsButtonNotificationsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "NotificationsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Toggle(config.AllowNotifications, true)
-                elseif i == "ClickGuiOptionsButtonClickSoundsToggle" and v.OptionsButton == "ClickGuiOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "ArrayListToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.ArrayList then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "ListBackgroundToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.ListBackground then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "ListLinesToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.ListLines then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "WatermarkToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.DrawWatermark then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "WMLineToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.WatermarkLine then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "WMBackgroundToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.WatermarkBackground then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "CoordsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.DrawCoords then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "SpeedToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.DrawSpeed then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "FPSToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.DrawFPS then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "PingToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if config.DrawPing then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "TargetHUDToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    if (config.TargetHUDEnabled) then
+                        v.API.Toggle(true, true)
+                    end
+                elseif i == "HUDOptionsButtonRenderingSelector" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                    v.API.Select(config.Rendering)
+                elseif i == "ClickSoundsToggle" and v.OptionsButton == "ClickGuiOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Toggle(config.ClickSounds, true)
                 elseif i == "ColorsOptionsButtonHueSlider" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Set(config.ColorTheme.H / 0.002777777777777)
@@ -259,7 +1010,7 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
                     v.API.Set(config.ColorTheme.S * 100)
                 elseif i == "ColorsOptionsButtonLightnessSlider" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Set(config.ColorTheme.V * 100)
-                elseif i == "ColorsOptionsButtonRainbowToggle" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "RainbowToggle" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     if config.Rainbow then
                         v.API.Toggle(true, true)
                     else
@@ -269,8 +1020,11 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
                     v.API.Set(config.RainbowSpeed)
                 end
             end
+            if type(config.TargetHUD) == "table" then
+                GuiLibrary["TargetHUDAPI"].setPosition(config.TargetHUD.Position)
+            end
         else
-            warn("[FUTURE] Failed to load GUIconfig.json config file")
+            warn("[Future] Failed to load GUIconfig.json config file")
         end
     else
         for i,v in next, GuiLibrary.Objects do 
@@ -298,38 +1052,40 @@ GuiLibrary["LoadConfig"] = function(name)
         if success then 
             -- // turn off all modules incase they are switching configs (to prevent the old configs settings staying)
             for i,v in next, GuiLibrary.Objects do 
-                if v.Type == "Toggle" and not table.find(exclusionList2, i) then 
-                    if v.Enabled then 
+                if v.Type == "Toggle" and not table.find(exclusionList, i) then 
+                    if v.API.Enabled then 
                         v.API.Toggle(false, true)
                     end
                 end
-                if v.Type == "OptionsButton" and not table.find(exclusionList2, i) then 
-                    if v.Enabled then 
-                        v.API.Toggle(false, true)
+                if v.Type == "OptionsButton" and not table.find(exclusionList, i) then 
+                    if v.API.Enabled then 
+                        v.API.Toggle(false, true, true)
                     end
                 end
             end
             for i,v in next, config do 
                 if GuiLibrary["Objects"][i] then 
                     local API = GuiLibrary["Objects"][i]["API"]
-                    if v.Type == "Toggle" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList2, v.OptionsButton) then
-                        API.Toggle(v.Enabled, true)
-                    elseif v.Type == "Slider" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList2, v.OptionsButton) then
-                        API.Set(v.Value)
-                    elseif v.Type == "Selector" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList2, v.OptionsButton) then
-                        API.Select(v.Value)
-                    elseif v.Type == "Textbox" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList2, v.OptionsButton) then
-                        API.Set(v.Value)
-                    elseif v.Type == "OptionsButton" and GuiLibrary["Objects"][i].Window == v.Window and not table.find(exclusionList2, i) then 
-                        if v.Enabled then
+                    if v.Type == "Toggle" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, i) then
+                        if v.Enabled then 
                             API.Toggle(v.Enabled, true)
+                        end
+                    elseif v.Type == "Slider" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, v.OptionsButton) then
+                        API.Set(v.Value)
+                    elseif v.Type == "Selector" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
+                        API.Select(v.Value)
+                    elseif v.Type == "Textbox" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
+                        API.Set(v.Value)
+                    elseif v.Type == "OptionsButton" and GuiLibrary["Objects"][i].Window == v.Window and not table.find(exclusionList, i) then 
+                        if v.Enabled then
+                            API.Toggle(v.Enabled, true, true)
                         end
                         API.SetKeybind(v.Keybind)
                     end
                 end
             end
         else
-            warn("[FUTURE] Failed to load "..tostring(shared.FuturePlaceId or game.PlaceId)..".json config file\nplease report this in the discord!\n("..config..")")
+            warn("[Future] Failed to load "..tostring(shared.FuturePlaceId or game.PlaceId)..".json config file\nplease report this in the discord!\n("..config..")")
         end
     end
     --GuiLibrary["LoadOnlyGuiConfig"]()
@@ -343,6 +1099,7 @@ GuiLibrary["RemoveObject"] = function(name)
 end
 GuiLibrary["CreateWindow"] = function(argstable)
     local windowapi = {["Expanded"] = true, ["ExpandedOptionsButton"] = nil}
+    local windowargs = argstable
 
     local Window = Instance.new("Frame")
     local Window_2 = Instance.new("TextButton")
@@ -358,7 +1115,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
     Window.Position = UDim2.new(0, GuiLibrary["WindowX"], 0, 25)
     GuiLibrary["WindowX"] = GuiLibrary["WindowX"] + (176 + 15)
     Window.Size = UDim2.new(0, 176, 0, 222)
-    Window_2.Name = "Window_2"
+    Window_2.Name = "WindowTopbar"
     Window_2.Parent = Window
     Window_2.BackgroundColor3 = Color3.fromHSV(GuiLibrary["ColorTheme"].H, GuiLibrary["ColorTheme"].S, GuiLibrary["ColorTheme"].V)
     GuiLibrary["Signals"]["UpdateColor"]:connect(function(color) 
@@ -544,13 +1301,22 @@ GuiLibrary["CreateWindow"] = function(argstable)
             playclicksound()
         end
 
-        buttonapi["Toggle"] = function(boolean, stopclick) 
+        buttonapi["Toggle"] = function(boolean, stopclick, isConfigLoad) 
             local doToggle = boolean
             if boolean==nil then doToggle = not buttonapi.Enabled end
             OptionsButton.BackgroundTransparency = doToggle and 0 or 0.7
             buttonapi.Enabled = doToggle
-            local suc, err = pcall(argstable.Function, doToggle)
-            if not suc then warn("[FUTURE] "..err) if shared.FutureDeveloper then error("[FUTURE] Module error: "..err)end end
+            argstable.Function(doToggle)
+            if argstable.Name == "ClickGui" and windowargs.Name == "Other" then 
+                clickGuiToggle:Fire(boolean)
+            end 
+            hudUpdate:Fire()
+            if GuiLibrary["AllowNotifications"] then 
+                local keyword = doToggle and "Enabled" or "Disabled"
+                if not table.find(exclusionList, OptionsButton.Name) and not isConfigLoad then
+                    GuiLibrary["CreateToast"](argstable.Name.." "..keyword.."!", "The '"..argstable.Name.."' module was "..keyword..".")
+                end
+            end
             if not stopclick then
                 playclicksound()
             end
@@ -583,7 +1349,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
                     end
                     return
                 end
-                if input.KeyCode.Name == buttonapi.Keybind then 
+                if input.KeyCode.Name == buttonapi.Keybind and UIS:GetFocusedTextBox() == nil then 
                     buttonapi.Toggle(nil, true)
                 end
             end)
@@ -928,7 +1694,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
         end
 
 
-        GuiLibrary["Objects"][argstable.Name.."OptionsButton"] = {["API"] = buttonapi, ["Instance"] = OptionsButton, ["Type"] = "OptionsButton", ["Window"] = Window.Name, ["DisableOnLeave"] = argstable.DisableOnLeave}
+        GuiLibrary["Objects"][argstable.Name.."OptionsButton"] = {["Name"] = argstable.Name, ["API"] = buttonapi, ["Instance"] = OptionsButton, ["Type"] = "OptionsButton", ["Window"] = Window.Name, ["DisableOnLeave"] = argstable.DisableOnLeave, ["ArrayText"] = argstable.ArrayText}
         return buttonapi
     end
 
@@ -965,7 +1731,67 @@ GuiLibrary["UpdateWindows"] = function()
     end
 end
 
+local oldC, oldS, oldF, oldP, override = GuiLibrary.DrawCoords, GuiLibrary.DrawSpeed, GuiLibrary.DrawFPS, GuiLibrary.DrawPing, false
+hudUpdate:Connect(function()
+    if GuiLibrary.HUDEnabled then
+        GuiLibrary["ArrayListAPI"].clearArrayObjects()
+        if GuiLibrary.Rendering == "Down" then 
+            GuiLibrary["ArrayListAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+            GuiLibrary["ArrayListAPI"].Instance.Position = UDim2.new(0.893, 0, 0.65, 0)
+
+            GuiLibrary["HUDAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+            GuiLibrary["HUDAPI"].Instance.Position = UDim2.new(0.893, 0, 0.03, 0)
+        else
+            GuiLibrary["ArrayListAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+            GuiLibrary["ArrayListAPI"].Instance.Position = UDim2.new(0.893, 0, 0.03, 0)
+
+            GuiLibrary["HUDAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+            GuiLibrary["HUDAPI"].Instance.Position = UDim2.new(0.893, 0, 0.66, 0)
+        end
+
+        local arrayListTable = prepareTableForArrayList(GuiLibrary.Objects)
+        for i,v in ipairs(arrayListTable) do 
+            GuiLibrary["ArrayListAPI"].createArrayObject(v.Name, v.ArrayText)
+        end
+        if GuiLibrary["ListBackground"] then 
+            GuiLibrary["ArrayListAPI"].renderShadows()
+        else
+            GuiLibrary["ArrayListAPI"].renderShadows(1)
+        end
+        if GuiLibrary["ListLines"] then 
+            GuiLibrary["ArrayListAPI"].renderLines()
+        else
+            GuiLibrary["ArrayListAPI"].renderLines(1)
+        end
+
+        GuiLibrary["WatermarkAPI"].undraw()
+        if GuiLibrary["DrawWatermark"] then 
+            GuiLibrary["WatermarkAPI"].draw()
+        end
+        if oldC ~= GuiLibrary.DrawCoords or oldS ~= GuiLibrary.DrawSpeed or oldF ~= GuiLibrary.DrawFPS or oldP ~= GuiLibrary.DrawPing or override then
+            GuiLibrary["HUDAPI"].undraw()
+            GuiLibrary["HUDAPI"].draw(GuiLibrary.DrawCoords, GuiLibrary.DrawSpeed, GuiLibrary.DrawFPS, GuiLibrary.DrawPing)
+            override = false
+        end
+
+        if GuiLibrary.TargetHUDEnabled then 
+            GuiLibrary["TargetHUDAPI"].draw()
+        else
+            GuiLibrary["TargetHUDAPI"].undraw()
+        end
+
+        oldC, oldS, oldF, oldP = GuiLibrary.DrawCoords, GuiLibrary.DrawSpeed, GuiLibrary.DrawFPS, GuiLibrary.DrawPing
+    else
+        GuiLibrary["ArrayListAPI"].clearArrayObjects()
+        GuiLibrary["HUDAPI"].undraw()
+        GuiLibrary["WatermarkAPI"].undraw()
+        GuiLibrary["TargetHUDAPI"].undraw()
+        override = true
+    end
+end)
+
 onDestroySignal:Connect(function()
+    GuiLibrary["ArrayListAPI"].clearArrayObjects()
     GuiLibrary["ScreenGui"]:Destroy()
     for i,v in next, GuiLibrary.Connections do 
         v:Disconnect()

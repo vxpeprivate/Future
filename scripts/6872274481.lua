@@ -1,9 +1,10 @@
-repeat wait() until game:IsLoaded()
+repeat task.wait() until game:IsLoaded()
 local GuiLibrary = shared.Future.GuiLibrary
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local WORKSPACE = game:GetService("Workspace")
 local PLAYERS = game:GetService("Players")
+local HTTPSERVICE = game:GetService("HttpService")
 local lplr = PLAYERS.LocalPlayer
 local mouse = lplr:GetMouse()
 local cam = WORKSPACE.CurrentCamera
@@ -11,8 +12,11 @@ local getcustomasset = getsynasset or getcustomasset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 local bedwars = {} 
-
--- skid("vape")
+local speedsettings = {
+    factor = 5.29,  
+    velocitydivfactor = 2.75,
+    wsvalue = 22
+}
 
 local function requesturl(url, bypass) 
     if isfile(url) and shared.FutureDeveloper then 
@@ -36,6 +40,7 @@ local function getasset(path)
 		})
         print("[Future] downloading "..path.." asset.")
 		writefile(path, req.Body)
+        repeat task.wait() until isfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end
 	return getcustomasset(path) 
@@ -46,7 +51,7 @@ local RenderStepTable = {}
 local SteppedTable = {}
 local function isAlive(plr)
     local plr = plr or lplr
-    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) and (plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) or (plr.Character:FindFirstChild("HumanoidRootPart"))) then
+    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) and (plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart"))) then
         return true
     end
 end
@@ -85,6 +90,10 @@ local function UnbindFromStepped(name)
 	end
 end
 
+local function skipFrame() 
+    return game:GetService("RunService").Heartbeat:Wait()
+end
+ 
 local function ferror(...)
     local args ={...}
     local str=""
@@ -195,6 +204,8 @@ local function getItem(itemName)
 	return nil
 end
 
+-- Huge thanks to 7granddad for this code, i dont see a point in writing this all my self when I know exactly what it does, it would just be alot of labour and work lel.
+
 local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
 repeat task.wait() until Flamework.isInitialized
 local KnitClient = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"].knit.src).KnitClient
@@ -279,7 +290,6 @@ bedwars = {
     ["ResetRemote"] = getremote(debug.getconstants(debug.getproto(KnitClient.Controllers.ResetController.createBindable, 1))),
     ["Roact"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["roact"].src),
     ["RuntimeLib"] = require(game:GetService("ReplicatedStorage")["rbxts_include"].RuntimeLib),
-    ["ShieldRemote"] = getremote(debug.getconstants(debug.getprotos(getmetatable(KnitClient.Controllers.ShieldController).raiseShield)[1])),
     ["Shop"] = require(game:GetService("ReplicatedStorage").TS.games.bedwars.shop["bedwars-shop"]).BedwarsShop,
     ["ShopItems"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.games.bedwars.shop["bedwars-shop"]).BedwarsShop.getShopItem, 2),
     ["ShopRight"] = require(lplr.PlayerScripts.TS.controllers.games.bedwars.shop.ui["item-shop"]["shop-left"]["shop-left"]).BedwarsItemShopLeft,
@@ -299,6 +309,10 @@ bedwars = {
     ["AttackRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.SwordController)["attackEntity"]))
 }
 
+local function getblock(pos)
+	return bedwars["BlockController"]:getStore():getBlockAt(bedwars["BlockController"]:getBlockPosition(pos)), bedwars["BlockController"]:getBlockPosition(pos)
+end
+
 for i,v in pairs(debug.getupvalues(getmetatable(KnitClient.Controllers.SwordController)["attackEntity"])) do
     if tostring(v) == "AC" then
         bedwars["AttackHashTable"] = v
@@ -317,6 +331,39 @@ bedwars["placeBlock"] = function(newpos, customblock)
     if bedwars["BlockController"]:isAllowedPlacement(lplr, placeblocktype, Vector3.new(newpos.X/3, newpos.Y/3, newpos.Z/3)) and getItem(placeblocktype) then
         return blocktable:placeBlock(Vector3.new(newpos.X/3, newpos.Y/3, newpos.Z/3))
     end
+end
+
+local function getItem(itemName)
+	for i5, v5 in pairs(bedwars["getInventory"](lplr)["items"]) do
+		if v5["itemType"] == itemName then
+			return v5, i5
+		end
+	end
+	return nil
+end
+
+local function getHotbarSlot(itemName)
+	for i5, v5 in pairs(bedwars["ClientStoreHandler"]:getState().Inventory.observedInventory.hotbar) do
+		if v5["item"] and v5["item"]["itemType"] == itemName then
+			return i5 - 1
+		end
+	end
+	return nil
+end
+
+local function switchItem(tool, legit)
+	if legit then
+		bedwars["ClientStoreHandler"]:dispatch({
+			type = "InventorySelectHotbarSlot", 
+			slot = getHotbarSlot(tool.Name)
+		})
+	end
+	pcall(function()
+		lplr.Character.HandInvItem.Value = tool
+	end)
+	bedwars["ClientHandler"]:Get(bedwars["EquipItemRemote"]):CallServerAsync({
+		hand = tool
+	})
 end
 
 local function getBestTool(block)
@@ -339,7 +386,7 @@ end
 
 local function switchToAndUseTool(block, legit)
 	local tool = getBestTool(block.Name)
-	if tool and (entity.isAlive and lplr.Character:FindFirstChild("HandInvItem") and lplr.Character.HandInvItem.Value ~= tool["tool"]) then
+	if tool and (isAlive() and lplr.Character:FindFirstChild("HandInvItem") and lplr.Character.HandInvItem.Value ~= tool["tool"]) then
 		if legit then
 			if getHotbarSlot(tool["itemType"]) then
 				bedwars["ClientStoreHandler"]:dispatch({
@@ -358,8 +405,29 @@ local function switchToAndUseTool(block, legit)
 	end
 end
 
+local function getBeds() 
+    local t = {}
+    for i,v in next, WORKSPACE:WaitForChild("Map"):WaitForChild("Blocks"):GetChildren() do 
+        if v.Name == "bed" then
+            t[#t+1] = v
+        end
+    end
+    return t
+end
+
+local function getotherbed(pos)
+	local normalsides = {"Top", "Left", "Right", "Front", "Back"}
+	for i,v in pairs(normalsides) do
+		local bedobj = getblock(pos + (Vector3.FromNormalId(Enum.NormalId[v]) * 3))
+		if bedobj and bedobj.Name == "bed" then
+			return (pos + (Vector3.FromNormalId(Enum.NormalId[v]) * 3))
+		end
+	end
+	return nil
+end
 
 local function isBlockCovered(pos)
+    local normalsides = {"Top", "Left", "Right", "Front", "Back"}
 	local coveredsides = 0
 	for i, v in pairs(normalsides) do
 		local blockpos = (pos + (Vector3.FromNormalId(Enum.NormalId[v]) * 3))
@@ -412,6 +480,29 @@ local function getlastblock(pos, normal)
 		end
 	end
 	return lastfound
+end
+
+local function getbestside(pos)
+	local softest = 1000000
+	local softestside = Enum.NormalId.Top
+	local normalsides = {"Top", "Left", "Right", "Front", "Back"}
+	for i,v in pairs(normalsides) do
+		local sidehardness = 0
+		for i2,v2 in pairs(getallblocks(pos, v)) do	
+			sidehardness = sidehardness + (((v2 == "unbreakable" or v2 == "bed") and 99999999 or bedwars["ItemTable"][v2]["block"] and bedwars["ItemTable"][v2]["block"]["health"]) or 10)
+            if bedwars["ItemTable"][v2]["block"] and v2 ~= "unbreakable" and v2 ~= "bed" and v2 ~= "ceramic" then
+                local tool = getBestTool(v2)
+                if tool then
+                    sidehardness = sidehardness - bedwars["ItemTable"][tool["itemType"]]["breakBlock"][bedwars["ItemTable"][v2]["block"]["breakType"]]
+                end
+            end
+		end
+		if sidehardness <= softest then
+			softest = sidehardness
+			softestside = v
+		end
+	end
+	return softestside, softest
 end
 
 local healthbarblocktable = {
@@ -480,7 +571,6 @@ end
 
 local function hashvector(vec)
 	return {
-		["hash"] = bedwars["AttackHashFunction"](bedwars["AttackHashText"], bedwars["prepareHashing"](vec)), 
 		["value"] = vec
 	}
 end
@@ -514,6 +604,15 @@ local function getBestSword()
 	return data, slot
 end
 
+local function state() 
+    return bedwars["ClientStoreHandler"]:getState().Game.matchState
+end
+local states = {
+    PRE = 0,
+    RUNNING = 1,
+    POST = 2
+}
+
 local function playsound(id, volume) 
     local sound = Instance.new("Sound")
     sound.Parent = workspace
@@ -536,8 +635,8 @@ end
 
 local function getBedNear(max)
     local returning, nearestnum = nil, max
-    for i,v in next, WORKSPACE:WaitForChild("Map").Blocks:GetChildren() do 
-        if v.Name == "bed" then
+    for i,v in next, getBeds() do 
+        if isAlive() then
             local mag = (v.Position - lplr.Character.HumanoidRootPart.Position).Magnitude
             if mag < nearestnum then 
                 nearestnum = mag
@@ -548,64 +647,110 @@ local function getBedNear(max)
     return returning
 end
 
+local function colorToRichText(color) 
+    return " rgb("..tostring(color.R*255)..", "..tostring(color.G*255)..", "..tostring(color.B*255)..")"
+end
+
+local convertHealthToColor = function(health, maxHealth) 
+    local percent = (health/maxHealth) * 100
+    if percent < 70 then 
+        return Color3.fromRGB(255, 196, 0)
+    elseif percent < 45 then
+        return Color3.fromRGB(255, 71, 71)
+    end
+    return Color3.fromRGB(96, 253, 48)
+end
+
 -- // combat window
 do 
+    local stopTween = false
+    local origC0
     local aura = {["Enabled"] = false}
-    local auraswing = {["Enabled"] = false}
-    local auraswingsound = {["Enabled"] = false}    
-    local soundtick = tick()
     local auradist = {["Value"] = 14 }
+    local auraanim = {["Value"] = "Slow"}
     local hitremote = bedwars["ClientHandler"]:Get(bedwars["AttackRemote"])["instance"]
     aura = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Aura",
         ["Function"] = function(callback) 
-            spawn(function()
-                repeat wait() 
-                    for i,v in next, getAllPlrsNear() do 
-                        if isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
-                            local weapon, slot = getBestSword()
-                            local attackArgs = {
-                                ["weapon"] = weapon~=nil and weapon.tool,
-                                ["entityInstance"] = v.Character,
-                                ["validate"] = {
-                                    ["raycast"] = {
-                                        ["cameraPosition"] = hashvector(cam.CFrame.p), 
-                                        ["cursorDirection"] = hashvector(Ray.new(cam.CFrame.p, v.Character.HumanoidRootPart.Position).Unit.Direction)
-                                    },
-                                    ["targetPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
-                                    ["selfPosition"] = hashvector(lplr.Character.HumanoidRootPart.Position)
+            if callback then
+                origC0 = origC0 or cam.Viewmodel.RightHand.RightWrist.C0
+                spawn(function()
+                    repeat wait() 
+                        for i,v in next, getAllPlrsNear() do 
+                            if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
+                                local weapon, slot = getBestSword()
+                                local attackArgs = {
+                                    ["weapon"] = weapon~=nil and weapon.tool,
+                                    ["entityInstance"] = v.Character,
+                                    ["validate"] = {
+                                        ["raycast"] = {
+                                            ["cameraPosition"] = hashvector(cam.CFrame.p), 
+                                            ["cursorDirection"] = hashvector(Ray.new(cam.CFrame.p, v.Character.HumanoidRootPart.Position).Unit.Direction)
+                                        },
+                                        ["targetPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
+                                        ["selfPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
+                                    }, 
+                                    ["chargedAttack"] = {["chargeRatio"] = 1},
                                 }
-                            }
-                            hitremote:InvokeServer(attackArgs)
-                            if auraswingsound["Enabled"] then 
-                                if soundtick < tick()+0.1 then
-                                    playsound("rbxassetid://6760544639")
-                                    soundtick = tick()
+                                hitremote:InvokeServer(attackArgs)
+
+                                GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
+
+                                playanimation("rbxassetid://4947108314")
+
+                                -- animation stuff (thx 7grand once again)
+                                
+                                if not stopTween then
+                                    local Tween
+                                    if auraanim["Value"] == "Slow" then 
+                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                        TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                    elseif auraanim["Value"] == "Medium" then 
+                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                    elseif auraanim["Value"] == "Fast" then 
+                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                        TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                    elseif auraanim["Value"] == "Dev" then 
+                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                        TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, true, 0), 
+                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(-90), math.rad(0), -math.rad(90))})
+                                    end
+
+                                    spawn(function()
+                                        stopTween = true
+                                        Tween:Play()
+                                        Tween.Completed:Wait()
+                                        stopTween = false
+                                    end)
                                 end
-                            end
-                            if auraswing["Enabled"] then
-                                playanimation("rbxassetid://7234367412")
+                            else
+                                GuiLibrary["TargetHUDAPI"].clear()
                             end
                         end
-                    end
-                until aura["Enabled"] == false
-            end)
+                    until aura["Enabled"] == false
+                end)
+            else
+                cam.Viewmodel.RightHand.RightWrist.C0 = origC0
+            end
         end,
-    })
-    auraswing = aura.CreateToggle({
-        ["Name"] = "Swing",
-        ["Function"] = function() end,
-    })
-    auraswingsound = aura.CreateToggle({
-        ["Name"] = "SwingSound",
-        ["Function"] = function() end,
     })
     auradist = aura.CreateSlider({
         ["Name"] = "Range",
         ["Function"] = function() end,
         ["Min"] = 1,
-        ["Max"] = 14,
-        ["Default"] = 14
+        ["Round"] = 0,
+        ["Max"] = 20,
+        ["Default"] = 16
+    })
+    auraanim = aura.CreateSelector({
+        ["Name"] = "Anim",
+        ["Function"] = function() end,
+        ["List"] = {"Slow", "Medium", "Fast", "Dev", "None"},
+        ["Default"] = "Slow",
     })
 
 end
@@ -654,13 +799,189 @@ end
 
 -- // exploits window 
 
-
+do 
+    local shopbypass = {["Enabled"] = false}
+    local old = bedwars["ShopItems"]
+    shopbypass = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "ShopDisplayAll",
+        ["Function"] = function(callback) 
+            if callback then 
+                for i,v in next, bedwars["ShopItems"] do 
+                    v.nextTier = nil
+                    v.tiered = nil
+                end
+            else
+                bedwars["ShopItems"] = old
+            end
+        end,
+    })
+end
 
 --// misc window
 
 
 
 -- // movement window 
+GuiLibrary["RemoveObject"]("LongJumpOptionsButton")
+do 
+    local goDown = false
+    local reenableSpeed = false
+    local longjumptick = tick()
+    local speedval, timeval = {["Value"] = 0},{["Value"] = 0}
+    local LongJump = {["Enabled"] = false}; LongJump = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "LongJump",
+        ["Function"] = function(callback) 
+            if callback then
+                spawn(function() 
+                    task.wait(timeval["Value"])
+                    if LongJump.Enabled then
+                        LongJump.Toggle(false, false)
+                    end
+                end)
+                spawn(function()
+                    local i = 0
+                    repeat 
+                        local bt = WORKSPACE:GetServerTimeNow()
+                        skipFrame()
+                        local dt = WORKSPACE:GetServerTimeNow() - bt
+                        if isAlive() then
+                            if GuiLibrary["Objects"]["SpeedOptionsButton"].API.Enabled then 
+                                GuiLibrary["Objects"]["SpeedOptionsButton"].API.Toggle(false, true)
+                                reenableSpeed = reenableSpeed or true
+                            end
+
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {lplr.Character}
+                            params.FilterType = Enum.RaycastFilterType.Blacklist
+                            local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -7, 0), params)
+                            if ray and ray.Instance then 
+                                if LongJump.Enabled then
+                                    LongJump.Toggle(false, false)
+                                end
+                                break
+                            end
+
+                            lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
+                            local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
+                            velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
+                            lplr.Character:TranslateBy(velo)
+                            local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, --[[math.random(-50, 50)]] -1, velo2.Z)
+                        end
+                    until not LongJump["Enabled"]
+                end)
+            else
+                if reenableSpeed then 
+                    if not GuiLibrary["Objects"]["SpeedOptionsButton"].API.Enabled then
+                        GuiLibrary["Objects"]["SpeedOptionsButton"].API.Toggle(nil, true)
+                    end
+                    reenableSpeed = nil
+                end
+            end
+        end,
+    })
+    speedval = LongJump.CreateSlider({
+        ["Name"] = "Speed",
+        ["Default"] = 50, 
+        ["Min"] = 10,
+        ["Round"] = 0,
+        ["Max"] = 90,
+        ["Function"] = function(value) end,
+    })
+    timeval = LongJump.CreateSlider({
+        ["Name"] = "Duration",
+        ["Default"] = 9, 
+        ["Min"] = 2,
+        ["Round"] = 0,
+        ["Max"] = 9,
+        ["Function"] = function(value) end,
+    })
+end
+
+GuiLibrary["RemoveObject"]("SpeedOptionsButton")
+do
+    local speedval = {["Value"] = 40}
+    local speedmode = {["Enabled"] = false}
+    local speed = {["Enabled"] = false}
+    speed = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Speed",
+        ["ArrayText"] = function() return speedval["Value"] end,
+        ["Function"] = function(callback)
+            if callback then
+                BindToStepped("Speed", function(time, dt)
+                    if isAlive() then
+                        lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
+                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
+                        velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
+                        lplr.Character:TranslateBy(velo)
+
+                        local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
+                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
+                    end
+                end)
+            else
+                lplr.Character.Humanoid.WalkSpeed = 16
+                UnbindFromStepped("Speed")
+            end
+        end
+    })
+    speedval = speed.CreateSlider({
+        ["Name"] = "Speed",
+        ["Min"] = 1,
+        ["Max"] = 44,
+        ["Default"] = 44,
+        ["Round"] = 0,
+        ["Function"] = function() end
+    })
+end
+
+GuiLibrary["RemoveObject"]("SpiderOptionsButton")
+do 
+    local xzdiv = {["Value"] = 1}
+    local spiderval = {["Value"] = 40}
+    local spider = {["Enabled"] = false}
+    spider = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Spider",
+        ["ArrayText"] = function() return spiderval["Value"] end,
+        ["Function"] = function(callback)
+            if callback then
+                BindToStepped("Spider", function(time, dt)
+                    if isAlive() then
+                        local param = RaycastParams.new()
+                        param.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
+                        param.FilterType = Enum.RaycastFilterType.Whitelist
+                        local ray = WORKSPACE:Raycast(lplr.Character.Head.Position-Vector3.new(0, 4, 0), lplr.Character.Humanoid.MoveDirection*3, param)
+                        local ray2 = WORKSPACE:Raycast(lplr.Character.Head.Position, lplr.Character.Humanoid.MoveDirection*3, param)
+                        if (ray and ray.Instance~=nil) or (ray2 and ray2.Instance~=nil) then
+                            local velo = Vector3.new(0, spiderval["Value"] / 100, 0)
+                            lplr.Character:TranslateBy(velo)
+                            local old = lplr.Character.HumanoidRootPart.Velocity
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(old.X / xzdiv["Value"], 0, old.Z / xzdiv["Value"])
+                        end
+                    end
+                end)
+            else
+                UnbindFromStepped("Spider")
+            end
+        end
+    })
+    spiderval = spider.CreateSlider({
+        ["Name"] = "Speed",
+        ["Min"] = 1,
+        ["Max"] = 40,
+        ["Default"] = 30,
+        ["Round"] = 0,
+        ["Function"] = function() end
+    })
+    xzdiv = spider.CreateSlider({
+        ["Name"] = "XZDivision",
+        ["Min"] = 1,
+        ["Max"] = 10,
+        ["Default"] = 5,
+        ["Round"] = 0,
+        ["Function"] = function() end
+    })
+end
 
 do 
     local nofall = {["Enabled"] = false}
@@ -682,10 +1003,274 @@ end
 
 -- // render window 
 
+if isnetworkowner~=nil then do 
+    local textlabel
+    local LagBackNotify = {["Enabled"] = false}
+    local notifyfunc
+    notifyfunc = function() 
+        if not isAlive() then repeat task.wait() until isAlive() end
+        repeat task.wait() until not isnetworkowner(lplr.Character.HumanoidRootPart) or not isAlive()
+        if isAlive() and LagBackNotify["Enabled"] then 
+            textlabel = textlabel or Instance.new("TextLabel")
+            textlabel.Size = UDim2.new(1, 0, 0, 36)
+            textlabel.RichText = true
+            textlabel.Text = "Lagback detected!"
+            textlabel.BackgroundTransparency = 1
+            textlabel.TextStrokeTransparency = 0.5
+            textlabel.TextSize = 25
+            textlabel.Font = Enum.Font.GothamSemibold
+            textlabel.TextColor3 = Color3.fromRGB(255, 174, 0)
+            textlabel.Position = UDim2.new(0, 0, 0, -70)
+            textlabel.Parent = GuiLibrary["ScreenGui"]
+            local Tween = TS:Create(textlabel, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, false, 0), {Position = UDim2.new(0, 0, 0, 0)})
+            Tween:Play()
+            repeat task.wait() until isnetworkowner(lplr.Character.HumanoidRootPart) or not isAlive()
+            if textlabel then
+                local Tween = TS:Create(textlabel, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, false, 0), {Position = UDim2.new(0, 0, 0, -70)})
+                Tween:Play()
+            end
+        end
+        notifyfunc()
+    end
+    LagBackNotify = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "LagbackNotifier",
+        ["Function"] = function(callback) 
+            if callback then 
+                spawn(function() 
+                    notifyfunc()
+                end)
+            else
+                if textlabel then
+                    textlabel:Destroy()
+                    textlabel = nil
+                end
+            end
+        end,
+    })
+end end
 
+do
+    local BedESPFolder = Instance.new("Folder", GuiLibrary["ScreenGui"]) 
+    BedESPFolder.Name = "BedESP"
+    local function refresh(boolean) 
+        if boolean then
+            BedESPFolder:ClearAllChildren()
+        end
+        for i,v in next, getBeds() do 
+            for i2,v2 in next, v:GetChildren() do
+                local bhd = Instance.new("BoxHandleAdornment", BedESPFolder)
+                bhd.Size = v2.Size + Vector3.new(0.01, 0.01, 0.01)
+                bhd.CFrame = CFrame.new()
+                bhd.Color3 = v2.Color
+                bhd.Visible = true
+                bhd.Adornee = v2
+                bhd.ZIndex = 10
+                bhd.Transparency = 0
+                bhd.AlwaysOnTop = true
+            end
+        end
+    end
+    local connection, connection2
+    local BedESP = {["Enabled"] = false}
+    BedESP = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "BedESP",
+        ["Function"] = function(callback) 
+            if callback then 
+                spawn(function()
+                    local connection2 = WORKSPACE:WaitForChild("Map"):WaitForChild("Blocks").ChildRemoved:Connect(function(v) 
+                        if v.Name ~= "bed" then 
+                            return nil
+                        end
+                        refresh(true)
+                    end)
+                    for i,v in next, getBeds() do 
+                        for i2,v2 in next, v:GetChildren() do
+                            refresh(false)   
+                        end
+                    end
+                    bedwars["ClientHandler"]:WaitFor("BedwarsBedBreak"):andThen(function(p13)
+                        connection = p13:Connect(function(p14) 
+                            refresh(true)
+                        end)
+                    end)
+                end)
+            else
+                if connection then 
+                    connection:Disconnect()
+                    connection = nil
+                end
+                if connection2 then 
+                    connection2:Disconnect()
+                    connection2 = nil
+                end
+                BedESPFolder:ClearAllChildren()
+            end
+        end 
+    })
+end
+
+GuiLibrary["RemoveObject"]("ESPOptionsButton")
+do 
+    local esp = {["Enabled"] = false}
+    local espfolder = GuiLibrary["ScreenGui"]:FindFirstChild("ESP") or Instance.new("Folder", GuiLibrary["ScreenGui"])
+    espfolder.Name = "ESP"
+    local espnames= {["Enabled"] = false}
+    local espdisplaynames= {["Enabled"] = false}
+    esp = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "ESP",
+        ["Function"] = function(callback) 
+            if callback then 
+                BindToStepped("ESP", function() 
+                    for i,v in next, PLAYERS:GetPlayers() do 
+                        if v~=lplr and isAlive(v) then
+                            local plrespframe
+                            if espfolder:FindFirstChild(v.Name) then 
+                                plrespframe = espfolder:FindFirstChild(v.Name)
+                                plrespframe.line2.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                plrespframe.line1.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                plrespframe.line3.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                plrespframe.line4.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                plrespframe:FindFirstChild("name").TextColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                plrespframe:FindFirstChild("name").Visible = espnames["Enabled"]
+                            else
+                                plrespframe = Instance.new("Frame", espfolder)
+                                plrespframe.BackgroundTransparency = 1
+                                plrespframe.Visible = false
+                                plrespframe.Name = v.Name
+                                plrespframe.BorderSizePixel = 0
+                                local line1 = Instance.new("Frame", plrespframe)
+                                line1.BorderSizePixel = 0
+                                line1.Name = "line1"
+                                line1.ZIndex = 99
+                                line1.Size = UDim2.new(1, -2, 0, 1)
+                                line1.Position = UDim2.new(0, 1, 0, 1)
+                                line1.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                line1.Parent = plrespframe
+                                local line2 = Instance.new("Frame", plrespframe)
+                                line2.BorderSizePixel = 0
+                                line2.Name = "line2"
+                                line2.ZIndex = 99
+                                line2.Size = UDim2.new(1, -2, 0, 1)
+                                line2.Position = UDim2.new(0, 1, 1, -2)
+                                line2.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                line2.Parent = plrespframe
+                                local line3 = Instance.new("Frame", plrespframe)
+                                line3.BorderSizePixel = 0
+                                line3.Name = "line3"
+                                line3.ZIndex = 99
+                                line3.Size = UDim2.new(0, 1, 1, -2)
+                                line3.Position = UDim2.new(0, 1, 0, 1)
+                                line3.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                line3.Parent = plrespframe
+                                local line4 = Instance.new("Frame", plrespframe)
+                                line4.BorderSizePixel = 0
+                                line4.Name = "line4"
+                                line4.ZIndex = 99
+                                line4.Size = UDim2.new(0, 1, 1, -2)
+                                line4.Position = UDim2.new(1, -2, 0, 1)
+                                line4.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                line4.Parent = plrespframe
+                                local name = Instance.new("TextLabel", plrespframe)
+                                local text = espdisplaynames["Enabled"] and v.DisplayName or v.Name
+                                name.TextColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                name.BackgroundTransparency = 1
+                                name.Size = UDim2.new(0, 1, 1, 2)
+                                name.Position = UDim2.new(0.5, 0, -0.95, 0)
+                                name.AnchorPoint = Vector2.new(0.5, 0)
+                                name.RichText = true
+                                name.Text = "<stroke color='#000000' thickness='1'>"..text..(esphealth["Enabled"] and (" [<font color='#"..(convertHealthToColor(v.Character:GetAttribute("Health"),  v.Character:GetAttribute("MaxHealth")):ToHex()).."'>"..tostring(v.Character:GetAttribute("Health")).."</font>]") or "").."</stroke>"
+                                name.Visible = espnames["Enabled"]
+                                name.Name = "name"
+                                name.TextSize = 15
+                                name.Font = Enum.Font.Code
+                            end
+
+                            local rootPos, rootVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+							local rootSize = (v.Character.HumanoidRootPart.Size.X * 1200) * (WORKSPACE.CurrentCamera.ViewportSize.X / 1920)
+							local headPos, headVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position + Vector3.new(0, 1 + v.Character.Humanoid.HipHeight, 0))
+							local legPos, legVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position - Vector3.new(0, 1 + v.Character.Humanoid.HipHeight, 0))
+                            plrespframe.Visible = rootVis
+                            plrespframe.name.Visible = espnames["Enabled"]
+                            if rootVis then
+                                local rootSize = rootSize * 0.75
+                                plrespframe.Size = UDim2.new(0, rootSize / rootPos.Z, 0, (headPos.Y - legPos.Y))
+                                plrespframe.Position = UDim2.new(0, rootPos.X - plrespframe.Size.X.Offset / 2, 0, (rootPos.Y - plrespframe.Size.Y.Offset / 2) - 36)
+                            end
+                        end
+                    end
+                    for i,v in next, espfolder:GetChildren() do 
+                        if not PLAYERS:FindFirstChild(v.Name) or not isAlive(PLAYERS:FindFirstChild(v.Name)) then
+                            v:Destroy()
+                        end
+                    end
+                end)
+            else
+                UnbindFromStepped("ESP")
+                espfolder:ClearAllChildren()
+            end
+        end
+    })
+
+    espnames = esp.CreateToggle({
+        ["Name"] = "Names",
+        ["Function"] = function() end,
+    })
+
+    espdisplaynames = esp.CreateToggle({
+        ["Name"] = "UseDisplayNames",
+        ["Function"] = function() end,
+    })
+    esphealth = esp.CreateToggle({
+        ["Name"] = "Health",
+        ["Function"] = function() end,
+    })
+end
 
 -- world window
 
+do 
+    local ChestStealer = {["Enabled"] = false}
+	local ChestStealerDistance = {["Value"] = 1}
+	local ChestStealDelay = tick()
+	ChestStealer = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+		["Name"] = "ChestStealer",
+		["Function"] = function(callback)
+			if callback then
+				BindToRenderStep("ChestStealer", function()
+					if ChestStealDelay <= tick() and isAlive() then
+						ChestStealDelay = tick() + 0.2
+						local rootpart = lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart")
+						for i,v in pairs(game:GetService("CollectionService"):GetTagged("chest")) do
+							if rootpart and (rootpart.Position - v.Position).magnitude <= ChestStealerDistance["Value"] and v:FindFirstChild("ChestFolderValue") then
+								local chest = v.ChestFolderValue.Value
+								local chestitems = chest and chest:GetChildren() or {}
+								if #chestitems > 0 then
+									bedwars["ClientHandler"]:GetNamespace("Inventory"):Get("SetObservedChest"):SendToServer(chest)
+									for i3,v3 in pairs(chestitems) do
+										if v3:IsA("Accessory") then
+											bedwars["ClientHandler"]:GetNamespace("Inventory"):Get("ChestGetItem"):CallServer(v.ChestFolderValue.Value, v3)
+										end
+									end
+									bedwars["ClientHandler"]:GetNamespace("Inventory"):Get("SetObservedChest"):SendToServer(nil)
+								end
+							end
+						end
+					end
+				end)
+			else
+				UnbindFromRenderStep("ChestStealer")
+			end
+		end,
+		["HoverText"] = "Grabs items from near chests."
+	})
+	ChestStealerDistance = ChestStealer.CreateSlider({
+		["Name"] = "Distance",
+		["Min"] = 0,
+		["Max"] = 18,
+		["Function"] = function() end,
+		["Default"] = 18
+	})
+end
 
 do 
     local bedaura = {["Enabled"] = false}; bedaura = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
@@ -693,10 +1278,13 @@ do
         ["Function"] = function(callback) 
             if callback then 
                 spawn(function() 
-                    repeat wait() 
+                    repeat task.wait(0.2) 
                         local bed = getBedNear(20)
                         if bed then 
-                            bedwars["breakBlock"](bed.Position)
+                            local bestSide = getbestside(bed.Position)
+                            if bestSide then
+                                bedwars["breakBlock"](bed.Position, true, bestSide)
+                            end
                         end
                     until bedaura["Enabled"] == false
                 end)
@@ -712,21 +1300,28 @@ scaffold = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
         if callback then 
             BindToStepped("Scaffold", function()
                 if isAlive() and lplr.Character:FindFirstChild("Humanoid") ~= nil then
+                    local block = getwool()
                     local newpos = lplr.Character.HumanoidRootPart.Position
-                    newpos = get3Vector( Vector3.new(newpos.X, lplr.Character.HumanoidRootPart.Position.Y-3, newpos.Z) )
+                    newpos = get3Vector( Vector3.new(newpos.X, lplr.Character.HumanoidRootPart.Position.Y - 4, newpos.Z) )
                     local movedir = lplr.Character:FindFirstChild("Humanoid").MoveDirection
-                    if movedir.X==0 and movedir.Z==0 and lplr.Character:FindFirstChild("Humanoid").Jump==true then 
+                    if movedir.X==0 and movedir.Z==0 and lplr.Character:FindFirstChild("Humanoid").Jump==true  then 
                         local velo = lplr.Character.HumanoidRootPart.Velocity
-                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(0, 30, 0)
+                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(0, 25, 0)
                     end
                     if not isPointInMapOccupied(newpos) then
                         bedwars["placeBlock"](newpos)
                     end
 
                     local expandpos = lplr.Character.HumanoidRootPart.Position + ((lplr.Character.Humanoid.MoveDirection.Unit))
-                    expandpos = get3Vector( Vector3.new(expandpos.X, lplr.Character.HumanoidRootPart.Position.Y-3, expandpos.Z) )
+                    expandpos = get3Vector( Vector3.new(expandpos.X, lplr.Character.HumanoidRootPart.Position.Y-4, expandpos.Z) )
                     if not isPointInMapOccupied(expandpos) then
                         bedwars["placeBlock"](expandpos)
+                    end
+
+                    local expandpos2 = lplr.Character.HumanoidRootPart.Position + ((lplr.Character.Humanoid.MoveDirection.Unit*2))
+                    expandpos2 = get3Vector( Vector3.new(expandpos2.X, lplr.Character.HumanoidRootPart.Position.Y-4, expandpos2.Z) )
+                    if not isPointInMapOccupied(expandpos2) then
+                        bedwars["placeBlock"](expandpos2)
                     end
                 end
             end)
@@ -739,3 +1334,327 @@ scaffold = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
 
 -- other window 
 
+local function PrepareSessionInfo() 
+    local api = {}
+
+    local posTable = {
+        ["X"] = {
+            ["Scale"] = 0.790697575, 
+            ["Offset"] = 0,
+        },
+        ["Y"] = {
+            ["Scale"] = 0.539999962,
+            ["Offset"] = 0
+        }
+    }
+    if isfile("Future/configs/SessionInfo.json") then 
+        local suc, value = pcall(function() 
+            return HTTPSERVICE:JSONDecode(readfile("Future/configs/SessionInfo.json"))
+        end)
+        if suc then 
+            posTable = value
+        end
+    end
+
+    local SessionInfo = Instance.new("Frame")
+    local Topbar = Instance.new("Frame")
+    local Title = Instance.new("TextLabel")
+    local MainContainer = Instance.new("Frame")
+    local Playtime = Instance.new("TextLabel")
+    local UIGridLayout = Instance.new("UIGridLayout")
+    local Lagbacks = Instance.new("TextLabel")
+    local Kills = Instance.new("TextLabel")
+    local Wins = Instance.new("TextLabel")
+    local PlaytimeValue = Instance.new("TextLabel")
+    local LagbacksValue = Instance.new("TextLabel")
+    local KillsValue = Instance.new("TextLabel")
+    local WinsValue = Instance.new("TextLabel")
+
+    local p = posTable
+    SessionInfo.Name = "SessionInfo"
+    SessionInfo.Parent = GuiLibrary["ScreenGui"]
+    SessionInfo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    SessionInfo.BackgroundTransparency = 0.250
+    SessionInfo.BorderSizePixel = 0
+    SessionInfo.Position = UDim2.new(p.X.Scale, p.X.Offset, p.Y.Scale, p.Y.Offset)
+    SessionInfo.Size = UDim2.new(0, 204, 0, 98)
+
+    Topbar.Name = "Topbar"
+    Topbar.Parent = SessionInfo
+    Topbar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    Topbar.BackgroundTransparency = 0.600
+    Topbar.BorderSizePixel = 0
+    Topbar.Size = UDim2.new(0, 204, 0, 23)
+
+    Title.Name = "Title"
+    Title.Parent = Topbar
+    Title.AnchorPoint = Vector2.new(0.5, 0.5)
+    Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Title.BackgroundTransparency = 1.000
+    Title.BorderSizePixel = 0
+    Title.Position = UDim2.new(0.0500000007, 0, 0.5, 0)
+    Title.Size = UDim2.new(0, 10, 0, 23)
+    Title.Font = Enum.Font.GothamSemibold
+    Title.Text = "Session Info"
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 14.000
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+
+    MainContainer.Name = "MainContainer"
+    MainContainer.Parent = SessionInfo
+    MainContainer.AnchorPoint = Vector2.new(0.5, 0)
+    MainContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    MainContainer.BackgroundTransparency = 1.000
+    MainContainer.BorderSizePixel = 0
+    MainContainer.Position = UDim2.new(0.5, 0, 0.244681045, 0)
+    MainContainer.Size = UDim2.new(0, 192, 0, 72)
+
+    Playtime.Name = "Playtime"
+    Playtime.Parent = MainContainer
+    Playtime.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Playtime.BackgroundTransparency = 1.000
+    Playtime.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
+    Playtime.Size = UDim2.new(0, 10, 0, 23)
+    Playtime.Font = Enum.Font.Gotham
+    Playtime.Text = "Playtime"
+    Playtime.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Playtime.TextSize = 14.000
+    Playtime.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    Playtime.TextXAlignment = Enum.TextXAlignment.Left
+
+    UIGridLayout.Parent = MainContainer
+    UIGridLayout.FillDirection = Enum.FillDirection.Vertical
+    UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    UIGridLayout.CellPadding = UDim2.new(0, 0, 0, 0)
+    UIGridLayout.CellSize = UDim2.new(0, 98, 0, 18)
+    UIGridLayout.FillDirectionMaxCells = 5
+
+    Lagbacks.Name = "Lagbacks"
+    Lagbacks.Parent = MainContainer
+    Lagbacks.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Lagbacks.BackgroundTransparency = 1.000
+    Lagbacks.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
+    Lagbacks.Size = UDim2.new(0, 10, 0, 23)
+    Lagbacks.Font = Enum.Font.Gotham
+    Lagbacks.Text = "Lagbacks"
+    Lagbacks.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Lagbacks.TextSize = 14.000
+    Lagbacks.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    Lagbacks.TextXAlignment = Enum.TextXAlignment.Left
+
+    Kills.Name = "Kills"
+    Kills.Parent = MainContainer
+    Kills.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Kills.BackgroundTransparency = 1.000
+    Kills.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
+    Kills.Size = UDim2.new(0, 10, 0, 23)
+    Kills.Font = Enum.Font.Gotham
+    Kills.Text = "Kills"
+    Kills.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Kills.TextSize = 14.000
+    Kills.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    Kills.TextXAlignment = Enum.TextXAlignment.Left
+
+    Wins.Name = "Wins"
+    Wins.Parent = MainContainer
+    Wins.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Wins.BackgroundTransparency = 1.000
+    Wins.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
+    Wins.Size = UDim2.new(0, 10, 0, 23)
+    Wins.Font = Enum.Font.Gotham
+    Wins.Text = "Wins"
+    Wins.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Wins.TextSize = 14.000
+    Wins.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    Wins.TextXAlignment = Enum.TextXAlignment.Left
+
+    PlaytimeValue.Name = "PlaytimeValue"
+    PlaytimeValue.Parent = MainContainer
+    PlaytimeValue.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    PlaytimeValue.BackgroundTransparency = 1.000
+    PlaytimeValue.Position = UDim2.new(0.53125, 0, 0, 0)
+    PlaytimeValue.Size = UDim2.new(0, 96, 0, 18)
+    PlaytimeValue.Font = Enum.Font.Gotham
+    PlaytimeValue.Text = "0d 0h 0m 0s"
+    PlaytimeValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PlaytimeValue.TextSize = 14.000
+    PlaytimeValue.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    PlaytimeValue.TextXAlignment = Enum.TextXAlignment.Right
+
+    LagbacksValue.Name = "LagbacksValue"
+    LagbacksValue.Parent = MainContainer
+    LagbacksValue.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    LagbacksValue.BackgroundTransparency = 1.000
+    LagbacksValue.Position = UDim2.new(0.53125, 0, 0, 0)
+    LagbacksValue.Size = UDim2.new(0, 96, 0, 18)
+    LagbacksValue.Font = Enum.Font.Gotham
+    LagbacksValue.Text = shared.FutureSavedSessionInfo and shared.FutureSavedSessionInfo.lagbacks or "0"
+    LagbacksValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    LagbacksValue.TextSize = 14.000
+    LagbacksValue.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    LagbacksValue.TextXAlignment = Enum.TextXAlignment.Right
+
+    KillsValue.Name = "KillsValue"
+    KillsValue.Parent = MainContainer
+    KillsValue.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    KillsValue.BackgroundTransparency = 1.000
+    KillsValue.Position = UDim2.new(0.53125, 0, 0, 0)
+    KillsValue.Size = UDim2.new(0, 96, 0, 18)
+    KillsValue.Font = Enum.Font.Gotham
+    KillsValue.Text = shared.FutureSavedSessionInfo and shared.FutureSavedSessionInfo.kills or "0"
+    KillsValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KillsValue.TextSize = 14.000
+    KillsValue.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    KillsValue.TextXAlignment = Enum.TextXAlignment.Right
+
+    WinsValue.Name = "WinsValue"
+    WinsValue.Parent = MainContainer
+    WinsValue.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    WinsValue.BackgroundTransparency = 1.000
+    WinsValue.Position = UDim2.new(0.53125, 0, 0, 0)
+    WinsValue.Size = UDim2.new(0, 96, 0, 18)
+    WinsValue.Font = Enum.Font.Gotham
+    WinsValue.Text = shared.FutureSavedSessionInfo and shared.FutureSavedSessionInfo.wins or "0"
+    WinsValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    WinsValue.TextSize = 14.000
+    WinsValue.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
+    WinsValue.TextXAlignment = Enum.TextXAlignment.Right
+
+    local _i_i = GuiLibrary["Signals"]["UpdateColor"]:connect(function(color) 
+        Topbar.BackgroundColor3 = GuiLibrary["GetColor"]()
+    end)
+
+    table.insert(GuiLibrary["Connections"], _i_i)
+
+    GuiLibrary["DragGUI"](SessionInfo, Topbar)
+
+    function api.draw() 
+        SessionInfo.Visible = true
+    end
+
+    function api.undraw() 
+        SessionInfo.Visible = false
+    end
+
+    api.kills = KillsValue
+    api.wins = WinsValue
+    api.lagbacks = LagbacksValue
+    api.playtime = PlaytimeValue
+    api.Instance = SessionInfo
+
+    return api
+end
+
+local SessionInfoAPI = PrepareSessionInfo()
+local SessionInfoToggle = GuiLibrary["Objects"]["HUDOptionsButton"]["API"].CreateToggle({
+    ["Name"] = "SessionInfo",
+    ["Function"] = function(callback)
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+        if callback then 
+            SessionInfoAPI.draw() 
+        else
+            SessionInfoAPI.undraw() 
+        end
+    end,
+})
+
+local detectLagback
+detectLagback = function() 
+    spawn(function() 
+        if state() == 0 then repeat task.wait() until state() ~= states.PRE end
+        if not isAlive() then repeat task.wait() until isAlive() end 
+        repeat task.wait() until not isAlive() or not isnetworkowner(lplr.Character.HumanoidRootPart)
+        if isAlive() then 
+            SessionInfoAPI.lagbacks.Text = tostring(tonumber(SessionInfoAPI.lagbacks.Text) + 1)
+        end
+        repeat task.wait() until not isAlive() or isnetworkowner(lplr.Character.HumanoidRootPart)
+        detectLagback()
+    end)
+end
+detectLagback()
+
+local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
+    if State == Enum.TeleportState.Started then
+        local api = SessionInfoAPI
+		local stringtp = "shared.FutureSavedSessionInfo = {startTime ="..tostring(futureStartTime)..", kills = "..api.kills.Text..", wins = "..api.wins.Text..", lagbacks = "..api.lagbacks.Text.."}"
+		queueteleport(stringtp)
+        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+    end
+end)
+
+bedwars["ClientHandler"]:WaitFor("EntityDeathEvent"):andThen(function(p6)
+    toDisconnect = p6:Connect(function(p7)
+        if p7.fromEntity and p7.fromEntity.Name == lplr.Name then 
+            SessionInfoAPI.kills.Text = tostring(tonumber(SessionInfoAPI.kills.Text) + 1)
+        end
+    end) 
+    table.insert(GuiLibrary["Connections"], toDisconnect)
+end)
+
+spawn(function() 
+    repeat task.wait() until state() == states.POST
+    if state() == states.POST and isAlive() then 
+        SessionInfoAPI.wins.Text = tostring(tonumber(SessionInfoAPI.wins.Text) + 1)
+    end
+end)
+
+spawn(function()
+    repeat task.wait(0.5) 
+
+        local t = math.round(WORKSPACE:GetServerTimeNow()) - math.round((shared.FutureSavedSessionInfo and tonumber(shared.FutureSavedSessionInfo.startTime)) or futureStartTime)
+        local seconds = tostring(t % 60)
+        local minutes = tostring(math.floor(t / 60) % 60)
+        local hours = tostring(math.floor(t / 3600) % 24)
+        local days = tostring(math.floor(t / 86400))
+        seconds = tostring(seconds)
+        minutes = tostring(minutes)
+        hours = tostring(hours)
+        days = tostring(days)
+        
+        local formattedPlaytime = ("%sd %sh %sm %ss"):format(days, hours, minutes, seconds)
+
+        SessionInfoAPI.playtime.Text = formattedPlaytime
+    until not shared.Future
+end)
+
+GuiLibrary["Signals"]["HUDUpdate"]:connect(function() 
+    if GuiLibrary["HUDEnabled"] then 
+        if SessionInfoToggle["Enabled"] then 
+            SessionInfoAPI.draw() 
+        else
+            SessionInfoAPI.undraw()
+        end
+    else
+        SessionInfoAPI.undraw()
+    end
+end)
+
+GuiLibrary.Signals.onDestroy:connect(function()
+    local api = SessionInfoAPI
+    shared.FutureSavedSessionInfo = {startTime = tostring(futureStartTime), kills = api.kills.Text, wins = api.wins.Text, lagbacks = api.lagbacks.Text}
+    local si = SessionInfoAPI.Instance.Position
+
+    local posTable = {
+        ["X"] = {
+            ["Scale"] = si.X.Scale, 
+            ["Offset"] = si.X.Offset,
+        },
+        ["Y"] = {
+            ["Scale"] = si.Y.Scale,
+            ["Offset"] = si.Y.Offset
+        }
+    }
+
+    local suc, value = pcall(function()
+        return HTTPSERVICE:JSONEncode(posTable)
+    end)
+    if suc then 
+        print("check4")
+        if isfile("Future/configs/SessionInfo.json") then 
+            delfile("Future/configs/SessionInfo.json")
+        end
+        writefile("Future/configs/SessionInfo.json", value)
+    else
+        error(value)
+    end
+end)

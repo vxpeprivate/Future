@@ -2,3 +2,5 @@
 configs/142823291/default.json
 *.json
 autowintimes.txt
+*.fp
+*.txt

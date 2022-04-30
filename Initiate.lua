@@ -1,8 +1,9 @@
 -- // credits to anyones code i used/looked at.
-getgenv()._FUTUREVERSION = "1.02"
+getgenv()._FUTUREVERSION = "1.1.0 | test build"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
 if shared.Future~=nil then print("[Future] Detected future already executed, not executing!") return end
+getgenv().futureStartTime = game:GetService("Workspace"):GetServerTimeNow()
 local startTime = game:GetService("Workspace"):GetServerTimeNow()
 shared.Future = {}
 local UIS = game:GetService("UserInputService")
@@ -27,6 +28,55 @@ local function requesturl(url, bypass)
     if req.StatusCode ~= 200 then return req.StatusCode end
     return req.Body
 end 
+
+local HeartbeatTable = {}
+local RenderStepTable = {}
+local SteppedTable = {}
+local function isAlive(plr)
+    local plr = plr or lplr
+    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) and (plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart"))) then
+        return true
+    end
+end
+
+local function BindToHeartbeat(name, func)
+    if HeartbeatTable[name] == nil then
+        HeartbeatTable[name] = game:GetService("RunService").Heartbeat:connect(func)
+    end
+end
+local function UnbindFromHeartbeat(name)
+    if HeartbeatTable[name] then
+        HeartbeatTable[name]:Disconnect()
+        HeartbeatTable[name] = nil
+    end
+end
+local function BindToRenderStep(name, func)
+	if RenderStepTable[name] == nil then
+		RenderStepTable[name] = game:GetService("RunService").RenderStepped:connect(func)
+	end
+end
+local function UnbindFromRenderStep(name)
+	if RenderStepTable[name] then
+		RenderStepTable[name]:Disconnect()
+		RenderStepTable[name] = nil
+	end
+end
+local function BindToStepped(name, func)
+	if SteppedTable[name] == nil then
+		SteppedTable[name] = game:GetService("RunService").Stepped:connect(func)
+	end
+end
+local function UnbindFromStepped(name)
+	if SteppedTable[name] then
+		SteppedTable[name]:Disconnect()
+		SteppedTable[name] = nil
+	end
+end
+
+local function skipFrame() 
+    return game:GetService("RunService").Heartbeat:Wait()
+end
+ 
 
 local GuiLibrary = loadstring(requesturl("Future/GuiLibrary.lua"))()
 shared.Future.GuiLibrary = GuiLibrary
@@ -70,6 +120,7 @@ local function getasset(path)
 		})
         print("[Future] downloading "..path.." asset.")
 		writefile(path, req.Body)
+        repeat task.wait() until isfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end
 	return getcustomasset(path) 
@@ -86,6 +137,19 @@ local function getscript(id)
     end
 end
 
+local function getplusscript(id) -- future plus moment
+    local id = id or shared.FuturePlaceId or game.PlaceId
+    id = tostring(id)
+    local req = requesturl("Future/plus/"..id..".fp")
+    if type(req) == "string" then
+        return loadstring(req)()
+    else
+        --fwarn("[Future] invalid script (error "..tostring(req)..")") -- game is not supported
+    end
+end
+
+GuiLibrary["LoadOnlyGuiConfig"]()
+
 local CombatWindow = GuiLibrary.CreateWindow({["Name"] = "Combat"})
 local ExploitsWindow = GuiLibrary.CreateWindow({["Name"] = "Exploits"})
 local MiscellaneousWindow = GuiLibrary.CreateWindow({["Name"] = "Miscellaneous"})
@@ -101,13 +165,15 @@ local configButton; configButton = OtherWindow.CreateOptionsButton({
     ["NoKeybind"] = true,
 })
 local configBox; configBox = configButton.CreateTextbox({
-    ["Name"] = "Config name",
+    ["Name"] = "ConfigName",
     ["Function"] = function(value)
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
-        if isfile("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/"..value..".json") then
-            GuiLibrary["LoadConfig"](value)
-        end
-        GuiLibrary["CurrentConfig"] = value
+        spawn(function()
+            GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+            if isfile("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/"..value..".json") then
+                GuiLibrary["LoadConfig"](value)
+            end
+            GuiLibrary["CurrentConfig"] = value
+        end)
     end,
     ["Default"] = "default"
 })
@@ -142,6 +208,104 @@ local NotificationsToggle = HUDButton.CreateToggle({
         GuiLibrary["AllowNotifications"] = callback
     end,
     ["Default"] = true
+})
+local TargetHUDToggle = HUDButton.CreateToggle({
+    ["Name"] = "TargetHUD",
+    ["Function"] = function(callback) 
+        GuiLibrary["TargetHUDEnabled"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local ArrayListToggle = HUDButton.CreateToggle({
+    ["Name"] = "ArrayList",
+    ["Function"] = function(callback) 
+        GuiLibrary["ScreenGui"].ArrayList.Visible = callback
+        GuiLibrary["ArrayList"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local ArrayList2Toggle = HUDButton.CreateToggle({
+    ["Name"] = "ListBackground",
+    ["Function"] = function(callback) 
+        GuiLibrary["ListBackground"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local ArrayList3Toggle = HUDButton.CreateToggle({
+    ["Name"] = "ListLines",
+    ["Function"] = function(callback) 
+        GuiLibrary["ListLines"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local WatermarkToggle = HUDButton.CreateToggle({
+    ["Name"] = "Watermark",
+    ["Function"] = function(callback) 
+        GuiLibrary["DrawWatermark"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local WatermarkToggle2 = HUDButton.CreateToggle({
+    ["Name"] = "WMBackground",
+    ["Function"] = function(callback) 
+        GuiLibrary["WatermarkBackground"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local WatermarkToggle3 = HUDButton.CreateToggle({
+    ["Name"] = "WMLine",
+    ["Function"] = function(callback) 
+        GuiLibrary["WatermarkLine"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local RenderingToggle = HUDButton.CreateSelector({
+    ["Name"] = "Rendering",
+    ["Function"] = function(value) 
+        GuiLibrary["Rendering"] = value
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = "Up",
+    ["List"] = {"Up", "Down"}
+})
+local CoordsToggle = HUDButton.CreateToggle({
+    ["Name"] = "Coords",
+    ["Function"] = function(callback) 
+        GuiLibrary["DrawCoords"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local SpeedToggle = HUDButton.CreateToggle({
+    ["Name"] = "Speed",
+    ["Function"] = function(callback) 
+        GuiLibrary["DrawSpeed"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local FPSToggle = HUDButton.CreateToggle({
+    ["Name"] = "FPS",
+    ["Function"] = function(callback) 
+        GuiLibrary["DrawFPS"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
+})
+local PingToggle = HUDButton.CreateToggle({
+    ["Name"] = "Ping",
+    ["Function"] = function(callback) 
+        GuiLibrary["DrawPing"] = callback
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    ["Default"] = false
 })
 
 local colorButton; colorButton = OtherWindow.CreateOptionsButton({
@@ -238,12 +402,47 @@ local destructButton; destructButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "Destruct",
     ["Function"] = function(callback)
         if callback then
-            GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
-            GuiLibrary.Signals.onDestroy:Fire()
+            spawn(function()
+                GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+                GuiLibrary.Signals.onDestroy:Fire()
+            end)
         end
     end
 })
 GuiLibrary["LoadOnlyGuiConfig"]()
+
+-- Calculate Speed, FPS and Coords
+local Coords, Speed, FPS = Vector3.new(), 0, 0
+local Tick = tick()
+local CurrentCharacterPositionConnection
+spawn(function()
+    local lastPos = Vector3.new()
+    repeat task.wait(1)
+
+        if isAlive() then 
+            lastPos = lastPos or lplr.Character.PrimaryPart.Position
+            local distance = (lastPos - lplr.Character.PrimaryPart.Position).Magnitude
+            local meters = distance / (25 / 7) --//there is 25 / 7 studs in a meter
+            Speed = meters * 3.6
+            lastPos = lplr.Character.PrimaryPart.Position
+        else
+            Speed = 0
+        end
+
+    until shared.Future == nil
+end)
+
+BindToRenderStep("stats", function(dt) 
+    if Tick <= tick() then
+        FPS = math.round(1/dt)
+        if isAlive() then 
+            Coords = lplr.Character.PrimaryPart.Position
+        end
+        local ping = tonumber(game:GetService("Stats"):FindFirstChild("PerformanceStats").Ping:GetValue())
+        GuiLibrary["Signals"]["statsUpdate"]:Fire(Coords, math.round(Speed*100)/100, FPS, ping)
+        Tick = tick() + 0.2
+    end
+end)
 
 local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
     if State == Enum.TeleportState.Started then
@@ -271,6 +470,7 @@ end
 
 local success, _error = pcall(getscript, "Universal")
 local success2, _error2 = pcall(getscript)
+getplusscript()
 if success then 
     print("[Future] Successfully retrieved Universal script!")
 else
@@ -281,6 +481,12 @@ if success2 then
 else
     fwarn("Unsuccessful attempt at retrieving Game script!\n report this in the discord.\n (".._error2..")")
 end
+--[[
+if success3 then 
+    print("[Future] Successfully retrieved FuturePlus Game script!")
+else
+    fwarn("Unsuccessful attempt at retrieving FuturePlus Game script!\n report this in the discord.\n (".._error3..")")
+end]]
 GuiLibrary["LoadConfig"](GuiLibrary["CurrentConfig"])
 
 
@@ -291,8 +497,9 @@ local leaving = PLAYERS.PlayerRemoving:connect(function(player)
 end)
 
 GuiLibrary.Signals.onDestroy:connect(function()
+    UnbindFromRenderStep("stats")
     for i,v in next, GuiLibrary.Objects do 
-        if v.Type == "OptionsButton" and i ~= "DestructOptionsButton" then 
+        if v.Type == "OptionsButton" and i ~= "DestructOptionsButton" and v.API.Enabled then 
             v.API.Toggle(false, true)
         end
     end
@@ -332,9 +539,9 @@ spawn(function()
 end)
 
 spawn(function()
-    repeat wait(3)
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
-        wait(7)
+    repeat
+        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"], true)
+        task.wait(2)
     until not shared.Future
 end)
 fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.\nPlease join the discord for changelogs and to report bugs. \ndiscord.gg/bdjT5UmmDJ\nEnjoy using Future v".._FUTUREVERSION.."")

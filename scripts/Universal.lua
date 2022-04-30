@@ -11,6 +11,9 @@ local cam = WORKSPACE.CurrentCamera
 local getcustomasset = getsynasset or getcustomasset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
+local getgenv = getgenv or function() 
+    return _G
+end
 
 local function requesturl(url, bypass) 
     if isfile(url) and shared.FutureDeveloper then 
@@ -34,6 +37,7 @@ local function getasset(path)
 		})
         print("[Future] downloading "..path.." asset.")
 		writefile(path, req.Body)
+        repeat task.wait() until isfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end
 	return getcustomasset(path) 
@@ -44,9 +48,13 @@ local RenderStepTable = {}
 local SteppedTable = {}
 local function isAlive(plr)
     local plr = plr or lplr
-    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart"))) then
+    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart")) and (plr.Character:FindFirstChild("Head"))) then
         return true
     end
+end
+
+local function skipFrame() 
+    return game:GetService("RunService").Heartbeat:Wait()
 end
 
 local function BindToHeartbeat(name, func)
@@ -113,6 +121,23 @@ local function fprint(...)
     GuiLibrary["CreateNotification"]("<font color='rgb(200, 200, 200)'>"..str.."</font>")
 end
 
+setreadonly(getgenv().table, false)
+getgenv().table.combine = function(...) 
+    local args = {...}
+    local MasterTable = {}
+    for i,v in next, args do 
+        if type(v) == "table" then 
+            for i2,v2 in next, v do 
+                table.insert(MasterTable, v2)
+            end
+        else
+            table.insert(MasterTable, v)
+        end
+    end
+
+    return MasterTable
+end
+
 local function getCharacters() 
     local t = {}
     for i,v in next, PLAYERS:GetPlayers() do 
@@ -162,6 +187,20 @@ local function canBeTargeted(plr, doTeamCheck)
         return true
     end
     return false
+end
+
+local function colorToRichText(color) 
+    return " rgb("..tostring(color.R*255)..", "..tostring(color.G*255)..", "..tostring(color.B*255)..")"
+end
+
+local convertHealthToColor = function(health, maxHealth) 
+    local percent = (health/maxHealth) * 100
+    if percent < 70 then 
+        return Color3.fromRGB(255, 196, 0)
+    elseif percent < 45 then
+        return Color3.fromRGB(255, 71, 71)
+    end
+    return Color3.fromRGB(96, 253, 48)
 end
 
 -- // CombatWindow
@@ -244,6 +283,7 @@ do
                     v.CanCollide = true
                 end
                 cachedparts = {}
+                UnbindFromStepped("Phase")
             end
         end,
     })
@@ -270,6 +310,7 @@ do
                     BindToHeartbeat("SendFakeLag", function() 
                         if isAlive() then
                             sethiddenproperty(lplr.Character.HumanoidRootPart, "NetworkIsSleeping", true)
+                            game:GetService("NetworkClient"):SetOutgoingKBPSLimit(1)
                         end
                     end)
                 end
@@ -277,6 +318,7 @@ do
                     settings().Network.IncomingReplicationLag = 99999999999999999
                 end
             else
+                game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge)
                 settings().Network.IncomingReplicationLag = 0
                 UnbindFromHeartbeat("SendFakeLag")
             end
@@ -484,11 +526,11 @@ do
                 local controls = require(lplr.PlayerScripts.PlayerModule).controls
                 oldmovefunc = controls.moveFunction
                 controls.moveFunction = function(self, movedir, ...)
-                    if isAlive() then
+                    if isAlive() and lplr.Character.Humanoid:GetState() ~= Enum.HumanoidStateType.Jumping then
                         local param = RaycastParams.new()
                         param.FilterDescendantsInstances = getCharacters()
                         param.FilterType = Enum.RaycastFilterType.Blacklist
-                        local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position + (movedir*2), Vector3.new(0, -9999999999, 0), param)
+                        local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position + (movedir*1.25), Vector3.new(0, -9999999999, 0), param)
                         if ray == nil then 
                             movedir = Vector3.new(0,0,0)
                         end
@@ -505,18 +547,59 @@ do
     })
 end
 
+do 
+    local spiderval = {["Value"] = 40}
+    local spider = {["Enabled"] = false}
+    spider = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Spider",
+        ["ArrayText"] = function() return spiderval["Value"] end,
+        ["Function"] = function(callback)
+            if callback then
+                BindToStepped("Spider", function(time, dt)
+                    if isAlive() then
+                        local param = RaycastParams.new()
+                        param.FilterDescendantsInstances = table.combine(getCharacters(), cam:GetDescendants())
+                        param.FilterType = Enum.RaycastFilterType.Blacklist
+                        local ray = WORKSPACE:Raycast(lplr.Character.Head.Position-Vector3.new(0, 4, 0), lplr.Character.Humanoid.MoveDirection*3, param)
+                        local ray2 = WORKSPACE:Raycast(lplr.Character.Head.Position, lplr.Character.Humanoid.MoveDirection*3, param)
+                        if (ray and ray.Instance~=nil) or (ray2 and ray2.Instance~=nil) then
+                            local velo = Vector3.new(0, spiderval["Value"] / 100, 0)
+                            lplr.Character:TranslateBy(velo)
+                            local old = lplr.Character.HumanoidRootPart.Velocity
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(old.X, 0, old.Z)
+                        end
+                    end
+                end)
+            else
+                UnbindFromStepped("Spider")
+            end
+        end
+    })
+    spiderval = spider.CreateSlider({
+        ["Name"] = "Speed",
+        ["Min"] = 1,
+        ["Max"] = 40,
+        ["Default"] = 30,
+        ["Round"] = 0,
+        ["Function"] = function() end
+    })
+end
+
 do
     local speedval = {["Value"] = 40}
     local speedmode = {["Enabled"] = false}
     local speed = {["Enabled"] = false}
+    local oldWS = 16
     speed = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Speed",
+        ["ArrayText"] = function() return speedval["Value"] end,
         ["Function"] = function(callback)
             if callback then
-                BindToStepped("Speed", function()
+                BindToStepped("Speed", function(time, dt)
                     if isAlive() then
-                        local velo = lplr.Character.Humanoid.MoveDirection * speedval["Value"]
-                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo.x, lplr.Character.HumanoidRootPart.Velocity.y, velo.z)
+                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and 5 or 0)) * dt
+                        velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
+                        lplr.Character:TranslateBy(velo)
                     end
                 end)
             else
@@ -617,7 +700,6 @@ do
 end
 
 do
-    local oldJumpPower
     local HighJumpHeight = {["Value"] = 0}
     local HighJumpMode = {["Value"] = "Normal"}
     local highjumpconnection
@@ -723,6 +805,40 @@ do
 end
 
 -- // renderwindow
+
+do 
+    local connection
+    local old
+    local FOVSlider = {["Value"] = 120}
+    local FOV = {["Enabled"] = false}; FOV = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "FOV", 
+        ["Function"] = function(callback) 
+            if callback then
+                old = old or cam.FieldOfView
+                cam.FieldOfView = FOVSlider["Value"]
+                connection = cam:GetPropertyChangedSignal("FieldOfView"):Connect(function() 
+                    cam.FieldOfView = FOVSlider["Value"]
+                end)
+            else
+                if connection then 
+                    connection:Disconnect() 
+                end
+                cam.FieldOfView = old
+            end
+        end
+    })
+    FOVSlider = FOV.CreateSlider({
+        ["Name"] = "FOV",
+        ["Function"] = function(value) 
+            if FOV["Enabled"] then
+                cam.FieldOfView = value
+            end
+        end,
+        ["Min"] = 40,
+        ["Max"] = 120,
+        ["Default"] = 120
+    })
+end
 
 do 
     local breadcrumbs = {["Enabled"] = false}
@@ -986,6 +1102,7 @@ end
 do 
     local esp = {["Enabled"] = false}
     local espfolder = Instance.new("Folder", GuiLibrary["ScreenGui"])
+    espfolder.Name = "ESP"
     local espnames= {["Enabled"] = false}
     local espdisplaynames= {["Enabled"] = false}
     esp = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
@@ -1002,8 +1119,8 @@ do
                                 plrespframe.line1.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
                                 plrespframe.line3.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
                                 plrespframe.line4.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
-                                plrespframe.name.TextColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
-                                plrespframe.name.Visible = espnames["Enabled"]
+                                plrespframe:FindFirstChild("name").TextColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
+                                plrespframe:FindFirstChild("name").Visible = espnames["Enabled"]
                             else
                                 plrespframe = Instance.new("Frame", espfolder)
                                 plrespframe.BackgroundTransparency = 1
@@ -1050,10 +1167,10 @@ do
                                 name.Position = UDim2.new(0.5, 0, -0.95, 0)
                                 name.AnchorPoint = Vector2.new(0.5, 0)
                                 name.RichText = true
-                                name.Text = "<stroke color='#000000' thickness='1'>"..text.."</stroke>"
+                                name.Text = "<stroke color='#000000' thickness='1'>"..text..(esphealth["Enabled"] and (" [<font color='#"..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex()).."'>"..tostring(v.Character.Humanoid.Health).."</font>]") or "").."</stroke>"
                                 name.Visible = espnames["Enabled"]
                                 name.Name = "name"
-                                name.TextSize = 13
+                                name.TextSize = 15
                                 name.Font = Enum.Font.Code
                             end
 
@@ -1090,6 +1207,10 @@ do
 
     espdisplaynames = esp.CreateToggle({
         ["Name"] = "UseDisplayNames",
+        ["Function"] = function() end,
+    })
+    esphealth = esp.CreateToggle({
+        ["Name"] = "Health",
         ["Function"] = function() end,
     })
 end
@@ -1214,5 +1335,55 @@ do
         end,
         ["Min"] = 0,
         ["Max"] = 255,
+    })
+end
+
+do 
+    -- most stupid and useless module
+    local oldg, oldws
+    local timerspeed = {["Value"] = 10}
+    local Timer = {["Enabled"] = false}
+    Timer = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Timer",
+        ["ArrayText"] = function() return timerspeed["Value"] end,
+        ["Function"] = function(callback) 
+            if callback then 
+                oldg = oldg or WORKSPACE.Gravity
+                WORKSPACE.Gravity = WORKSPACE.Gravity * (timerspeed["Value"] / 10)
+                if GuiLibrary["Objects"]["SpeedOptionsButton"]["API"]["Enabled"] then 
+                    GuiLibrary["Objects"]["SpeedOptionsButton"]["API"]["Toggle"](nil, true)
+                end
+                spawn(function()
+                    if not isAlive() then repeat task.wait() until isAlive() end
+                    oldws = oldws or lplr.Character.Humanoid.WalkSpeed
+                    lplr.Character.Humanoid.WalkSpeed = lplr.Character.Humanoid.WalkSpeed * (timerspeed["Value"] / 10)
+
+                    repeat skipFrame()
+                        local tracks = lplr.Character.Humanoid:GetPlayingAnimationTracks()
+                        for i,v in next, tracks do 
+                            v:AdjustSpeed((timerspeed["Value"] / 10))
+                        end
+                    until not Timer["Enabled"]
+                end)
+            else
+                WORKSPACE.Gravity = oldg
+                if isAlive() then 
+                    lplr.Character.Humanoid.WalkSpeed = oldws
+                end
+            end
+        end
+    })
+    timerspeed = Timer.CreateSlider({
+        ["Name"] = "Speed",
+        ["Default"] = 10,
+        ["Min"] = 1,
+        ["Max"] = 7500,
+        ["OnInputEnded"] = true,
+        ["Function"] = function(value) 
+            if Timer.Enabled then 
+                Timer.Toggle(nil, true, true) 
+                Timer.Toggle(nil, true, true)
+            end
+        end
     })
 end
