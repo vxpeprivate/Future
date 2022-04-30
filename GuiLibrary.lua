@@ -96,7 +96,7 @@ local function requesturl(url, bypass)
 end 
 
 local function getasset(path)
-	if not isfile(path) then
+	--[[if not isfile(path) then
 		local req = requestfunc({
 			Url = "https://raw.githubusercontent.com/joeengo/Future/main/"..path:gsub("Future/assets", "assets"),
 			Method = "GET"
@@ -105,7 +105,7 @@ local function getasset(path)
 		writefile(path, req.Body)
         repeat task.wait() until isfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
-	end
+	end]]
 	return getcustomasset(path) 
 end
 
