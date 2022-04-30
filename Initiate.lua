@@ -11,7 +11,6 @@ local TS = game:GetService("TweenService")
 local HTTPSERVICE = game:GetService("HttpService")
 local PLAYERS = game:GetService("Players")
 local lplr = PLAYERS.LocalPlayer
-local getcustomasset = getsynasset or getcustomasset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 
@@ -28,6 +27,12 @@ local function requesturl(url, bypass)
     if req.StatusCode ~= 200 then return req.StatusCode end
     return req.Body
 end 
+
+local GuiLibrary = loadstring(requesturl("Future/GuiLibrary.lua"))()
+shared.Future.GuiLibrary = GuiLibrary
+local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]
+GuiLibrary["LoadOnlyGuiConfig"]()
+
 
 local HeartbeatTable = {}
 local RenderStepTable = {}
@@ -76,11 +81,6 @@ end
 local function skipFrame() 
     return game:GetService("RunService").Heartbeat:Wait()
 end
- 
-
-local GuiLibrary = loadstring(requesturl("Future/GuiLibrary.lua"))()
-shared.Future.GuiLibrary = GuiLibrary
-GuiLibrary["LoadOnlyGuiConfig"]()
 
 local function ferror(...)
     local args ={...}

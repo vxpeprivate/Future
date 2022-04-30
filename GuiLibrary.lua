@@ -6,10 +6,19 @@ local STARTERGUI = game:GetService("StarterGui")
 local COREGUI = game:GetService("CoreGui")
 local PLAYERS = game:GetService("Players")
 local lplr = PLAYERS.LocalPlayer
-local getcustomasset = getsynasset or getcustomasset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local chatchildaddedconnection
 local GuiLibrary = {
+    ["getRobloxAsset"] = function(path) 
+        local name = path:split("/")[#path:split("/")]
+        if name == "arrow.png" then
+            return "rbxassetid://8904422926" 
+        elseif name == "gear.png" then
+            return "rbxassetid://8905804106"
+        elseif name == "click.mp3" then 
+            return "rbxassetid://535716488"
+        end
+    end,
     ["ColorTheme"] = {["H"] = 1, ["S"] = 1, ["V"] = 0.7}, 
     ["Objects"] = {}, 
     ["Signals"] = {}, 
@@ -48,6 +57,7 @@ local GuiLibrary = {
         },
     }
 }
+local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]
 local exclusionList = {
     "ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", 
     "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton",
@@ -1153,7 +1163,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
     Expand.Image = getasset("Future/assets/arrow.png") --"rbxassetid://8904422926"
     Expand.ImageColor3 = Color3.fromRGB(0, 0, 0)
     Expand.ScaleType = Enum.ScaleType.Fit
-    Expand.Rotation = 180
+    Expand.Rotation = 0
     ButtonContainer.Name = "ButtonContainer"
     ButtonContainer.Parent = Window
     ButtonContainer.AnchorPoint = Vector2.new(0.5, 0.5)
