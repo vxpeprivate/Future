@@ -13,9 +13,9 @@ local requestfunc = syn and syn.request or http and http.request or http_request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 local bedwars = {} 
 local speedsettings = {
-    factor = 5.29,  
-    velocitydivfactor = 2.75,
-    wsvalue = 22
+    factor = 5.37,  
+    velocitydivfactor = 2.9,
+    wsvalue = 22.5
 }
 
 local function requesturl(url, bypass) 
@@ -184,6 +184,13 @@ local function canBeTargeted(plr, doTeamCheck)
         return true
     end
     return false
+end
+
+local function getMoveDirection(plr) 
+    if not isAlive(plr) then return Vector3.new() end
+    local velocity = part:GetVelocityAtPosition(part.Position)
+    local velocityDirection = velocity.Magnitude > 0 and velocity.Unit or Vector3.new()
+    return velocityDirection
 end
 
 local function getwool()
@@ -636,7 +643,7 @@ end
 local function getBedNear(max)
     local returning, nearestnum = nil, max
     for i,v in next, getBeds() do 
-        if isAlive() then
+        if isAlive() and v.Covers.BrickColor ~= lplr.TeamColor then
             local mag = (v.Position - lplr.Character.HumanoidRootPart.Position).Magnitude
             if mag < nearestnum then 
                 nearestnum = mag
@@ -816,6 +823,8 @@ do
         end,
     })
 end
+
+
 
 --// misc window
 
@@ -1649,7 +1658,6 @@ GuiLibrary.Signals.onDestroy:connect(function()
         return HTTPSERVICE:JSONEncode(posTable)
     end)
     if suc then 
-        print("check4")
         if isfile("Future/configs/SessionInfo.json") then 
             delfile("Future/configs/SessionInfo.json")
         end

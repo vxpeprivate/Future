@@ -1,11 +1,14 @@
 -- // New gui library for future roblox.
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
+local WORKSPACE = game:GetService("Workspace")
 local HTTPSERVICE = game:GetService("HttpService")
 local STARTERGUI = game:GetService("StarterGui")
 local COREGUI = game:GetService("CoreGui")
 local PLAYERS = game:GetService("Players")
 local lplr = PLAYERS.LocalPlayer
+local mouse = lplr:GetMouse()
+local cam = WORKSPACE.CurrentCamera
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local chatchildaddedconnection
 local GuiLibrary = {
@@ -55,7 +58,31 @@ local GuiLibrary = {
                 ["Offset"] = 0,
             },
         },
-    }
+    },
+    ["ArrayListInfo"] = {
+        ["Position"] = {
+            ["X"] = {
+                ["Scale"] = 0,
+                ["Offset"] = 0,
+            },
+            ["Y"] = {
+                ["Scale"] = 0,
+                ["Offset"] = 0,
+            },
+        },
+    },
+    ["HUDElements"] = {
+        ["Position"] = {
+            ["X"] = {
+                ["Scale"] = 0,
+                ["Offset"] = 0,
+            },
+            ["Y"] = {
+                ["Scale"] = 0,
+                ["Offset"] = 0,
+            },
+        },
+    },
 }
 local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]
 local exclusionList = {
@@ -64,13 +91,14 @@ local exclusionList = {
      "NotificationsToggle", "RainbowToggle", "ClickSoundsToggle",
      "ArrayListToggle", "ListBackgroundToggle", "ListLinesToggle", "WatermarkToggle",
      "WMLineToggle", "WMBackgroundToggle", "HUDOptionsButtonRenderingSelector",
-     "FPSToggle", "SpeedToggle", "CoordsToggle", "PingToggle", "TargetHUDToggle"
+     "FPSToggle", "SpeedToggle", "CoordsToggle", "PingToggle", "TargetHUDToggle",
+     "RestartOptionsButton"
 }
 
 local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
 ScreenGui.Name = tostring(math.random(1,10))
 local ClickGUI = Instance.new("Frame", ScreenGui)
-ClickGUI.Size = UDim2.new(1,0,1,0)
+ClickGUI.Size = UDim2.new(0,ScreenGui.AbsoluteSize.X,0,ScreenGui.AbsoluteSize.Y)
 ClickGUI.BackgroundTransparency = 1
 ClickGUI.Name = "ClickGUI"
 ClickGUI.Visible = false
@@ -80,6 +108,7 @@ makefolder("Future")
 makefolder("Future/assets")
 makefolder("Future/configs")
 makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
+
 
 local function requesturl(url, bypass) 
     if isfile(url) then 
@@ -250,11 +279,11 @@ local function prepareTableForArrayList(t)
         end
         local vec = game:GetService("TextService"):GetTextSize(atext, 20, Enum.Font.GothamSemibold, Vector2.new(99999, 99999))
         local vec2 = game:GetService("TextService"):GetTextSize(btext, 20, Enum.Font.GothamSemibold, Vector2.new(99999, 99999))
-        if GuiLibrary.Rendering == "Down" then 
-            return vec.X < vec2.X
-        else
+        --if GuiLibrary["ArrayList"]["Bottom"] then 
+            --return vec.X < vec2.X
+        --else
             return vec.X > vec2.X 
-        end
+        --end
     end)
     return newT
 end
@@ -367,7 +396,7 @@ GuiLibrary["PrepareTargetHUD"] = function()
     TargetHUD.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     TargetHUD.BackgroundTransparency = 0.250
     TargetHUD.BorderSizePixel = 0
-    TargetHUD.Position = UDim2.new(0.795097411, 0, 0.838947356, 0)
+    TargetHUD.Position = UDim2.new(0.5, 0, 0.5, 0)
     TargetHUD.Size = UDim2.new(0, 204, 0, 100)
     TargetHUD.Visible = false
 
@@ -506,13 +535,24 @@ GuiLibrary["PrepareHUDAPI"] = function()
     HUDElements.Parent = GuiLibrary["ScreenGui"]
     HUDElements.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     HUDElements.BackgroundTransparency = 1.000
-    HUDElements.Position = UDim2.new(0.874921441, 0, 0, 0)
-    HUDElements.Size = UDim2.new(0, 197, 0, 346)
+    HUDElements.Position = UDim2.new(0.5, 0, 0.5, 0)
+    HUDElements.Size = UDim2.fromOffset(200, 15)
+
+    function api.setPosition(pos) 
+        HUDElements.Position = UDim2.new(pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset)
+    end
+
+    function api.getPosition() 
+        return HUDElements.Position
+    end
+
+    dragGUI(HUDElements, HUDElements)
 
     UIListLayout.Parent = HUDElements
     UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
     function api.draw(CoordsBool, SpeedBool, FPSBool, PingBool)
+        --HUDElements.Size = UDim2.fromOffset(UIListLayout.AbsoluteContentSize.X, UIListLayout.AbsoluteContentSize.Y)
 
         if CoordsBool then
             Coords.Name = "Coords"
@@ -645,7 +685,7 @@ GuiLibrary["PrepareWatermark"] = function()
         Watermark.Position = UDim2.new(0, 110, 0, -27)
         Watermark.Size = UDim2.new(0, 0, 0, 20)
         Watermark.Font = Enum.Font.GothamSemibold
-        Watermark.Text = "Future v"..tostring(_FUTUREVERSION)
+        Watermark.Text = "Future"..(isfolder("Future/plus") and "+" or "").." v"..tostring(_FUTUREVERSION).." | "..tostring(_FUTUREMOTD)
         Watermark.BorderSizePixel = 0
         Watermark.TextSize = 20.000
         Watermark.TextStrokeTransparency = 0.4
@@ -732,14 +772,29 @@ GuiLibrary["CreateArrayList"] = function()
     ArrayList.Parent = GuiLibrary["ScreenGui"]
     ArrayList.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     ArrayList.BackgroundTransparency = 1.000
-    ArrayList.Position = UDim2.new(0.893, 0, 0.03, 0)
+    ArrayList.Position = UDim2.new(0.5, 0, 0.5, 0)
     ArrayList.Size = UDim2.new(0, 197, 0, 346)
     ArrayList.Visible = false
+
+    --local _con = ArrayList:GetPropertyChangedSignal("Position"):connect(function() 
+    --end)
+    --table.insert(GuiLibrary["Connections"], _con)
+
+
+    dragGUI(ArrayList, ArrayList)
 
     UIListLayout.Parent = ArrayList
     UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
     UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     UIListLayout.Padding = UDim.new(0, 0)
+
+    function api.setPosition(pos) 
+        ArrayList.Position = UDim2.new(pos.X.Scale, pos.X.Offset, pos.Y.Scale, pos.Y.Offset)
+    end
+
+    function api.getPosition() 
+        return ArrayList.Position
+    end
 
     function api.createArrayObject(name,label)
         local Shadow = Instance.new("TextLabel")
@@ -921,6 +976,8 @@ GuiLibrary["SaveConfig"] = function(name, isAutosave)
         ["DrawPing"] = GuiLibrary.DrawPing,
         ["TargetHUD"] = GuiLibrary.TargetHUD,
         ["TargetHUDEnabled"] = GuiLibrary.TargetHUDEnabled,
+        ["ArrayListInfo"] = GuiLibrary.ArrayListInfo,
+        ["HUDElements"] = GuiLibrary.HUDElements,
     }
     local path = "Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json"
     makefolder("Future/configs")
@@ -931,6 +988,28 @@ GuiLibrary["SaveConfig"] = function(name, isAutosave)
 
     local pos = GuiLibrary["TargetHUDAPI"].getPosition()
     guiconfig.TargetHUD.Position = {
+        ["X"] = {
+            ["Scale"] = pos.X.Scale,
+            ["Offset"] = pos.X.Offset,
+        },
+        ["Y"] = {
+            ["Scale"] = pos.Y.Scale,
+            ["Offset"] = pos.Y.Offset,
+        },
+    }
+    local pos = GuiLibrary["ArrayListAPI"].getPosition()
+    guiconfig.ArrayListInfo.Position = {
+        ["X"] = {
+            ["Scale"] = pos.X.Scale,
+            ["Offset"] = pos.X.Offset,
+        },
+        ["Y"] = {
+            ["Scale"] = pos.Y.Scale,
+            ["Offset"] = pos.Y.Offset,
+        },
+    }
+    local pos = GuiLibrary["HUDAPI"].getPosition()
+    guiconfig.HUDElements.Position = {
         ["X"] = {
             ["Scale"] = pos.X.Scale,
             ["Offset"] = pos.X.Offset,
@@ -1033,6 +1112,12 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
             if type(config.TargetHUD) == "table" then
                 GuiLibrary["TargetHUDAPI"].setPosition(config.TargetHUD.Position)
             end
+            if type(config.ArrayListInfo) == "table" then
+                GuiLibrary["ArrayListAPI"].setPosition(config.ArrayListInfo.Position)
+            end
+            if type(config.HUDElements) == "table" then
+                GuiLibrary["HUDAPI"].setPosition(config.HUDElements.Position)
+            end
         else
             warn("[Future] Failed to load GUIconfig.json config file")
         end
@@ -1064,11 +1149,13 @@ GuiLibrary["LoadConfig"] = function(name)
             for i,v in next, GuiLibrary.Objects do 
                 if v.Type == "Toggle" and not table.find(exclusionList, i) then 
                     if v.API.Enabled then 
+                        print("[Future] Turned off "..i)
                         v.API.Toggle(false, true)
                     end
                 end
                 if v.Type == "OptionsButton" and not table.find(exclusionList, i) then 
                     if v.API.Enabled then 
+                        print("[Future] Turned off "..i)
                         v.API.Toggle(false, true, true)
                     end
                 end
@@ -1745,19 +1832,6 @@ local oldC, oldS, oldF, oldP, override = GuiLibrary.DrawCoords, GuiLibrary.DrawS
 hudUpdate:Connect(function()
     if GuiLibrary.HUDEnabled then
         GuiLibrary["ArrayListAPI"].clearArrayObjects()
-        if GuiLibrary.Rendering == "Down" then 
-            GuiLibrary["ArrayListAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-            GuiLibrary["ArrayListAPI"].Instance.Position = UDim2.new(0.893, 0, 0.65, 0)
-
-            GuiLibrary["HUDAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-            GuiLibrary["HUDAPI"].Instance.Position = UDim2.new(0.893, 0, 0.03, 0)
-        else
-            GuiLibrary["ArrayListAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-            GuiLibrary["ArrayListAPI"].Instance.Position = UDim2.new(0.893, 0, 0.03, 0)
-
-            GuiLibrary["HUDAPI"].UIListLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-            GuiLibrary["HUDAPI"].Instance.Position = UDim2.new(0.893, 0, 0.66, 0)
-        end
 
         local arrayListTable = prepareTableForArrayList(GuiLibrary.Objects)
         for i,v in ipairs(arrayListTable) do 

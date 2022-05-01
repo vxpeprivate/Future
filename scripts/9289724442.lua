@@ -243,13 +243,13 @@ local function getMap()
     end
     return "CUBA"
 end
---[[
+
 local function getMapAutowinPosition() 
     if getMap() == "CUBA" then
         return CFrame.new(-160.108078, 40.878952, -150.817886, -0.000178738439, 0, -1, 0, 1, 0, 1, 0, -0.000178738439)
     end
     return CFrame.new(-94.5189819, 14.1403761, 113.373901, -0.110669941, 0, -0.993857205, 0, 1, 0, 0.993857205, 0, -0.110669941)
-end]]
+end
 
 local function canBeTargeted(plr, doTeamCheck) 
     if isAlive(plr) and plr~=lplr and (doTeamCheck and plr.Team ~=lplr.Team or not doTeamCheck) then 
@@ -325,7 +325,9 @@ local function killall()
                 math.random(),
                 false
             }
-            dependencies.ClientHandler.NetEvents.client.shoot(unpack(args))  
+            if vischeck(v.Character, "HumanoidRootPart") then
+                game:GetService("ReplicatedStorage")["events-shared/networking@NetEvents"].shoot:FireServer(unpack(args))  
+            end
         end)    
     end
 end
@@ -419,10 +421,37 @@ do
             if callback then
                 spawn(function()
                     repeat task.wait(0.05) 
-                    killnear()
+                    killall()
                     until PropKill["Enabled"] == false
                 end)
             end
+        end
+    })
+end
+
+do
+    local AutoAdvertise = {["Enabled"] = false}
+    local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "AutoWin",
+        ["Function"] = function(callback) 
+            spawn(function()
+                repeat task.wait(0.1)
+                    if PropKill["Enabled"] == false then break end 
+
+                    if isAlive() and lplr.Team ~= nil and state() ~= 0 then
+                        if lplr.Team.Name == "Hider" then
+                            requestSelfDamage(math.huge)
+                            return
+                        end
+
+                        if state() == 2 or lplr.Team.Name == "Seeker" then 
+                             game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = "vanilla"})
+                            break
+                        end
+
+                    end
+                until PropKill["Enabled"] == false
+            end)
         end
     })
 end
