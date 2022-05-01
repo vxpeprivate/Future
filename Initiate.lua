@@ -1,5 +1,5 @@
 -- // credits to anyones code i used/looked at.
-getgenv()._FUTUREVERSION = "1.1.0c | "..(shared.FutureDeveloper and "dev" or "test").." build" -- // This is a cool thing yes
+getgenv()._FUTUREVERSION = "1.1.0d | "..(shared.FutureDeveloper and "dev" or "test").." build" -- // This is a cool thing yes
 getgenv()._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
