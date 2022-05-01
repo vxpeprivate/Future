@@ -202,6 +202,61 @@ local convertHealthToColor = function(health, maxHealth)
     return Color3.fromRGB(96, 253, 48)
 end
 
+local function getAllPlrsNear()
+    if not isAlive() then return {} end
+    local t = {}
+    for i,v in next, PLAYERS:GetPlayers() do 
+        if isAlive(v) and v~=lplr and v.Name ~= "StopEveryTrans" and v.Name~="BanEqualsACName" then 
+            if v.Character.HumanoidRootPart then table.insert(t, (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude, v) end
+        end
+    end
+    return t
+end
+
+do 
+    local canAttack = true
+    local aura = {["Enabled"] = false}
+    local auradist = {["Value"] = 14 }
+    aura = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Aura",
+        ["Function"] = function(callback) 
+            if callback then
+                spawn(function()
+                    repeat task.wait(0.1) 
+                        for i,v in next, getAllPlrsNear() do 
+                            if isAlive() and canBeTargeted(v, false) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
+                                local attackArgs = {
+                                    v.Character
+                                }
+                                print(canAttack)
+                                if canAttack then
+                                    spawn(function()
+                                        canAttack = false
+                                        local x = game:GetService("ReplicatedStorage").GameRemotes.Attack:InvokeServer(table.unpack(attackArgs))
+                                        if x~=nil then print(x) end
+                                        canAttack = true
+                                    end)
+                                end
+                                GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character.Humanoid.Health))
+                            else
+                                GuiLibrary["TargetHUDAPI"].clear()
+                            end
+                        end
+                    until aura["Enabled"] == false
+                end)
+            end
+        end,
+    })
+    auradist = aura.CreateSlider({
+        ["Name"] = "Range",
+        ["Function"] = function() end,
+        ["Min"] = 1,
+        ["Round"] = 0,
+        ["Max"] = 15,
+        ["Default"] = 15
+    })
+end
+
 GuiLibrary["RemoveObject"]("SmoothAimOptionsButton")
 do 
     local smoothaim = {["Enabled"] = false}

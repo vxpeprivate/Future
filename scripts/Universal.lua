@@ -1121,6 +1121,8 @@ do
                                 plrespframe.line4.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
                                 plrespframe:FindFirstChild("name").TextColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
                                 plrespframe:FindFirstChild("name").Visible = espnames["Enabled"]
+                                local text = espdisplaynames["Enabled"] and v.DisplayName or v.Name
+                                plrespframe:FindFirstChild("name").Text = "<stroke color='#000000' thickness='1'>"..text..(esphealth["Enabled"] and (" [<font color='#"..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex()).."'>"..tostring(math.round(v.Character.Humanoid.Health)).."</font>]") or "").."</stroke>"
                             else
                                 plrespframe = Instance.new("Frame", espfolder)
                                 plrespframe.BackgroundTransparency = 1
