@@ -1,5 +1,6 @@
 -- // credits to anyones code i used/looked at.
-getgenv()._FUTUREVERSION = "1.1.0 | test build"
+getgenv()._FUTUREVERSION = "1.1.0b | "..(shared.FutureDeveloper and "dev" or "test").." build" -- // This is a cool thing yes
+getgenv()._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
 if shared.Future~=nil then print("[Future] Detected future already executed, not executing!") return end
@@ -409,6 +410,26 @@ local destructButton; destructButton = OtherWindow.CreateOptionsButton({
         end
     end
 })
+
+local restartButton; restartButton = OtherWindow.CreateOptionsButton({
+    ["Name"] = "Restart",
+    ["Function"] = function(callback) 
+        if callback then 
+            spawn(function() 
+                restartButton.Toggle(nil, true, true)
+                GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+                GuiLibrary.Signals.onDestroy:Fire()
+                task.wait(0.5)
+                if shared.FutureDeveloper then 
+                    loadfile("Future/Initiate.lua")()
+                else
+                    loadstring(game:HttpGet('https://raw.githubusercontent.com/joeengo/Future/main/loadstring.lua', true))()
+                end
+            end)
+        end
+    end
+})
+
 GuiLibrary["LoadOnlyGuiConfig"]()
 
 -- Calculate Speed, FPS and Coords
@@ -456,6 +477,7 @@ local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(
         ]]
 		queueteleport(stringtp)
         GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+        GuiLibrary["Signals"]["onDestroy"]:Fire()
     end
 end)
 
@@ -540,8 +562,16 @@ end)
 
 spawn(function()
     repeat
+        if not shared.Future then 
+            break
+        end
         GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"], true)
-        task.wait(2)
+        for i = 1, 100 do 
+            task.wait(0.02)
+            if not shared.Future then 
+                break
+            end
+        end
     until not shared.Future
 end)
 fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.\nPlease join the discord for changelogs and to report bugs. \ndiscord.gg/bdjT5UmmDJ\nEnjoy using Future v".._FUTUREVERSION.."")
