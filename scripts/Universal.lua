@@ -178,6 +178,7 @@ local function aimAt(pos,smooth)
     local smooth = smooth +1
     local targetPos = WORKSPACE.CurrentCamera:WorldToScreenPoint(pos)
     local mousePos = WORKSPACE.CurrentCamera:WorldToScreenPoint(mouse.Hit.p)
+    print((targetPos.X-mousePos.X)/smooth,(targetPos.Y-mousePos.Y)/smooth)
     mousemoverel((targetPos.X-mousePos.X)/smooth,(targetPos.Y-mousePos.Y)/smooth)
 end
 
