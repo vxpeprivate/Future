@@ -175,10 +175,6 @@ local function getAimAt(pos)
 end
 
 local function aimAt(pos,smooth)
-    rconsoleprint("Aiming at position")
-    if rconsoleclose then 
-        rconsoleclose()
-    end
     local smooth = smooth +1
     local targetPos = WORKSPACE.CurrentCamera:WorldToScreenPoint(pos)
     local mousePos = WORKSPACE.CurrentCamera:WorldToScreenPoint(mouse.Hit.p)
@@ -222,6 +218,7 @@ do
                 BindToStepped("SmoothAim", function() 
                     local aimpart = smoothaimpart["Value"] == "Root" and "HumanoidRootPart" or "Head"
                     local plr = getPlrNearMouse(smoothaimfov["Value"] * 10)
+                    print(plr, canBeTargeted(plr, true), UIS:IsMouseButtonPressed(smoothaimheld["Value"] == "LMB" and 0 or 1) )
                     if plr and canBeTargeted(plr, true) and UIS:IsMouseButtonPressed(smoothaimheld["Value"] == "LMB" and 0 or 1) then 
                         aimAt(plr.Character[aimpart].Position, smoothaimsmoothness["Value"])
                     end
