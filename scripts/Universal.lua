@@ -597,7 +597,7 @@ do
             if callback then
                 BindToStepped("Speed", function(time, dt)
                     if isAlive() then
-                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and 5 or 0)) * dt
+                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(5)) * dt
                         velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
                         lplr.Character:TranslateBy(velo)
                     end
@@ -625,7 +625,7 @@ do
     local verttoggle = {["Enabled"] = false}
     local vertbind = {["Value"] = "LShift"}
     local flyspeed = {["Value"] = 40}
-    local flyglide = {["Value"] = 10}
+    local flyglide = {["Value"] = 0}
     local fly = {["Enabled"] = false}
     fly = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Flight",
@@ -694,6 +694,7 @@ do
     flyglide = fly.CreateSlider({
         ["Name"] = "Glide",
         ["Min"] = -100,
+        ["Default"] = 0,
         ["Max"] = 100,
         ["Function"] = function() end
     })
