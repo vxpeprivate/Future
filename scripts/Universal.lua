@@ -46,9 +46,9 @@ end
 local HeartbeatTable = {}
 local RenderStepTable = {}
 local SteppedTable = {}
-local function isAlive(plr)
+local function isAlive(plr, headCheck)
     local plr = plr or lplr
-    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart")) and (plr.Character:FindFirstChild("Head"))) then
+    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart")) and (headCheck and plr.Character:FindFirstChild("Head") or not headCheck)) then
         return true
     end
 end
@@ -555,7 +555,7 @@ do
         ["Function"] = function(callback)
             if callback then
                 BindToStepped("Spider", function(time, dt)
-                    if isAlive() then
+                    if isAlive(lplr, true) then
                         local param = RaycastParams.new()
                         param.FilterDescendantsInstances = table.combine(getCharacters(), cam:GetDescendants())
                         param.FilterType = Enum.RaycastFilterType.Blacklist

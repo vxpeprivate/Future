@@ -428,7 +428,7 @@ do
         end
     })
 end
-
+--[[
 do
     local AutoAdvertise = {["Enabled"] = false}
     local PropKill = {["Enabled"] = false}; PropKill = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
@@ -454,7 +454,7 @@ do
             end)
         end
     })
-end
+end]]
 
 --[[
 do

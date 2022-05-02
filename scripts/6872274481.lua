@@ -52,7 +52,7 @@ local RenderStepTable = {}
 local SteppedTable = {}
 local function isAlive(plr)
     local plr = plr or lplr
-    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) and (plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart") and lplr.Character:FindFirstChild("Head"))) then
+    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) and (plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart")) and (plr.Character:FindFirstChild("Head"))) then
         return true
     end
 end
@@ -706,56 +706,58 @@ do
                 spawn(function()
                     repeat wait() 
                         for i,v in next, getAllPlrsNear() do 
-                            if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
-                                local weapon, slot = getBestSword()
-                                local selfpos = lplr.Character.HumanoidRootPart.Position + (auradist["Value"] > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
-                                local attackArgs = {
-                                    ["weapon"] = weapon~=nil and weapon.tool,
-                                    ["entityInstance"] = v.Character,
-                                    ["validate"] = {
-                                        ["raycast"] = {
-                                            ["cameraPosition"] = hashvector(cam.CFrame.p), 
-                                            ["cursorDirection"] = hashvector(Ray.new(cam.CFrame.p, v.Character.HumanoidRootPart.Position).Unit.Direction)
-                                        },
-                                        ["targetPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
-                                        ["selfPosition"] = hashvector(selfpos),
-                                    }, 
-                                    ["chargedAttack"] = {["chargeRatio"] = 1},
-                                }
-                                hitremote:InvokeServer(attackArgs)
+                            if isAlive(v) then
+                                if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
+                                    local weapon, slot = getBestSword()
+                                    local selfpos = lplr.Character.HumanoidRootPart.Position + (auradist["Value"] > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
+                                    local attackArgs = {
+                                        ["weapon"] = weapon~=nil and weapon.tool,
+                                        ["entityInstance"] = v.Character,
+                                        ["validate"] = {
+                                            ["raycast"] = {
+                                                ["cameraPosition"] = hashvector(cam.CFrame.p), 
+                                                ["cursorDirection"] = hashvector(Ray.new(cam.CFrame.p, v.Character.HumanoidRootPart.Position).Unit.Direction)
+                                            },
+                                            ["targetPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
+                                            ["selfPosition"] = hashvector(selfpos),
+                                        }, 
+                                        ["chargedAttack"] = {["chargeRatio"] = 1},
+                                    }
+                                    hitremote:InvokeServer(attackArgs)
 
-                                GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
+                                    GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
 
-                                playanimation("rbxassetid://4947108314")
+                                    playanimation("rbxassetid://4947108314")
 
-                                -- animation stuff (thx 7grand once again)
-                                
-                                if not stopTween then
-                                    local Tween
-                                    if auraanim["Value"] == "Slow" then 
-                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                        TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                    elseif auraanim["Value"] == "Medium" then 
-                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                        TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                    elseif auraanim["Value"] == "Fast" then 
-                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                        TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                    elseif auraanim["Value"] == "Dev" then 
-                                        Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                        TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, true, 0), 
-                                        {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(-90), math.rad(0), -math.rad(90))})
+                                    -- animation stuff (thx 7grand once again)
+                                    
+                                    if not stopTween then
+                                        local Tween
+                                        if auraanim["Value"] == "Slow" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                        elseif auraanim["Value"] == "Medium" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                        elseif auraanim["Value"] == "Fast" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                        elseif auraanim["Value"] == "Dev" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(-90), math.rad(0), -math.rad(90))})
+                                        end
+
+                                        spawn(function()
+                                            stopTween = true
+                                            Tween:Play()
+                                            Tween.Completed:Wait()
+                                            stopTween = false
+                                        end)
                                     end
-
-                                    spawn(function()
-                                        stopTween = true
-                                        Tween:Play()
-                                        Tween.Completed:Wait()
-                                        stopTween = false
-                                    end)
                                 end
                             else
                                 GuiLibrary["TargetHUDAPI"].clear()
@@ -990,7 +992,7 @@ do
                 BindToStepped("Speed", function(time, dt)
                     if isAlive() and not stopSpeed then
                         lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
-                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
+                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*((isnetworkowner and isnetworkowner(lplr.Character.HumanoidRootPart)) and speedsettings.factor or 0)) * dt
                         velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
                         lplr.Character:TranslateBy(velo)
 
