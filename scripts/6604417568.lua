@@ -213,6 +213,13 @@ local function getAllPlrsNear()
     return t
 end
 
+local mainscript = lplr.PlayerScripts.MainLocalScript
+local dependencies = {
+    ["MainLocalScript"] = getsenv(mainscript),
+    ["CWorld"] = require(mainscript.CWorld),
+}
+
+
 do 
     local canAttack = true
     local aura = {["Enabled"] = false}
@@ -308,5 +315,21 @@ do
         ["Min"] = 1,
         ["Max"] = 100,
         ["Round"] = 0,
+    })
+end
+
+do 
+    local Speedmine = {["Enabled"] = false} 
+    Speedmine = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Speedmine",
+        ["Function"] = function(callback) 
+            if callback then 
+                spawn(function()
+                    repeat task.wait()
+                        game:GetService("ReplicatedStorage").GameRemotes.AcceptBreakBlock:InvokeServer()
+                    until not Speedmine.Enabled
+                end)
+            end
+        end
     })
 end
