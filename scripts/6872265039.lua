@@ -221,7 +221,7 @@ do
             end
         end,
     })
-    local selectedQueue = AutoQueue.CreateSelector({
+    selectedQueue = AutoQueue.CreateSelector({
         ["Name"] = "",
         ["Function"] = function()
             if AutoQueue["Enabled"] then 

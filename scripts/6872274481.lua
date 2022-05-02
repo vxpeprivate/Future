@@ -12,6 +12,7 @@ local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRob
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 local bedwars = {} 
+local Reach = {["Enabled"] = false}
 local speedsettings = {
     factor = 5.37,  
     velocitydivfactor = 2.9,
@@ -51,7 +52,7 @@ local RenderStepTable = {}
 local SteppedTable = {}
 local function isAlive(plr)
     local plr = plr or lplr
-    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) and (plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart"))) then
+    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid")) and (plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart") and lplr.Character:FindFirstChild("Head"))) then
         return true
     end
 end
@@ -211,6 +212,12 @@ local function getItem(itemName)
 	return nil
 end
 
+local function hashvector(vec)
+	return {
+		["value"] = vec
+	}
+end
+
 -- Huge thanks to 7granddad for this code, i dont see a point in writing this all my self when I know exactly what it does, it would just be alot of labour and work lel.
 
 local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
@@ -218,6 +225,26 @@ repeat task.wait() until Flamework.isInitialized
 local KnitClient = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"].knit.src).KnitClient
 local Client = require(game:GetService("ReplicatedStorage").TS.remotes).default.Client
 local InventoryUtil = require(game:GetService("ReplicatedStorage").TS.inventory["inventory-util"]).InventoryUtil
+local OldClientGet = getmetatable(Client).Get
+local OldClientWaitFor = getmetatable(Client).WaitFor
+getmetatable(Client).Get = function(Self, remotename)
+    if remotename == bedwars["AttackRemote"] then
+        local res = OldClientGet(Self, remotename)
+        return {
+            ["instance"] = res["instance"],
+            ["CallServer"] = function(Self, tab)
+                if Reach["Enabled"] then
+                    local mag = (tab.validate.selfPosition.value - tab.validate.targetPosition.value).magnitude
+                    local newres = hashvector(tab.validate.selfPosition.value + (mag > 14.4 and (CFrame.lookAt(tab.validate.selfPosition.value, tab.validate.targetPosition.value).lookVector * 4) or Vector3.new(0, 0, 0)))
+                    tab.validate.selfPosition = newres
+                end
+                return res:CallServer(tab)
+            end
+        }
+    end
+    return OldClientGet(Self, remotename)
+end
+
 bedwars = {
     ["AnimationUtil"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].util["animation-util"]).AnimationUtil,
     ["AngelUtil"] = require(game:GetService("ReplicatedStorage").TS.games.bedwars.kit.kits.angel["angel-kit"]),
@@ -313,7 +340,8 @@ bedwars = {
     ["VictoryScreen"] = require(lplr.PlayerScripts.TS.controllers["game"].match.ui["victory-section"]).VictorySection,
     ["ViewmodelController"] = KnitClient.Controllers.ViewmodelController,
     ["WeldTable"] = require(game:GetService("ReplicatedStorage").TS.util["weld-util"]).WeldUtil,
-    ["AttackRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.SwordController)["attackEntity"]))
+    ["AttackRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.SwordController)["attackEntity"])),
+    ["VelocityUtil"]  = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].util["velocity-util"]).VelocityUtil, 
 }
 
 local function getblock(pos)
@@ -574,12 +602,6 @@ bedwars["breakBlock"] = function(pos, effects, normal, bypass)
             end
         end
     end
-end	
-
-local function hashvector(vec)
-	return {
-		["value"] = vec
-	}
 end
 
 local function isPointInMapOccupied(p)
@@ -686,6 +708,7 @@ do
                         for i,v in next, getAllPlrsNear() do 
                             if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
                                 local weapon, slot = getBestSword()
+                                local selfpos = lplr.Character.HumanoidRootPart.Position + (auradist["Value"] > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
                                 local attackArgs = {
                                     ["weapon"] = weapon~=nil and weapon.tool,
                                     ["entityInstance"] = v.Character,
@@ -695,7 +718,7 @@ do
                                             ["cursorDirection"] = hashvector(Ray.new(cam.CFrame.p, v.Character.HumanoidRootPart.Position).Unit.Direction)
                                         },
                                         ["targetPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
-                                        ["selfPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
+                                        ["selfPosition"] = hashvector(selfpos),
                                     }, 
                                     ["chargedAttack"] = {["chargeRatio"] = 1},
                                 }
@@ -750,8 +773,8 @@ do
         ["Function"] = function() end,
         ["Min"] = 1,
         ["Round"] = 0,
-        ["Max"] = 20,
-        ["Default"] = 16
+        ["Max"] = 18,
+        ["Default"] = 18
     })
     auraanim = aura.CreateSelector({
         ["Name"] = "Anim",
@@ -765,14 +788,20 @@ end
 do 
     local veloh, velov = {["Value"] = 0},{["Value"] = 0}
     local velocity = {["Enabled"] = false}
-    local oldveloh, oldvelov = bedwars["KnockbackTable"]["kbDirectionStrength"], bedwars["KnockbackTable"]["kbUpwardStrength"]
+    local oldveloh, oldvelov, oldvelofunc = bedwars["KnockbackTable"]["kbDirectionStrength"], bedwars["KnockbackTable"]["kbUpwardStrength"], bedwars["VelocityUtil"].applyVelocity
     velocity = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Velocity",
         ["Function"] = function(callback) 
             if callback then 
                 bedwars["KnockbackTable"]["kbDirectionStrength"] = oldveloh * (veloh["Value"] / 100)
                 bedwars["KnockbackTable"]["kbUpwardStrength"] = oldvelov * (velov["Value"] / 100)
+                if veloh["Value"] == 0 and velov["Value"] == 0 then
+                    bedwars["VelocityUtil"].applyVelocity = function(...) end
+                else
+                    bedwars["VelocityUtil"].applyVelocity = oldvelofunc
+                end
             else
+                bedwars["VelocityUtil"].applyVelocity = oldvelofunc
                 bedwars["KnockbackTable"]["kbDirectionStrength"] = oldveloh
                 bedwars["KnockbackTable"]["kbUpwardStrength"] = oldvelov
             end
@@ -781,7 +810,10 @@ do
     veloh = velocity.CreateSlider({
         ["Name"] = "Horizontal",
         ["Function"] = function(value)
-            bedwars["KnockbackTable"]["kbDirectionStrength"] = oldveloh * (value / 100)
+            if velocity["Enabled"] then 
+                velocity.Toggle(nil, true, true)
+                velocity.Toggle(nil, true, true)
+            end
         end,
         ["Min"] = 0,
         ["Max"] = 100,
@@ -792,7 +824,8 @@ do
         ["Name"] = "Vertical",
         ["Function"] = function(value)
             if velocity["Enabled"] then 
-                bedwars["KnockbackTable"]["kbUpwardStrength"] = oldvelov * (value / 100)
+                velocity.Toggle(nil, true, true)
+                velocity.Toggle(nil, true, true)
             end
         end,
         ["Min"] = 0,
@@ -802,9 +835,54 @@ do
     })
 end
 
-
-
+do 
+    local old = getmetatable(bedwars["SwordController"]).isClickingTooFast
+    local NoClickDelay = {["Enabled"] = false}
+    NoClickDelay = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "NoClickDelay",
+        ["Function"] = function(callback) 
+            if callback then 
+                getmetatable(bedwars["SwordController"]).isClickingTooFast = function(...) 
+                    return false
+                end
+            else
+                getmetatable(bedwars["SwordController"]).isClickingTooFast = old
+            end
+        end
+    })
+end
 -- // exploits window 
+
+do 
+    local old, old2 = debug.getconstant(bedwars["SwingSwordRegion"], 10),debug.getconstant(bedwars["SwingSwordRegion"], 15)
+    local ReachValue = {["Value"] = 0.1}
+    Reach = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Reach",
+        ["Function"] = function(callback) 
+            if callback then 
+                debug.setconstant(bedwars["SwingSwordRegion"], 10, old*(ReachValue["Value"]+1))
+                debug.setconstant(bedwars["SwingSwordRegion"], 15, old2*(ReachValue["Value"]+1))
+            else
+                debug.setconstant(bedwars["SwingSwordRegion"], 10, old)
+                debug.setconstant(bedwars["SwingSwordRegion"], 15, old2)
+            end
+        end,
+    })
+    ReachValue = Reach.CreateSlider({
+        ["Name"] = "HitboxAdd",
+        ["Function"] = function(value) 
+            if Reach["Enabled"] then 
+                debug.setconstant(bedwars["SwingSwordRegion"], 10, old*(value+1))
+                debug.setconstant(bedwars["SwingSwordRegion"], 15, old2*(value+1))
+            end
+        end,
+        ["Min"] = 0,
+        ["Max"] = 2,
+        ["Round"] = 1,
+        ["Default"] = 2
+    })
+end
+
 
 do 
     local shopbypass = {["Enabled"] = false}
@@ -831,10 +909,9 @@ end
 
 
 -- // movement window 
+local stopSpeed = false
 GuiLibrary["RemoveObject"]("LongJumpOptionsButton")
 do 
-    local goDown = false
-    local reenableSpeed = false
     local longjumptick = tick()
     local speedval, timeval = {["Value"] = 0},{["Value"] = 0}
     local LongJump = {["Enabled"] = false}; LongJump = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
@@ -844,7 +921,7 @@ do
                 spawn(function() 
                     task.wait(timeval["Value"])
                     if LongJump.Enabled then
-                        LongJump.Toggle(false, false)
+                        LongJump.Toggle(false, true)
                     end
                 end)
                 spawn(function()
@@ -854,18 +931,15 @@ do
                         skipFrame()
                         local dt = WORKSPACE:GetServerTimeNow() - bt
                         if isAlive() then
-                            if GuiLibrary["Objects"]["SpeedOptionsButton"].API.Enabled then 
-                                GuiLibrary["Objects"]["SpeedOptionsButton"].API.Toggle(false, true)
-                                reenableSpeed = reenableSpeed or true
-                            end
-
+                            stopSpeed = true
                             local params = RaycastParams.new()
                             params.FilterDescendantsInstances = {lplr.Character}
                             params.FilterType = Enum.RaycastFilterType.Blacklist
                             local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -7, 0), params)
                             if ray and ray.Instance then 
                                 if LongJump.Enabled then
-                                    LongJump.Toggle(false, false)
+                                    LongJump.Toggle(false, true)
+                                    stopSpeed = false
                                 end
                                 break
                             end
@@ -875,17 +949,13 @@ do
                             velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
                             lplr.Character:TranslateBy(velo)
                             local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
-                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, --[[math.random(-50, 50)]] -1, velo2.Z)
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, --[[math.random(-50, 50)]] 1, velo2.Z)
                         end
                     until not LongJump["Enabled"]
+                    stopSpeed = false
                 end)
             else
-                if reenableSpeed then 
-                    if not GuiLibrary["Objects"]["SpeedOptionsButton"].API.Enabled then
-                        GuiLibrary["Objects"]["SpeedOptionsButton"].API.Toggle(nil, true)
-                    end
-                    reenableSpeed = nil
-                end
+                stopSpeed = false
             end
         end,
     })
@@ -918,7 +988,7 @@ do
         ["Function"] = function(callback)
             if callback then
                 BindToStepped("Speed", function(time, dt)
-                    if isAlive() then
+                    if isAlive() and not stopSpeed then
                         lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
                         local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
                         velo = Vector3.new(velo.x / 10, 0, velo.z / 10)

@@ -1797,6 +1797,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
 
 
     windowapi["Update"] = function()
+        
         for i,v in next, GuiLibrary.Objects do 
             if v.Type == "OptionsButton" and v.Window == Window.Name then 
                 v.API.Update()
