@@ -522,7 +522,7 @@ do
             spawn(function()
                 if callback then
                     repeat task.wait(0.5) 
-                        requestSelfDamage(-9999999999999999999999999999999999999)
+                        requestSelfDamage(-10000)
                     until not God.Enabled
                 end
             end)
