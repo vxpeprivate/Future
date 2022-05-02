@@ -14,6 +14,7 @@ local cam = WORKSPACE.CurrentCamera
 local getcustomasset = getsynasset or getcustomasset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
+local isnetworkowner = isnetworkowner or function() return true end
 local state = function() return workspace.MatchDocument:GetAttribute("matchState") end
 
 local UnixTime = os.time()
@@ -521,7 +522,7 @@ do
             spawn(function()
                 if callback then
                     repeat task.wait(0.5) 
-                        requestSelfDamage(-10000)
+                        requestSelfDamage(-math.huge)
                     until not God.Enabled
                 end
             end)
