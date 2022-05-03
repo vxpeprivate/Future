@@ -552,6 +552,23 @@ do
     })
 end
 
+do 
+    local Invis = {["Enabled"] = false}
+    Invis = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Invis",
+        ["Function"] = function(callback) 
+            if callback then 
+                game:GetService("ReplicatedStorage"):FindFirstChild("events-shared/networking@NetEvents").setLocked:FireServer(true)
+                for i,v in next, game.Players.LocalPlayer.Character:GetChildren() do
+                    if v:IsA("MeshPart") then
+                        v:destroy()
+                    end
+                end
+            end
+        end
+    })
+end
+
 
 do 
     local AutoLeave = {["Enabled"] = false}; AutoLeave = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({
