@@ -1,5 +1,5 @@
 -- // credits to anyones code i used/looked at.
-getgenv()._FUTUREVERSION = "1.1.1b | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
+getgenv()._FUTUREVERSION = "1.1.1c | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
 getgenv()._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
@@ -476,7 +476,6 @@ local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(
         end
         ]]
 		queueteleport(stringtp)
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
         GuiLibrary["Signals"]["onDestroy"]:Fire()
     end
 end)

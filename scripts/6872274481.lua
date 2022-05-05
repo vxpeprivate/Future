@@ -981,6 +981,7 @@ end
 
 GuiLibrary["RemoveObject"]("SpeedOptionsButton")
 do
+    local isnetworkowner = isnetworkowner or function() return true end
     local speedval = {["Value"] = 40}
     local speedmode = {["Enabled"] = false}
     local speed = {["Enabled"] = false}
@@ -1083,7 +1084,6 @@ do
 end
 
 -- // render window 
-
 if isnetworkowner~=nil then do 
     local textlabel
     local LagBackNotify = {["Enabled"] = false}
@@ -1213,6 +1213,8 @@ do
                                 plrespframe.line4.BackgroundColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
                                 plrespframe:FindFirstChild("name").TextColor3 = getColorFromPlayer(v) or GuiLibrary["GetColor"]()
                                 plrespframe:FindFirstChild("name").Visible = espnames["Enabled"]
+                                local text = espdisplaynames["Enabled"] and v.DisplayName or v.Name
+                                plrespframe:FindFirstChild("name").Text = "<stroke color='#000000' thickness='1'>"..text..(esphealth["Enabled"] and (" [<font color='#"..(convertHealthToColor(v.Character:GetAttribute("Health"),  v.Character:GetAttribute("MaxHealth")):ToHex()).."'>"..tostring(math.round(v.Character:GetAttribute("Health"))).."</font>]") or "").."</stroke>"
                             else
                                 plrespframe = Instance.new("Frame", espfolder)
                                 plrespframe.BackgroundTransparency = 1
@@ -1374,43 +1376,86 @@ do
     })
 end
 
-local scaffold = {["Enabled"] = false}
-scaffold = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
-    ["Name"] = "Scaffold",
-    ["Function"] = function(callback) 
-        if callback then 
-            BindToStepped("Scaffold", function()
-                if isAlive() and lplr.Character:FindFirstChild("Humanoid") ~= nil then
-                    local block = getwool()
-                    local newpos = lplr.Character.HumanoidRootPart.Position
-                    newpos = get3Vector( Vector3.new(newpos.X, lplr.Character.HumanoidRootPart.Position.Y - 4, newpos.Z) )
-                    local movedir = lplr.Character:FindFirstChild("Humanoid").MoveDirection
-                    if movedir.X==0 and movedir.Z==0 and lplr.Character:FindFirstChild("Humanoid").Jump==true  then 
-                        local velo = lplr.Character.HumanoidRootPart.Velocity
-                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(0, 25, 0)
-                    end
-                    if not isPointInMapOccupied(newpos) then
-                        bedwars["placeBlock"](newpos)
-                    end
+do 
+    local controls = require(game:GetService("Players").LocalPlayer.PlayerScripts.PlayerModule):GetControls()
+    local AntiVoid = {["Enabled"] = false}; 
+    AntiVoid = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "AntiVoid",
+        ["Function"] = function(callback)
+            if callback then 
+                spawn(function()
+                    local lastValid 
+                    repeat task.wait(0.05)
+                        if isAlive() then 
+                            if lplr.Character.Humanoid.FloorMaterial ~= Enum.Material.Air then 
+                                lastValid = lplr.Character.HumanoidRootPart.CFrame
+                            else
+                                local params = RaycastParams.new()
+                                params.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
+                                params.FilterType = Enum.RaycastFilterType.Whitelist
+                                local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -999999999999, 0), params)
+                                if ray and not ray.Instance or not ray then 
+                                    local mag = (lplr.Character.HumanoidRootPart.Position - lastValid.p).magnitude
+                                    local magY = (lplr.Character.HumanoidRootPart.Position.Y - lastValid.p.Y)
+                                    if magY <= -10 then 
+                                        spawn(function()
+                                            controls:Disable()
+                                            lplr.Character.HumanoidRootPart.CFrame = lastValid:lerp(lplr.Character.HumanoidRootPart.CFrame, 0.5)
+                                            task.wait(0.2)
+                                            lplr.Character.HumanoidRootPart.CFrame = lastValid
+                                            controls:Enable()
+                                        end)
+                                    end
+                                end
+                            end
+                        end
+                    until not AntiVoid["Enabled"] 
+                end)
+            end
+        end,
+    })
+end
 
-                    local expandpos = lplr.Character.HumanoidRootPart.Position + ((lplr.Character.Humanoid.MoveDirection.Unit))
-                    expandpos = get3Vector( Vector3.new(expandpos.X, lplr.Character.HumanoidRootPart.Position.Y-4, expandpos.Z) )
-                    if not isPointInMapOccupied(expandpos) then
-                        bedwars["placeBlock"](expandpos)
-                    end
 
-                    local expandpos2 = lplr.Character.HumanoidRootPart.Position + ((lplr.Character.Humanoid.MoveDirection.Unit*2))
-                    expandpos2 = get3Vector( Vector3.new(expandpos2.X, lplr.Character.HumanoidRootPart.Position.Y-4, expandpos2.Z) )
-                    if not isPointInMapOccupied(expandpos2) then
-                        bedwars["placeBlock"](expandpos2)
+do
+    local scaffold = {["Enabled"] = false}
+    scaffold = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Scaffold",
+        ["Function"] = function(callback) 
+            if callback then 
+                BindToStepped("Scaffold", function()
+                    if isAlive() and lplr.Character:FindFirstChild("Humanoid") ~= nil then
+                        local block = getwool()
+                        local newpos = lplr.Character.HumanoidRootPart.Position
+                        newpos = get3Vector( Vector3.new(newpos.X, lplr.Character.HumanoidRootPart.Position.Y - 4, newpos.Z) )
+                        local movedir = lplr.Character:FindFirstChild("Humanoid").MoveDirection
+                        if movedir.X==0 and movedir.Z==0 and lplr.Character:FindFirstChild("Humanoid").Jump==true  then 
+                            local velo = lplr.Character.HumanoidRootPart.Velocity
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(0, 25, 0)
+                        end
+                        if not isPointInMapOccupied(newpos) then
+                            bedwars["placeBlock"](newpos)
+                        end
+
+                        local expandpos = lplr.Character.HumanoidRootPart.Position + ((lplr.Character.Humanoid.MoveDirection.Unit))
+                        expandpos = get3Vector( Vector3.new(expandpos.X, lplr.Character.HumanoidRootPart.Position.Y-4, expandpos.Z) )
+                        if not isPointInMapOccupied(expandpos) then
+                            bedwars["placeBlock"](expandpos)
+                        end
+
+                        local expandpos2 = lplr.Character.HumanoidRootPart.Position + ((lplr.Character.Humanoid.MoveDirection.Unit*2))
+                        expandpos2 = get3Vector( Vector3.new(expandpos2.X, lplr.Character.HumanoidRootPart.Position.Y-4, expandpos2.Z) )
+                        if not isPointInMapOccupied(expandpos2) then
+                            bedwars["placeBlock"](expandpos2)
+                        end
                     end
-                end
-            end)
-        else
-            UnbindFromStepped("Scaffold")
+                end)
+            else
+                UnbindFromStepped("Scaffold")
+            end
         end
-    end
-})
+    })
+end
 
 
 -- other window 

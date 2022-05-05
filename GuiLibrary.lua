@@ -1149,13 +1149,11 @@ GuiLibrary["LoadConfig"] = function(name)
             for i,v in next, GuiLibrary.Objects do 
                 if v.Type == "Toggle" and not table.find(exclusionList, i) then 
                     if v.API.Enabled then 
-                        print("[Future] Turned off "..i)
                         v.API.Toggle(false, true)
                     end
                 end
                 if v.Type == "OptionsButton" and not table.find(exclusionList, i) then 
                     if v.API.Enabled then 
-                        print("[Future] Turned off "..i)
                         v.API.Toggle(false, true, true)
                     end
                 end
@@ -1176,6 +1174,7 @@ GuiLibrary["LoadConfig"] = function(name)
                     elseif v.Type == "OptionsButton" and GuiLibrary["Objects"][i].Window == v.Window and not table.find(exclusionList, i) then 
                         if v.Enabled then
                             API.Toggle(v.Enabled, true, true)
+                        else
                         end
                         API.SetKeybind(v.Keybind)
                     end
