@@ -488,6 +488,13 @@ local bedwarsidtable = {
 if table.find(bedwarsidtable, game.PlaceId) then 
     shared.FuturePlaceId = 6872274481
 end
+local minerscaveidtable = {
+    7910558502,
+    6604417568,
+}
+if table.find(minerscaveidtable, game.PlaceId) then 
+    shared.FuturePlaceId = 6604417568
+end
 
 local success, _error = pcall(getscript, "Universal")
 local success2, _error2 = pcall(getscript)

@@ -4,3 +4,4 @@ configs/142823291/default.json
 autowintimes.txt
 *.fp
 *.txt
+*.log
