@@ -170,6 +170,22 @@ local function getPlrNearMouse(max)
     return nearestval
 end
 
+
+local function getPlrNear(max)
+    local max = max or 99999999999999
+    local nearestval, nearestnum = nil,max
+    for i,v in next, PLAYERS:GetPlayers() do 
+        if isAlive(v) and v~=lplr then 
+            local diff = (v.Character.HumanoidRootPart.Position - lplr.Character.HumanoidRootPart.Position).Magnitude
+            if diff < nearestnum then 
+                nearestnum = diff 
+                nearestval = v
+            end
+        end
+    end
+    return nearestval
+end
+
 local function getAimAt(pos)
     return WORKSPACE.CurrentCamera:WorldToScreenPoint(pos)
 end
@@ -271,18 +287,13 @@ do
     local smoothaimsmoothness = {["Value"] = 0}
     local smoothaimpart = {["Value"] ="Root"}
     local smoothaimheld = {["Value"] = "LMB"}
-
     smoothaim = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
         ["Name"] = "SmoothAim",
         ["Function"] = function(callback) 
             if callback then 
                 BindToStepped("SmoothAim", function() 
-                    local aimpart = smoothaimpart["Value"] == "Root" and "HumanoidRootPart" or "Head"
-                    local plr
-                    for i,v in next, getAllPlrsNear() do 
-                        plr = v
-                        break
-                    end
+                    local aimpart = smoothaimpart["Value"] == "Root" and "HumanoidRootPart" or "Head" 
+                    local plr = getPlrNear()
                     if plr and canBeTargeted(plr, false) and UIS:IsMouseButtonPressed(smoothaimheld["Value"] == "LMB" and 0 or 1) then 
                         aimAt(plr.Character[aimpart].Position, smoothaimsmoothness["Value"])
                     end
