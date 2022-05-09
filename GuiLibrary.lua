@@ -97,18 +97,30 @@ local exclusionList = {
 
 local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
 ScreenGui.Name = tostring(math.random(1,10))
-local ClickGUI = Instance.new("Frame", ScreenGui)
-ClickGUI.Size = UDim2.new(0,ScreenGui.AbsoluteSize.X,0,ScreenGui.AbsoluteSize.Y)
+local ScaledGui = Instance.new("Frame", ScreenGui)
+ScaledGui.Position = UDim2.fromScale(0.5, 0.5)
+ScaledGui.AnchorPoint = Vector2.new(0.5,0.5)
+ScaledGui.Size = UDim2.new(1,0,1,0)
+ScaledGui.BackgroundTransparency = 1
+local ClickGUI = Instance.new("Frame", ScaledGui)
+ClickGUI.Size = UDim2.new(1,0,1,0)
 ClickGUI.BackgroundTransparency = 1
 ClickGUI.Name = "ClickGUI"
 ClickGUI.Visible = false
+local UIScale = Instance.new("UIScale", ScaledGui)
+UIScale.Scale = math.clamp(cam.ViewportSize.X / 1920, 0.5, 1)
 GuiLibrary["ScreenGui"] = ScreenGui
+GuiLibrary["ScaledGui"] = ScreenGui
 GuiLibrary["ClickGUI"] = ClickGUI
+GuiLibrary["UIScale"] = UIScale
 makefolder("Future")
+makefolder("Future/logs")
 makefolder("Future/assets")
 makefolder("Future/configs")
 makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
-
+cam:GetPropertyChangedSignal("ViewportSize"):connect(function()
+    UIScale.Scale = math.clamp(cam.ViewportSize.X / 1920, 0.5, 1)
+end)
 
 local function requesturl(url, bypass) 
     if isfile(url) then 
@@ -137,6 +149,31 @@ local function getasset(path)
 	end]]
 	return getcustomasset(path) 
 end
+
+if isfile("Future/logs/latestmove.log") then 
+    local data = readfile("Future/logs/latestmove.log")
+    delfile("Future/logs/latestmove.log")
+    local date = data:split("\n")[1]
+    writefile(("Future/logs/"..date:gsub(" ", "_"):gsub("[^%w%s_:-]+", ""):gsub(":", "-")..".log"), data)
+end
+if isfile("Future/latest.log") then 
+    local data = readfile("Future/latest.log")
+    delfile("Future/latest.log")
+    writefile(("Future/logs/latestmove.log"), data)
+end
+local function log(sys, mes) 
+    local timePrefix = ("[%s] | "):format(os.date("%c").." "..os.date("%Z"))
+    local prefix = timePrefix.." ["..tostring(sys).."] "
+    local toPush = prefix..tostring(mes).."\n"
+
+    if not isfile("Future/latest.log") then 
+        writefile("Future/latest.log", os.date("%c").."\n"..toPush)
+    else
+        appendfile("Future/latest.log", toPush)
+    end
+end
+log("Startup", "---- BEGIN LOG ----")
+log("Startup", "Starting GUILibrary")
 
 local function colortotable(color)
     if color:ToHSV() then
@@ -242,6 +279,8 @@ spawn(function()
         task.wait()
     until not shared.Future
 end)
+log("Startup", "Starting Signals")
+
 
 local function playsound(id, volume) 
     local sound = Instance.new("Sound")
@@ -941,10 +980,12 @@ end
 GuiLibrary["SaveConfig"] = function(name, isAutosave) 
     local name = (name == nil or name == "") and "default" or name
     GuiLibrary["Debug"]("save Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
+    log("SaveConfig", "Saving "..name)
     local config = {}
     for i,v in next, GuiLibrary["Objects"] do 
         if v.Type == "OptionsButton" and not table.find(exclusionList, i) and not v.DisableOnLeave then 
             config[i] = {["Enabled"] = v.API.Enabled, ["Keybind"] = v.API.Keybind, ["Type"] = v.Type, ["Window"] = v.Window}
+            log("SaveConfig", "Saving "..i.." as "..tostring(v.API.Enabled))
         elseif v.Type == "Toggle" and --[[not table.find(exclusionList, v.OptionsButton) and]] not table.find(exclusionList, i) then
             config[i] = {["Enabled"] = v.API.Enabled, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
         elseif v.Type == "Slider" and not table.find(exclusionList, v.OptionsButton) then
@@ -1140,6 +1181,7 @@ GuiLibrary["LoadConfig"] = function(name)
     GuiLibrary["Debug"]("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     if isfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 
         print("[Future] Loading configuration "..name)
+        log("LoadConfig", "Loading "..name)
         local success, config = pcall(function() 
             local x = readfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
             return HTTPSERVICE:JSONDecode(x)
@@ -1173,8 +1215,8 @@ GuiLibrary["LoadConfig"] = function(name)
                         API.Set(v.Value)
                     elseif v.Type == "OptionsButton" and GuiLibrary["Objects"][i].Window == v.Window and not table.find(exclusionList, i) then 
                         if v.Enabled then
+                            log("LoadConfig", "Loading "..i.." as ".. tostring(v.Enabled))
                             API.Toggle(v.Enabled, true, true)
-                        else
                         end
                         API.SetKeybind(v.Keybind)
                     end
@@ -1191,10 +1233,11 @@ GuiLibrary["RemoveObject"] = function(name)
         GuiLibrary.Objects[name].Instance:Destroy()
         GuiLibrary.Objects[name] = nil
         GuiLibrary.UpdateWindows()
+        log("RemoveObject", "Removing "..name)
     end
 end
 GuiLibrary["CreateWindow"] = function(argstable)
-    local windowapi = {["Expanded"] = true, ["ExpandedOptionsButton"] = nil}
+    local windowapi = {["Expanded"] = true, ["ExpandedOptionsButton"] = nil, ["Expand"] = function() end}
     local windowargs = argstable
 
     local Window = Instance.new("Frame")
@@ -1209,7 +1252,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
     Window.BackgroundTransparency = 0.250
     Window.BorderSizePixel = 0
     Window.Position = UDim2.new(0, GuiLibrary["WindowX"], 0, 25)
-    GuiLibrary["WindowX"] = GuiLibrary["WindowX"] + (176 + 15)
+    GuiLibrary["WindowX"] = GuiLibrary["WindowX"] + (176 + 3)
     Window.Size = UDim2.new(0, 176, 0, 222)
     Window_2.Name = "WindowTopbar"
     Window_2.Parent = Window
@@ -1261,13 +1304,15 @@ GuiLibrary["CreateWindow"] = function(argstable)
     UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     UIListLayout.Padding = UDim.new(0, 1)
+    local connection222 = UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):connect(windowapi.Update)
+    table.insert(GuiLibrary.Connections, connection222)
 
     windowapi["CreateOptionsButton"] = function(argstable) 
         local buttonapi = {["Enabled"] = false, ["Expanded"] = false, ["Keybind"] = nil, ["IsRecording"] = false}
 
         local OptionsButton = Instance.new("TextButton")
         local Name = Instance.new("TextLabel")
-        local Gear = Instance.new("ImageLabel")
+        local Gear = Instance.new("ImageButton")
         local ChildrenContainer = Instance.new("Frame")
         local UIListLayout_2 = Instance.new("UIListLayout")
         local ModuleContainer = Instance.new("Frame")
@@ -1384,10 +1429,17 @@ GuiLibrary["CreateWindow"] = function(argstable)
         end
 
         buttonapi["Update"] = function()
-            ModuleContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, UIListLayout_3.AbsoluteContentSize.Y-1)
-            ChildrenContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, UIListLayout_2.AbsoluteContentSize.Y + 0)
+            local abc =  UIListLayout_3.AbsoluteContentSize.Y * (1/GuiLibrary["UIScale"].Scale)
+            local abc2 = UIListLayout_2.AbsoluteContentSize.Y * (1/GuiLibrary["UIScale"].Scale)
+            ModuleContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, abc-1)
+            ChildrenContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, (abc2 ))
         end
         windowapi.Update()
+
+        local connection = UIListLayout_3:GetPropertyChangedSignal("AbsoluteContentSize"):connect(windowapi.Update)
+        local connection2 = UIListLayout_2:GetPropertyChangedSignal("AbsoluteContentSize"):connect(windowapi.Update)
+        table.insert(GuiLibrary.Connections, connection2)
+        table.insert(GuiLibrary.Connections, connection)
 
         buttonapi["Expand"] = function(boolean)
             local doExpand = boolean~=nil and boolean or not buttonapi.Expanded
@@ -1466,6 +1518,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
         end
         OptionsButton.MouseButton2Click:Connect(buttonapi.Expand)
         OptionsButton.MouseButton1Click:Connect(buttonapi.Toggle)
+        Gear.MouseButton1Click:Connect(buttonapi.Expand)
 
         buttonapi["CreateToggle"] = function(argstable) 
             local toggleapi = {["Enabled"] = false}
@@ -1796,13 +1849,14 @@ GuiLibrary["CreateWindow"] = function(argstable)
 
 
     windowapi["Update"] = function()
-        
         for i,v in next, GuiLibrary.Objects do 
             if v.Type == "OptionsButton" and v.Window == Window.Name then 
                 v.API.Update()
             end
         end
-        Window.Size = not windowapi.Expanded and UDim2.new(0, 176, 0, 35) or UDim2.new(0, 176, 0, UIListLayout.AbsoluteContentSize.Y + 37)
+        local off = 37
+        local abc = off+UIListLayout.AbsoluteContentSize.Y * (1 / GuiLibrary["UIScale"].Scale)
+        Window.Size = not windowapi.Expanded and UDim2.new(0, 176, 0, 35*(1/ GuiLibrary["UIScale"].Scale)) or UDim2.new(0, 176, 0, abc)
     end
     windowapi.Update()
     windowapi["Expand"] = function(boolean) 
@@ -1886,6 +1940,7 @@ onDestroySignal:Connect(function()
         chatchildaddedconnection = nil
     end
     shared.Future = nil
+    log("Destruct", "---- END LOG ----")
 end)
 
 return GuiLibrary
