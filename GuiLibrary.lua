@@ -97,30 +97,18 @@ local exclusionList = {
 
 local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
 ScreenGui.Name = tostring(math.random(1,10))
-local ScaledGui = Instance.new("Frame", ScreenGui)
-ScaledGui.Position = UDim2.fromScale(0.5, 0.5)
-ScaledGui.AnchorPoint = Vector2.new(0.5,0.5)
-ScaledGui.Size = UDim2.new(1,0,1,0)
-ScaledGui.BackgroundTransparency = 1
-local ClickGUI = Instance.new("Frame", ScaledGui)
+local ClickGUI = Instance.new("Frame", ScreenGui)
 ClickGUI.Size = UDim2.new(1,0,1,0)
 ClickGUI.BackgroundTransparency = 1
 ClickGUI.Name = "ClickGUI"
 ClickGUI.Visible = false
-local UIScale = Instance.new("UIScale", ScaledGui)
-UIScale.Scale = math.clamp(cam.ViewportSize.X / 1920, 0.5, 1)
 GuiLibrary["ScreenGui"] = ScreenGui
-GuiLibrary["ScaledGui"] = ScreenGui
 GuiLibrary["ClickGUI"] = ClickGUI
-GuiLibrary["UIScale"] = UIScale
 makefolder("Future")
 makefolder("Future/logs")
 makefolder("Future/assets")
 makefolder("Future/configs")
 makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
-cam:GetPropertyChangedSignal("ViewportSize"):connect(function()
-    UIScale.Scale = math.clamp(cam.ViewportSize.X / 1920, 0.5, 1)
-end)
 
 local function requesturl(url, bypass) 
     if isfile(url) then 
@@ -1429,10 +1417,8 @@ GuiLibrary["CreateWindow"] = function(argstable)
         end
 
         buttonapi["Update"] = function()
-            local abc =  UIListLayout_3.AbsoluteContentSize.Y * (1/GuiLibrary["UIScale"].Scale)
-            local abc2 = UIListLayout_2.AbsoluteContentSize.Y * (1/GuiLibrary["UIScale"].Scale)
-            ModuleContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, abc-1)
-            ChildrenContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, (abc2 ))
+            ModuleContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, UIListLayout_3.AbsoluteContentSize.Y-1)
+            ChildrenContainer.Size = not buttonapi.Expanded and UDim2.new(0, 175, 0, 35) or UDim2.new(0, 175, 0, UIListLayout_2.AbsoluteContentSize.Y + 0)
         end
         windowapi.Update()
 
@@ -1855,8 +1841,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             end
         end
         local off = 37
-        local abc = off+UIListLayout.AbsoluteContentSize.Y * (1 / GuiLibrary["UIScale"].Scale)
-        Window.Size = not windowapi.Expanded and UDim2.new(0, 176, 0, 35*(1/ GuiLibrary["UIScale"].Scale)) or UDim2.new(0, 176, 0, abc)
+        Window.Size = not windowapi.Expanded and UDim2.new(0, 176, 0, 35) or UDim2.new(0, 176, 0, UIListLayout.AbsoluteContentSize.Y + 37)
     end
     windowapi.Update()
     windowapi["Expand"] = function(boolean) 
