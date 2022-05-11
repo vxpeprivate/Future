@@ -16,31 +16,10 @@ local requestfunc = syn and syn.request or http and http.request or http_request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 local isnetworkowner = isnetworkowner or function() return true end
 local state = function() return workspace.MatchDocument:GetAttribute("matchState") end
-
-local UnixTime = os.time()
-local UpdateTime = math.huge
-if UnixTime >= UpdateTime then 
-    print(" game has updated. ")
-    if not shared.FutureDeveloper then 
-        local textlabel = Instance.new("TextLabel")
-        textlabel.Size = UDim2.new(1, 0, 0, 36)
-        textlabel.RichText = true
-        textlabel.Text = '<stroke thickness="2">Future is down due to the prophunt update. Expect it to be back up in a few minutes. \n join the Future discord server for updates, discord.gg/bdjT5UmmDJ</stroke>'
-        textlabel.BackgroundTransparency = 1
-        textlabel.TextStrokeTransparency = 0
-        textlabel.TextSize = 40
-        textlabel.Font = Enum.Font.SourceSans
-        textlabel.TextColor3 = Color3.new(1, 1, 1)
-        textlabel.Position = UDim2.new(0.5, 0, 0.5, 0)
-        textlabel.AnchorPoint = Vector2.new(0.5, 0.5)
-        textlabel.Parent = COREGUI.RobloxGui
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
-        GuiLibrary.Signals.onDestroy:Fire()
-        task.wait(30)
-        textlabel:Destroy()
-        return
-    end
+local spawn = function(func) 
+    return coroutine.wrap(func)()
 end
+
 
 local function requesturl(url, bypass) 
     if isfile(url) and shared.FutureDeveloper then 

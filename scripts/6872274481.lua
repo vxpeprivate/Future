@@ -8,11 +8,14 @@ local HTTPSERVICE = game:GetService("HttpService")
 local lplr = PLAYERS.LocalPlayer
 local mouse = lplr:GetMouse()
 local cam = WORKSPACE.CurrentCamera
-local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]
+local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary.getRobloxAsset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
+local spawn = function(func) 
+    return coroutine.wrap(func)()
+end
 local bedwars = {} 
-local Reach = {["Enabled"] = false}
+local Reach = {Enabled = false}
 local speedsettings = {
     factor = 5.37,  
     velocitydivfactor = 2.9,
@@ -101,7 +104,7 @@ local function ferror(...)
     for i,v in next,args do 
         str=str.." "..tostring(v)
     end
-    GuiLibrary["CreateNotification"]("<font color='rgb(255, 10, 10)'>[ERROR]"..str.."</font>")
+    GuiLibrary.CreateNotification("<font color='rgb(255, 10, 10)'>[ERROR]"..str.."</font>")
     error("[Future]"..str)
 end
 
@@ -112,7 +115,7 @@ local function fwarn(...)
         str=str.." "..tostring(v)
     end
     warn("[Future]"..str)
-    GuiLibrary["CreateNotification"]("<font color='rgb(255, 255, 10)'>[WARNING] "..str.."</font>")
+    GuiLibrary.CreateNotification("<font color='rgb(255, 255, 10)'>[WARNING] "..str.."</font>")
 end
 
 local function fprint(...)
@@ -122,7 +125,7 @@ local function fprint(...)
         str=str.." "..tostring(v)
     end
     print("[Future]"..str)
-    GuiLibrary["CreateNotification"]("<font color='rgb(200, 200, 200)'>"..str.."</font>")
+    GuiLibrary.CreateNotification("<font color='rgb(200, 200, 200)'>"..str.."</font>")
 end
 
 local function getColorFromPlayer(v) 
@@ -698,7 +701,7 @@ do
     local auradist = {["Value"] = 14 }
     local auraanim = {["Value"] = "Slow"}
     local hitremote = bedwars["ClientHandler"]:Get(bedwars["AttackRemote"])["instance"]
-    aura = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+    aura = GuiLibrary.Objects.CombatWindow.API.CreateOptionsButton({
         ["Name"] = "Aura",
         ["Function"] = function(callback) 
             if callback then
@@ -723,7 +726,9 @@ do
                                         }, 
                                         ["chargedAttack"] = {["chargeRatio"] = 1},
                                     }
-                                    hitremote:InvokeServer(attackArgs)
+                                    spawn(function()
+                                        hitremote:InvokeServer(attackArgs)
+                                    end)
 
                                     GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
 
@@ -791,7 +796,7 @@ do
     local veloh, velov = {["Value"] = 0},{["Value"] = 0}
     local velocity = {["Enabled"] = false}
     local oldveloh, oldvelov, oldvelofunc = bedwars["KnockbackTable"]["kbDirectionStrength"], bedwars["KnockbackTable"]["kbUpwardStrength"], bedwars["VelocityUtil"].applyVelocity
-    velocity = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+    velocity = GuiLibrary.Objects.CombatWindow.API.CreateOptionsButton({
         ["Name"] = "Velocity",
         ["Function"] = function(callback) 
             if callback then 
@@ -840,7 +845,7 @@ end
 do 
     local old = getmetatable(bedwars["SwordController"]).isClickingTooFast
     local NoClickDelay = {["Enabled"] = false}
-    NoClickDelay = GuiLibrary["Objects"]["CombatWindow"]["API"].CreateOptionsButton({
+    NoClickDelay = GuiLibrary.Objects.CombatWindow.API.CreateOptionsButton({
         ["Name"] = "NoClickDelay",
         ["Function"] = function(callback) 
             if callback then 
@@ -858,7 +863,7 @@ end
 do 
     local old, old2 = debug.getconstant(bedwars["SwingSwordRegion"], 10),debug.getconstant(bedwars["SwingSwordRegion"], 15)
     local ReachValue = {["Value"] = 0.1}
-    Reach = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+    Reach = GuiLibrary.Objects.ExploitsWindow.API.CreateOptionsButton({
         ["Name"] = "Reach",
         ["Function"] = function(callback) 
             if callback then 
@@ -889,7 +894,7 @@ end
 do 
     local shopbypass = {["Enabled"] = false}
     local old = bedwars["ShopItems"]
-    shopbypass = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+    shopbypass = GuiLibrary.Objects.ExploitsWindow.API.CreateOptionsButton({
         ["Name"] = "ShopDisplayAll",
         ["Function"] = function(callback) 
             if callback then 
@@ -916,7 +921,7 @@ GuiLibrary["RemoveObject"]("LongJumpOptionsButton")
 do 
     local longjumptick = tick()
     local speedval, timeval = {["Value"] = 0},{["Value"] = 0}
-    local LongJump = {["Enabled"] = false}; LongJump = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+    local LongJump = {["Enabled"] = false}; LongJump = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "LongJump",
         ["Function"] = function(callback) 
             if callback then
@@ -985,7 +990,7 @@ do
     local speedval = {["Value"] = 40}
     local speedmode = {["Enabled"] = false}
     local speed = {["Enabled"] = false}
-    speed = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+    speed = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "Speed",
         ["ArrayText"] = function() return speedval["Value"] end,
         ["Function"] = function(callback)
@@ -994,11 +999,11 @@ do
                     if isAlive() and not stopSpeed then
                         lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
                         local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*((isnetworkowner and isnetworkowner(lplr.Character.HumanoidRootPart)) and speedsettings.factor or 0)) * dt
-                        velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
+                        velo = Vector3.new(velo.x / 11, 0, velo.z / 11)
                         lplr.Character:TranslateBy(velo)
 
-                        local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
-                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
+                        --local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
+                        --lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
                     end
                 end)
             else
@@ -1010,8 +1015,8 @@ do
     speedval = speed.CreateSlider({
         ["Name"] = "Speed",
         ["Min"] = 1,
-        ["Max"] = 44,
-        ["Default"] = 44,
+        ["Max"] = 42,
+        ["Default"] = 42,
         ["Round"] = 0,
         ["Function"] = function() end
     })
@@ -1022,7 +1027,7 @@ do
     local xzdiv = {["Value"] = 1}
     local spiderval = {["Value"] = 40}
     local spider = {["Enabled"] = false}
-    spider = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+    spider = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "Spider",
         ["ArrayText"] = function() return spiderval["Value"] end,
         ["Function"] = function(callback)
@@ -1067,7 +1072,7 @@ end
 
 do 
     local nofall = {["Enabled"] = false}
-    nofall = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+    nofall = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "NoFall",
         ["Function"] = function(callback) 
             if callback then 
@@ -1078,6 +1083,23 @@ do
                         end
                     until nofall.Enabled == false
                 end)
+            end
+        end
+    })
+end
+
+do
+    local Sprint = {Enabled = false}
+    Sprint = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
+        Name = "Sprint",
+        Function = function(callback) 
+            if callback then 
+                BindToHeartbeat("Sprint", function() 
+                    bedwars["sprintTable"]:startSprinting()
+                end)
+            else
+                bedwars["sprintTable"]:stopSprinting()
+                UnbindFromHeartbeat("Sprint")
             end
         end
     })
@@ -1113,7 +1135,7 @@ if isnetworkowner~=nil then do
         end
         notifyfunc()
     end
-    LagBackNotify = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+    LagBackNotify = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
         ["Name"] = "LagbackNotifier",
         ["Function"] = function(callback) 
             if callback then 
@@ -1153,7 +1175,7 @@ do
     end
     local connection, connection2
     local BedESP = {["Enabled"] = false}
-    BedESP = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+    BedESP = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
         ["Name"] = "BedESP",
         ["Function"] = function(callback) 
             if callback then 
@@ -1197,7 +1219,7 @@ do
     espfolder.Name = "ESP"
     local espnames= {["Enabled"] = false}
     local espdisplaynames= {["Enabled"] = false}
-    esp = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+    esp = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
         ["Name"] = "ESP",
         ["Function"] = function(callback) 
             if callback then 
@@ -1315,7 +1337,7 @@ do
     local ChestStealer = {["Enabled"] = false}
 	local ChestStealerDistance = {["Value"] = 1}
 	local ChestStealDelay = tick()
-	ChestStealer = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+	ChestStealer = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
 		["Name"] = "ChestStealer",
 		["Function"] = function(callback)
 			if callback then
@@ -1356,7 +1378,7 @@ do
 end
 
 do 
-    local bedaura = {["Enabled"] = false}; bedaura = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+    local bedaura = {["Enabled"] = false}; bedaura = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
         ["Name"] = "BedAura",
         ["Function"] = function(callback) 
             if callback then 
@@ -1379,7 +1401,7 @@ end
 do 
     local controls = require(game:GetService("Players").LocalPlayer.PlayerScripts.PlayerModule):GetControls()
     local AntiVoid = {["Enabled"] = false}; 
-    AntiVoid = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+    AntiVoid = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
         ["Name"] = "AntiVoid",
         ["Function"] = function(callback)
             if callback then 
@@ -1419,7 +1441,7 @@ end
 
 do
     local scaffold = {["Enabled"] = false}
-    scaffold = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+    scaffold = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
         ["Name"] = "Scaffold",
         ["Function"] = function(callback) 
             if callback then 

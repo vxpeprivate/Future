@@ -11,6 +11,9 @@ local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRob
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 local bedwars = {} 
+local spawn = function(func) 
+    return coroutine.wrap(func)()
+end
 
 -- skid("vape")
 

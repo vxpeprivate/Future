@@ -10,6 +10,10 @@ local lplr = PLAYERS.LocalPlayer
 local mouse = lplr:GetMouse()
 local cam = WORKSPACE.CurrentCamera
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
+local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
+local spawn = function(func) 
+    return coroutine.wrap(func)()
+end
 local chatchildaddedconnection
 local GuiLibrary = {
     ["getRobloxAsset"] = function(path) 

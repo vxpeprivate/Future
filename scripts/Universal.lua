@@ -14,6 +14,9 @@ local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or flux
 local getgenv = getgenv or function() 
     return _G
 end
+local spawn = function(func) 
+    return coroutine.wrap(func)()
+end
 
 local function requesturl(url, bypass) 
     if isfile(url) and shared.FutureDeveloper then 
