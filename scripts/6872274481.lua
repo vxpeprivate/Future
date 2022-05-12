@@ -762,7 +762,7 @@ do
                 spawn(function()
                     repeat wait() 
                         for i,v in next, getAllPlrsNear() do 
-                            if isAlive(v) then
+                            if isAlive(v) and not bedwars["CheckWhitelisted"](v) then
                                 if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
                                     local weapon, slot = getBestSword()
                                     local selfpos = lplr.Character.HumanoidRootPart.Position + (auradist["Value"] > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
@@ -779,44 +779,47 @@ do
                                         }, 
                                         ["chargedAttack"] = {["chargeRatio"] = 1},
                                     }
-                                    if not bedwars["CheckWhitelisted"](v) then
-                                        spawn(function()
-                                            hitremote:InvokeServer(attackArgs)
-                                        end)
+                                    spawn(function()
+                                        --hitremote:InvokeServer(attackArgs)
+                                    end)
 
-                                        GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
+                                    GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
 
-                                        playanimation("rbxassetid://4947108314")
+                                    playanimation("rbxassetid://4947108314")
 
-                                        -- animation stuff (thx 7grand once again)
-                                        
-                                        if not stopTween then
-                                            local Tween
-                                            if auraanim["Value"] == "Slow" then 
-                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                                TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                            elseif auraanim["Value"] == "Medium" then 
-                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                                TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                            elseif auraanim["Value"] == "Fast" then 
-                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                                TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                            elseif auraanim["Value"] == "Dev" then 
-                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                                TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, true, 0), 
-                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(-90), math.rad(0), -math.rad(90))})
-                                            end
-
-                                            spawn(function()
-                                                stopTween = true
-                                                Tween:Play()
-                                                Tween.Completed:Wait()
-                                                stopTween = false
-                                            end)
+                                    -- animation stuff (thx 7grand once again)
+                                    
+                                    if not stopTween then
+                                        local Tween
+                                        if auraanim["Value"] == "Slow" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                        elseif auraanim["Value"] == "Medium" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                        elseif auraanim["Value"] == "Fast" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                        elseif auraanim["Value"] == "Slice" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 1) * CFrame.Angles(-math.rad(100), math.rad(0), -math.rad(0))})
+                                        elseif auraanim["Value"] == "Dev" then 
+                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, true, 0), 
+                                            {C0 = origC0 * CFrame.new(-1, -1, 4) * CFrame.Angles(-math.rad(100), math.rad(0), -math.rad(0))})
                                         end
+
+                                        spawn(function()
+                                            stopTween = true
+                                            Tween:Play()
+                                            Tween.Completed:Wait()
+                                            cam.Viewmodel.RightHand.RightWrist.C0 = origC0
+                                            stopTween = false
+                                        end)
                                     end
                                 end
                             else
@@ -841,7 +844,7 @@ do
     auraanim = aura.CreateSelector({
         ["Name"] = "Anim",
         ["Function"] = function() end,
-        ["List"] = {"Slow", "Medium", "Fast", "Dev", "None"},
+        ["List"] = {"Slow", "Medium", "Fast", "Slice", "Dev", "None"},
         ["Default"] = "Slow",
     })
 
