@@ -780,7 +780,7 @@ do
                                         ["chargedAttack"] = {["chargeRatio"] = 1},
                                     }
                                     spawn(function()
-                                        --hitremote:InvokeServer(attackArgs)
+                                        hitremote:InvokeServer(attackArgs)
                                     end)
 
                                     GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
