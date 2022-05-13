@@ -142,6 +142,7 @@ local function getasset(path)
 	return getcustomasset(path) 
 end
 
+--[[
 if isfile("Future/logs/latestmove.log") then 
     local data = readfile("Future/logs/latestmove.log")
     delfile("Future/logs/latestmove.log")
@@ -166,6 +167,8 @@ local function log(sys, mes)
 end
 log("Startup", "---- BEGIN LOG ----")
 log("Startup", "Starting GUILibrary")
+]]
+local function log() end
 
 local function colortotable(color)
     if color:ToHSV() then

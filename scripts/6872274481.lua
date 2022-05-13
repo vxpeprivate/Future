@@ -327,7 +327,6 @@ bedwars = {
     ["ConstantManager"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].constant["constant-manager"]).ConstantManager,
     ["CooldownController"] = KnitClient.Controllers.CooldownController,
     ["damageTable"] = KnitClient.Controllers.DamageController,
-    ["DaoRemote"] = getremote(debug.getconstants(debug.getprotos(KnitClient.Controllers.KatanaController.onEnable)[4])),
     ["DetonateRavenRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.RavenController).detonateRaven)),
     ["DropItem"] = getmetatable(KnitClient.Controllers.ItemDropController).dropItemInHand,
     ["DropItemRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.ItemDropController).dropItemInHand)),
@@ -360,7 +359,7 @@ bedwars = {
     ["ItemTable"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.item["item-meta"]).getItemMeta, 1),
     ["JuggernautRemote"] = getremote(debug.getconstants(debug.getprotos(debug.getprotos(KnitClient.Controllers.JuggernautController.KnitStart)[1])[4])),
     ["KatanaController"] = KnitClient.Controllers.KatanaController,
-    ["KatanaRemote"] = getremote(debug.getconstants(debug.getproto(KnitClient.Controllers.KatanaController.onEnable, 4))),
+    ["KatanaRemote"] = getremote(debug.getconstants(debug.getproto(KnitClient.Controllers.DaoController.onEnable, 4))),
     ["KnockbackTable"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.damage["knockback-util"]).KnockbackUtil.calculateKnockbackVelocity, 1),
     ["KnockbackTable2"] = require(game:GetService("ReplicatedStorage").TS.damage["knockback-util"]).KnockbackUtil,
     ["LobbyClientEvents"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"].lobby.out.client.events).LobbyClientEvents,
@@ -759,6 +758,9 @@ do
         ["Function"] = function(callback) 
             if callback then
                 origC0 = origC0 or cam.Viewmodel.RightHand.RightWrist.C0
+                if auraanim.Value == "Dong" then 
+                    cam.Viewmodel.RightHand.RightWrist.C0 = origC0 * CFrame.new(Vector3.new(-1.78,0.5,0), Vector3.new(7, -100, 0))
+                end
                 spawn(function()
                     repeat wait() 
                         for i,v in next, getAllPlrsNear() do 
@@ -807,17 +809,20 @@ do
                                             Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
                                             TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, true, 0), 
                                             {C0 = origC0 * CFrame.new(0.7, -0.7, 1) * CFrame.Angles(-math.rad(100), math.rad(0), -math.rad(0))})
-                                        elseif auraanim["Value"] == "Dev" then 
+                                        elseif auraanim["Value"] == "Dong" then 
+                                            cam.Viewmodel.RightHand.RightWrist.C0 = origC0 * CFrame.new(Vector3.new(-1.78,0.5,0), Vector3.new(7, -100, 0))
                                             Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
                                             TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(-1, -1, 4) * CFrame.Angles(-math.rad(100), math.rad(0), -math.rad(0))})
+                                            { C0 = origC0 * CFrame.new(Vector3.new(-1.78,-1.5,0), Vector3.new(7, -100, 0)) })
                                         end
                                         if auraanim["Value"] ~= "None" then
                                             spawn(function()
                                                 stopTween = true
                                                 Tween:Play()
                                                 Tween.Completed:Wait()
-                                                cam.Viewmodel.RightHand.RightWrist.C0 = origC0
+                                                if auraanim.Value ~= "Dong" then
+                                                    cam.Viewmodel.RightHand.RightWrist.C0 = origC0
+                                                end
                                                 stopTween = false
                                             end)
                                         end
@@ -844,8 +849,13 @@ do
     })
     auraanim = aura.CreateSelector({
         ["Name"] = "Anim",
-        ["Function"] = function() end,
-        ["List"] = {"Slow", "Medium", "Fast", "Slice", "Dev", "None"},
+        ["Function"] = function()
+            if aura.Enabled then 
+                aura.Toggle(nil, true, true)
+                aura.Toggle(nil, true, true)
+            end
+        end,
+        ["List"] = {"Slow", "Medium", "Fast", "Slice", "Dong", "None"},
         ["Default"] = "Slow",
     })
 
@@ -972,6 +982,81 @@ end
 
 --// misc window
 
+do
+    local PlayerAddedConnection 
+    local AutoLeaveStaffMode = {Value = "Destruct"}
+    local AutoLeaveStateMode = {Value = "Requeue"}
+    local AutoLeave = {Enabled = false} 
+
+    local function AutoLeaveStaffFunction(plr) 
+
+        if not AutoLeave.Enabled then return end
+
+        if plr and plr:IsInGroup(5774246) and plr:GetRankInGroup(5774246) >= 100 or plr.Name == "futureclient_xyz2" then 
+            print(AutoLeaveStaffMode.Value)
+            if AutoLeaveStaffMode.Value == "Destruct" then 
+                GuiLibrary.SaveConfig(GuiLibrary.CurrentConfig)
+                GuiLibrary.Signals.onDestroy:Fire()
+            elseif AutoLeaveStaffMode.Value == "Requeue" then
+                local tpdata = game:GetService("TeleportService"):GetLocalPlayerTeleportData()
+                if tpdata and tpdata.match then 
+                    tpdata = tpdata.match.queueType
+                end
+                if type(tpdata)~="table" then
+                    game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = tpdata})
+                end
+            elseif AutoLeaveStaffMode.Value == "Lobby" then
+                game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.TeleportToLobby:FireServer()
+            end
+        end
+    end
+    AutoLeave = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
+        Name = "AutoLeave",
+        Function = function(callback) 
+            if callback then 
+                spawn(function() 
+                    repeat task.wait() until state() == states.POST
+                    task.wait(2)
+                    if AutoLeave.Enabled then 
+                        local tpdata = game:GetService("TeleportService"):GetLocalPlayerTeleportData()
+                        if tpdata and tpdata.match then 
+                            tpdata = tpdata.match.queueType
+                        end
+                        if AutoLeaveStateMode.Value == "Requeue" and type(tpdata)~="table" then
+                            game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = tpdata})
+                        elseif AutoLeaveStateMode.Value == "Lobby" then
+                            game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.TeleportToLobby:FireServer()
+                        end
+                    end
+                end)
+                spawn(function()
+                    repeat task.wait(0.1) until pcall(function() return game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.TeleportToLobby end)
+                    for i,v in next, PLAYERS:GetPlayers() do 
+                        pcall(AutoLeaveStaffFunction, v)
+                    end
+                end)
+                PlayerAddedConnection = PLAYERS.PlayerAdded:Connect(AutoLeaveStaffFunction)
+            else
+                PlayerAddedConnection:Disconnect()
+                PlayerAddedConnection = nil
+            end
+        end,
+    })
+    AutoLeaveStateMode = AutoLeave.CreateSelector({
+        Name = "End",
+        List = {"Requeue", "Lobby", "None"},
+        Function = function(callback) 
+            
+        end
+    })
+    AutoLeaveStaffMode = AutoLeave.CreateSelector({
+        Name = "Staff",
+        List = {"Destruct", "Requeue","Lobby", "None"},
+        Function = function(callback) 
+            
+        end
+    })
+end
 
 
 -- // movement window 
@@ -1552,6 +1637,10 @@ end
 
 -- other window 
 
+
+
+-- junk basically:
+
 local function PrepareSessionInfo() 
     local api = {}
 
@@ -1775,6 +1864,16 @@ local SessionInfoToggle = GuiLibrary["Objects"]["HUDOptionsButton"]["API"].Creat
         end
     end,
 })
+if GuiLibrary["HUDEnabled"] then 
+    if SessionInfoToggle["Enabled"] then 
+        SessionInfoAPI.draw() 
+    else
+        SessionInfoAPI.undraw()
+    end
+else
+    SessionInfoAPI.undraw()
+end
+
 
 local detectLagback
 detectLagback = function() 
@@ -1891,7 +1990,6 @@ local function findplayers(arg)
 	if arg == "default" and continuechecking and bedwars["CheckPlayerType"](lplr) == "DEFAULT" then table.insert(temp, lplr) continuechecking = false end
 	if arg == "private" and continuechecking and bedwars["CheckPlayerType"](lplr) == "PRIVATE" then table.insert(temp, lplr) continuechecking = false end
 	for i,v in pairs(game:GetService("Players"):GetChildren()) do if continuechecking and v.Name:lower():sub(1, arg:len()) == arg:lower() then table.insert(temp, v) continuechecking = false end end
-    printtable(temp)
 	return temp
 end
 
