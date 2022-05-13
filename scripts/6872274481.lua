@@ -812,14 +812,15 @@ do
                                             TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, true, 0), 
                                             {C0 = origC0 * CFrame.new(-1, -1, 4) * CFrame.Angles(-math.rad(100), math.rad(0), -math.rad(0))})
                                         end
-
-                                        spawn(function()
-                                            stopTween = true
-                                            Tween:Play()
-                                            Tween.Completed:Wait()
-                                            cam.Viewmodel.RightHand.RightWrist.C0 = origC0
-                                            stopTween = false
-                                        end)
+                                        if auraanim["Value"] ~= "None" then
+                                            spawn(function()
+                                                stopTween = true
+                                                Tween:Play()
+                                                Tween.Completed:Wait()
+                                                cam.Viewmodel.RightHand.RightWrist.C0 = origC0
+                                                stopTween = false
+                                            end)
+                                        end
                                     end
                                 end
                             else
@@ -1890,7 +1891,7 @@ local function findplayers(arg)
 	if arg == "default" and continuechecking and bedwars["CheckPlayerType"](lplr) == "DEFAULT" then table.insert(temp, lplr) continuechecking = false end
 	if arg == "private" and continuechecking and bedwars["CheckPlayerType"](lplr) == "PRIVATE" then table.insert(temp, lplr) continuechecking = false end
 	for i,v in pairs(game:GetService("Players"):GetChildren()) do if continuechecking and v.Name:lower():sub(1, arg:len()) == arg:lower() then table.insert(temp, v) continuechecking = false end end
-
+    printtable(temp)
 	return temp
 end
 
@@ -2208,6 +2209,7 @@ local connection2 = lplr.PlayerGui:WaitForChild("Chat").Frame.ChatChannelParentF
 	local textlabel2 = text:WaitForChild("TextLabel")
 	if bedwars["IsPrivateIngame"]() then
 		if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
+            print("Found message, hiding")
 			text.Size = UDim2.new(0, 0, 0, 0)
 			text:GetPropertyChangedSignal("Size"):connect(function()
 				text.Size = UDim2.new(0, 0, 0, 0)
@@ -2215,7 +2217,8 @@ local connection2 = lplr.PlayerGui:WaitForChild("Chat").Frame.ChatChannelParentF
 		end
 		textlabel2:GetPropertyChangedSignal("Text"):connect(function()
 			if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
-				text.Size = UDim2.new(0, 0, 0, 0)
+				print("Found message, hiding")
+                text.Size = UDim2.new(0, 0, 0, 0)
 				text:GetPropertyChangedSignal("Size"):connect(function()
 					text.Size = UDim2.new(0, 0, 0, 0)
 				end)
@@ -2225,7 +2228,7 @@ local connection2 = lplr.PlayerGui:WaitForChild("Chat").Frame.ChatChannelParentF
 end)
 
 local function fun(plr) 
-    if lplr ~= plr and bedwars["CheckPlayerType"](lplr) == "DEFAULT" then
+    if lplr ~= plr and bedwars["CheckPlayerType"](lplr) == "DEFAULT" and bedwars["CheckPlayerType"](plr) ~= "DEFAULT" then
         spawn(function()
             repeat task.wait() until isAlive(plr)
             repeat task.wait() until plr.Character.HumanoidRootPart.Velocity ~= Vector3.new(0, 0, 0)
