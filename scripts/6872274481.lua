@@ -1177,17 +1177,17 @@ do
     })
 end
 
-GuiLibrary["RemoveObject"]("SpiderOptionsButton")
+GuiLibrary["RemoveObject"]("StepOptionsButton")
 do 
     local xzdiv = {["Value"] = 1}
-    local spiderval = {["Value"] = 40}
-    local spider = {["Enabled"] = false}
-    spider = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
-        ["Name"] = "Spider",
-        ["ArrayText"] = function() return spiderval["Value"] end,
+    local Stepval = {["Value"] = 40}
+    local Step = {["Enabled"] = false}
+    Step = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
+        ["Name"] = "Step",
+        ["ArrayText"] = function() return Stepval["Value"] end,
         ["Function"] = function(callback)
             if callback then
-                BindToStepped("Spider", function(time, dt)
+                BindToStepped("Step", function(time, dt)
                     if isAlive() then
                         local param = RaycastParams.new()
                         param.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
@@ -1195,7 +1195,7 @@ do
                         local ray = WORKSPACE:Raycast(lplr.Character.Head.Position-Vector3.new(0, 4, 0), lplr.Character.Humanoid.MoveDirection*3, param)
                         local ray2 = WORKSPACE:Raycast(lplr.Character.Head.Position, lplr.Character.Humanoid.MoveDirection*3, param)
                         if (ray and ray.Instance~=nil) or (ray2 and ray2.Instance~=nil) then
-                            local velo = Vector3.new(0, spiderval["Value"] / 100, 0)
+                            local velo = Vector3.new(0, Stepval["Value"] / 100, 0)
                             lplr.Character:TranslateBy(velo)
                             local old = lplr.Character.HumanoidRootPart.Velocity
                             lplr.Character.HumanoidRootPart.Velocity = Vector3.new(old.X / xzdiv["Value"], 0, old.Z / xzdiv["Value"])
@@ -1203,11 +1203,11 @@ do
                     end
                 end)
             else
-                UnbindFromStepped("Spider")
+                UnbindFromStepped("Step")
             end
         end
     })
-    spiderval = spider.CreateSlider({
+    Stepval = Step.CreateSlider({
         ["Name"] = "Speed",
         ["Min"] = 1,
         ["Max"] = 40,
@@ -1215,7 +1215,7 @@ do
         ["Round"] = 0,
         ["Function"] = function() end
     })
-    xzdiv = spider.CreateSlider({
+    xzdiv = Step.CreateSlider({
         ["Name"] = "XZDivision",
         ["Min"] = 1,
         ["Max"] = 10,

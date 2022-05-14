@@ -268,11 +268,13 @@ do
         ["Name"] = "Phase",
         ["Function"] = function(callback) 
             if callback then 
-                BindToStepped("Phase", 1, function()
+                BindToStepped("Phase", function()
                     if phasemode["Value"] == "Normal" then
                         if isAlive() then
+                            print("phase")
                             for i,v in next, lplr.Character:GetDescendants() do 
                                 if v:IsA("BasePart") and v.CanCollide then 
+                                    print(v.CanCollide)
                                     cachedparts[v] = v
                                     v.CanCollide = false
                                 end
@@ -550,14 +552,14 @@ do
 end
 
 do 
-    local spiderval = {["Value"] = 40}
-    local spider = {["Enabled"] = false}
-    spider = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "Spider",
-        ["ArrayText"] = function() return spiderval["Value"] end,
+    local Stepval = {["Value"] = 40}
+    local Step = {["Enabled"] = false}
+    Step = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Step",
+        ["ArrayText"] = function() return Stepval["Value"] end,
         ["Function"] = function(callback)
             if callback then
-                BindToStepped("Spider", function(time, dt)
+                BindToStepped("Step", function(time, dt)
                     if isAlive(lplr, true) then
                         local param = RaycastParams.new()
                         param.FilterDescendantsInstances = table.combine(getCharacters(), cam:GetDescendants())
@@ -565,7 +567,7 @@ do
                         local ray = WORKSPACE:Raycast(lplr.Character.Head.Position-Vector3.new(0, 4, 0), lplr.Character.Humanoid.MoveDirection*3, param)
                         local ray2 = WORKSPACE:Raycast(lplr.Character.Head.Position, lplr.Character.Humanoid.MoveDirection*3, param)
                         if (ray and ray.Instance~=nil) or (ray2 and ray2.Instance~=nil) then
-                            local velo = Vector3.new(0, spiderval["Value"] / 100, 0)
+                            local velo = Vector3.new(0, Stepval["Value"] / 100, 0)
                             lplr.Character:TranslateBy(velo)
                             local old = lplr.Character.HumanoidRootPart.Velocity
                             lplr.Character.HumanoidRootPart.Velocity = Vector3.new(old.X, 0, old.Z)
@@ -573,11 +575,11 @@ do
                     end
                 end)
             else
-                UnbindFromStepped("Spider")
+                UnbindFromStepped("Step")
             end
         end
     })
-    spiderval = spider.CreateSlider({
+    Stepval = Step.CreateSlider({
         ["Name"] = "Speed",
         ["Min"] = 1,
         ["Max"] = 40,
