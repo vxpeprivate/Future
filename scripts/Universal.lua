@@ -1295,6 +1295,44 @@ local ViewClip = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButto
 
 
 -- // WorldWindow
+
+do 
+    local origGrav
+    local connection
+    local Gravity = {Enabled = false}
+    local Intensity = {Value = 192}
+    Gravity = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
+        Name = "Gravity",
+        Function = function(callback) 
+            if callback then 
+                origGrav = WORKSPACE.Gravity
+                connection = WORKSPACE:GetPropertyChangedSignal("Gravity"):connect(function() 
+                    if WORKSPACE.Gravity ~= Intensity.Value then
+                        WORKSPACE.Gravity = Intensity.Value
+                    end
+                end)
+                WORKSPACE.Gravity = Intensity.Value
+            else
+                if connection then
+                    connection:Disconnect()
+                    connection = nil 
+                end
+                WORKSPACE.Gravity = origGrav
+            end
+        end
+    })
+    Intensity = Gravity.CreateSlider({
+        Name = "Intensity",
+        Function = function(value) 
+            WORKSPACE.Gravity = value
+        end,
+        Min = 0,
+        Round = 0,
+        Max = 192,
+        Default = 192
+    })
+end
+
 do
     local cachedparts = {}
     local wallhackopacity = {["Value"] = 0}

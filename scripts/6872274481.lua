@@ -16,6 +16,7 @@ local spawn = function(func)
 end
 local bedwars = {} 
 local Reach = {Enabled = false}
+local ViewModel = {Enabled = false} 
 local oldisnetworkowner = isnetworkowner
 local isnetworkowner = isnetworkowner or function() return true end
 local speedsettings = {
@@ -756,9 +757,16 @@ local convertHealthToColor = function(health, maxHealth)
 end
 
 -- // combat window
+
+local function ViewmodelC0() 
+    if ViewModel.Enabled then 
+        return cam and cam.Viewmodel.RightHand.RightWrist.C0 or nil
+    end
+    return
+end
 do 
-    local stopTween = false
     local origC0
+    local stopTween = false
     local aura = {["Enabled"] = false}
     local auradist = {["Value"] = 14 }
     local auraanim = {["Value"] = "Slow"}
@@ -801,6 +809,7 @@ do
 
                                     -- animation stuff (thx 7grand once again)
                                     
+                                    local origC0 = ViewmodelC0() or origC0
                                     if not stopTween then
                                         local Tween
                                         if auraanim["Value"] == "Slow" then 
@@ -940,17 +949,20 @@ end
 -- // exploits window 
 
 do 
-    local old, old2 = debug.getconstant(bedwars["SwingSwordRegion"], 10),debug.getconstant(bedwars["SwingSwordRegion"], 15)
+    local reachConst1 = 14
+    local reachConst2 = 18
+
+    local old, old2 = debug.getconstant(bedwars["SwingSwordRegion"], reachConst1),debug.getconstant(bedwars["SwingSwordRegion"], reachConst2)
     local ReachValue = {["Value"] = 0.1}
     Reach = GuiLibrary.Objects.ExploitsWindow.API.CreateOptionsButton({
         ["Name"] = "Reach",
         ["Function"] = function(callback) 
             if callback then 
-                debug.setconstant(bedwars["SwingSwordRegion"], 10, old*(ReachValue["Value"]+1))
-                debug.setconstant(bedwars["SwingSwordRegion"], 15, old2*(ReachValue["Value"]+1))
+                debug.setconstant(bedwars["SwingSwordRegion"], reachConst1, old*(ReachValue["Value"]+1))
+                debug.setconstant(bedwars["SwingSwordRegion"], reachConst2, old2*(ReachValue["Value"]+1))
             else
-                debug.setconstant(bedwars["SwingSwordRegion"], 10, old)
-                debug.setconstant(bedwars["SwingSwordRegion"], 15, old2)
+                debug.setconstant(bedwars["SwingSwordRegion"], reachConst1, old)
+                debug.setconstant(bedwars["SwingSwordRegion"], reachConst2, old2)
             end
         end,
     })
@@ -1565,6 +1577,113 @@ do
     esphealth = esp.CreateToggle({
         ["Name"] = "Health",
         ["Function"] = function() end,
+    })
+end
+
+do 
+    local onspawn
+    local NoNameTag = {Enabled = false}
+    NoNameTag = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
+        Name = "NoNametag",
+        Function = function(callback) 
+            if callback then
+                spawn(function() 
+                    if not isAlive() then repeat task.wait() until isAlive() end
+                    lplr.Character:WaitForChild("Head"):WaitForChild("StatusEffectTagBillboard"):Destroy()
+                    lplr.Character:WaitForChild("Head"):WaitForChild("Nametag"):Destroy()
+                end)
+                onspawn = lplr.CharacterAdded:Connect(function(char)
+                    char:WaitForChild("Head"):WaitForChild("StatusEffectTagBillboard"):Destroy()
+                    char:WaitForChild("Head"):WaitForChild("Nametag"):Destroy()
+                end)
+            else
+                onspawn:Disconnect()
+                onspawn = nil
+            end
+        end
+    })
+end
+
+do 
+    local savedc0
+    local mult = function(val) 
+        if savedc0 then 
+            return savedc0 * val
+        end
+    end
+    local val = function(x,y,z,xr,yr,zr) 
+        return CFrame.new(Vector3.new(x,y,z)) * CFrame.Angles(-math.rad(xr), -math.rad(yr), -math.rad(zr))
+    end
+    local X = {Value = 0}
+    local Y = {Value = 0}
+    local Z = {Value = 0}
+    local Xr = {Value = 0}
+    local Yr = {Value = 0}
+    local Zr = {Value = 0}
+    ViewModel = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
+        Name = "ViewModel",
+        Function = function(callback) 
+            if callback then 
+                spawn(function()
+                    if not isAlive() then repeat task.wait() until isAlive() end
+                    savedc0 = savedc0 or cam.Viewmodel.RightHand.RightWrist.C0
+                    if not ViewModel.Enabled then return end
+                    BindToStepped("ViewModel", function()
+                        if isAlive() and cam~=nil and cam:FindFirstChild("Viewmodel") then 
+                            cam.Viewmodel.RightHand.RightWrist.C0 = savedc0 * val(X.Value, Y.Value, Z.Value, Xr.Value, Yr.Value, Zr.Value)
+                        end
+                    end)
+                end)
+            else
+                UnbindFromStepped("ViewModel")
+                cam.Viewmodel.RightHand.RightWrist.C0 = savedc0
+            end
+        end,
+    })
+    X = ViewModel.CreateSlider({
+        Name = "X",
+        Function = function() end,
+        Min = -10,
+        Max = 10,
+        Round = 3,
+        Default = 0
+    })
+    Y = ViewModel.CreateSlider({
+        Name = "Y",
+        Function = function() end,
+        Min = -10,
+        Max = 10,
+        Round = 3,
+        Default = 0
+    })
+    Z = ViewModel.CreateSlider({
+        Name = "Z",
+        Function = function() end,
+        Min = -10,
+        Max = 10,
+        Round = 3,
+        Default = 0
+    })
+    Xr = ViewModel.CreateSlider({
+        Name = "XRot",
+        Function = function() end,
+        Min = 0,
+        Max = 360,
+        Round = 3,
+    })
+    Yr = ViewModel.CreateSlider({
+        Name = "YRot",
+        Function = function() end,
+        Min = 0,
+        Max = 360,
+        Round = 3,
+    })
+    Zr = ViewModel.CreateSlider({
+        Name = "ZRot",
+        Function = function() end,
+        Min = 0,
+        Max = 360,
+        Round = 3,
     })
 end
 
