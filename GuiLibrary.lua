@@ -1224,12 +1224,14 @@ GuiLibrary["LoadConfig"] = function(name)
     --GuiLibrary["LoadOnlyGuiConfig"]()
 end
 GuiLibrary["RemoveObject"] = function(name) 
-    if GuiLibrary.Objects[name] then 
-        GuiLibrary.Objects[name].Instance:Destroy()
-        GuiLibrary.Objects[name] = nil
-        GuiLibrary.UpdateWindows()
-        log("RemoveObject", "Removing "..name)
-    end
+    pcall(function()
+        if GuiLibrary.Objects[name] then 
+            GuiLibrary.Objects[name].Instance:Destroy()
+            GuiLibrary.Objects[name] = nil
+            GuiLibrary.UpdateWindows()
+            log("RemoveObject", "Removing "..name)
+        end
+    end)
 end
 GuiLibrary["CreateWindow"] = function(argstable)
     local windowapi = {["Expanded"] = true, ["ExpandedOptionsButton"] = nil, ["Expand"] = function() end}

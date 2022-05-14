@@ -216,8 +216,18 @@ end
 
 local function getwool()
 	for i5, v5 in pairs(bedwars["getInventory"](lplr)["items"]) do
-		if v5["itemType"]:match("wool") or v5["itemType"]:match("grass") then
-			return v5["itemType"], v5["amount"]
+		if v5.itemType:match("wool") or v5.itemType:match("grass") then
+			return v5.itemType, v5.amount
+		end
+	end	
+	return nil
+end
+
+local function getblockitem() 
+    for i5, v5 in pairs(bedwars.getInventory(lplr).items) do
+        printtable(v5)
+        if v5.itemType:match("wool") or v5.itemType:match("grass") or v5.itemType:match("stone_brick") or v5.itemType:match("wood_plank") or v5.itemType:match("stone") or v5.itemType:match("bedrock") then
+			return v5.itemType, v5.amount
 		end
 	end	
 	return nil
@@ -225,7 +235,7 @@ end
 
 local function getItem(itemName)
 	for i5, v5 in pairs(bedwars["getInventory"](lplr)["items"]) do
-		if v5["itemType"] == itemName then
+		if v5.itemType == itemName then
 			return v5, i5
 		end
 	end
@@ -234,7 +244,7 @@ end
 
 local function hashvector(vec)
 	return {
-		["value"] = vec
+		value = vec
 	}
 end
 
@@ -337,7 +347,7 @@ bedwars = {
     ["GamePlayerUtil"] = require(game:GetService("ReplicatedStorage").TS.player["player-util"]).GamePlayerUtil,
     ["getEntityTable"] = require(game:GetService("ReplicatedStorage").TS.entity["entity-util"]).EntityUtil,
     ["getIcon"] = function(item, showinv)
-        local itemmeta = bedwars["getItemMetadata"](item["itemType"])
+        local itemmeta = bedwars["getItemMetadata"](item.itemType)
         if itemmeta and showinv then
             return itemmeta.image
         end
@@ -425,7 +435,7 @@ end
 
 local function getItem(itemName)
 	for i5, v5 in pairs(bedwars["getInventory"](lplr)["items"]) do
-		if v5["itemType"] == itemName then
+		if v5.itemType == itemName then
 			return v5, i5
 		end
 	end
@@ -434,7 +444,7 @@ end
 
 local function getHotbarSlot(itemName)
 	for i5, v5 in pairs(bedwars["ClientStoreHandler"]:getState().Inventory.observedInventory.hotbar) do
-		if v5["item"] and v5["item"]["itemType"] == itemName then
+		if v5["item"] and v5["item"].itemType == itemName then
 			return i5 - 1
 		end
 	end
@@ -465,7 +475,7 @@ local function getBestTool(block)
 		blockType = blockmeta["block"]["breakType"]
 	end
 	for i,v in pairs(bedwars["getInventory"](lplr)["items"]) do
-		local meta = bedwars["getItemMetadata"](v["itemType"])
+		local meta = bedwars["getItemMetadata"](v.itemType)
 		if meta["breakBlock"] and meta["breakBlock"][blockType] then
 			tool = v
 			break
@@ -478,10 +488,10 @@ local function switchToAndUseTool(block, legit)
 	local tool = getBestTool(block.Name)
 	if tool and (isAlive() and lplr.Character:FindFirstChild("HandInvItem") and lplr.Character.HandInvItem.Value ~= tool["tool"]) then
 		if legit then
-			if getHotbarSlot(tool["itemType"]) then
+			if getHotbarSlot(tool.itemType) then
 				bedwars["ClientStoreHandler"]:dispatch({
 					type = "InventorySelectHotbarSlot", 
-					slot = getHotbarSlot(tool["itemType"])
+					slot = getHotbarSlot(tool.itemType)
 				})
 				task.wait(0.1)
 				updateitem:Fire(inputobj)
@@ -583,7 +593,7 @@ local function getbestside(pos)
             if bedwars["ItemTable"][v2]["block"] and v2 ~= "unbreakable" and v2 ~= "bed" and v2 ~= "ceramic" then
                 local tool = getBestTool(v2)
                 if tool then
-                    sidehardness = sidehardness - bedwars["ItemTable"][tool["itemType"]]["breakBlock"][bedwars["ItemTable"][v2]["block"]["breakType"]]
+                    sidehardness = sidehardness - bedwars["ItemTable"][tool.itemType]["breakBlock"][bedwars["ItemTable"][v2]["block"]["breakType"]]
                 end
             end
 		end
@@ -1309,6 +1319,7 @@ if oldisnetworkowner~=nil then do
     })
 end end
 
+local BedESP = {["Enabled"] = false}
 do
     local BedESPFolder = Instance.new("Folder", GuiLibrary["ScreenGui"]) 
     BedESPFolder.Name = "BedESP"
@@ -1317,21 +1328,22 @@ do
             BedESPFolder:ClearAllChildren()
         end
         for i,v in next, getBeds() do 
-            for i2,v2 in next, v:GetChildren() do
-                local bhd = Instance.new("BoxHandleAdornment", BedESPFolder)
-                bhd.Size = v2.Size + Vector3.new(0.01, 0.01, 0.01)
-                bhd.CFrame = CFrame.new()
-                bhd.Color3 = v2.Color
-                bhd.Visible = true
-                bhd.Adornee = v2
-                bhd.ZIndex = 10
-                bhd.Transparency = 0
-                bhd.AlwaysOnTop = true
+            for i2,v2 in next, v:GetDescendants() do
+                if v2:IsA("BasePart") and v2.Name ~= "EggSpot" then
+                    local bhd = Instance.new("BoxHandleAdornment", BedESPFolder)
+                    bhd.Size = v2.Size + Vector3.new(0.01, 0.01, 0.01)
+                    bhd.CFrame = CFrame.new()
+                    bhd.Color3 = v2.Color
+                    bhd.Visible = true
+                    bhd.Adornee = v2
+                    bhd.ZIndex = 10
+                    bhd.Transparency = v2.Transparency
+                    bhd.AlwaysOnTop = true
+                end
             end
         end
     end
     local connection, connection2
-    local BedESP = {["Enabled"] = false}
     BedESP = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
         ["Name"] = "BedESP",
         ["Function"] = function(callback) 
@@ -1364,6 +1376,74 @@ do
                     connection2 = nil
                 end
                 BedESPFolder:ClearAllChildren()
+            end
+        end 
+    })
+end
+
+do
+    local OrigEgg = game:GetObjects("rbxassetid://9627800970")[1]
+    local function addegg(bed) 
+        if bed:FindFirstChild("Egg") then 
+            return
+        end
+        local children = bed:GetChildren()
+        for i,v in next, children do 
+            if v:IsA("BasePart") and v.Name ~= "Egg" then 
+                v.Transparency = 1
+            end
+        end
+        local egg = OrigEgg:Clone()
+        egg.Parent = bed
+        egg.PrimaryPart = egg:FindFirstChild("EggLayer2")
+        local pos = bed.Covers.CFrame
+        egg:SetPrimaryPartCFrame(pos-Vector3.new(0, 0.8, 0))
+        egg.Name = "Egg"
+    end
+    local function deleteegg(bed) 
+        if bed:FindFirstChild("Egg") then
+            bed:FindFirstChild("Egg"):Destroy()
+        end
+        local children = bed:GetChildren()
+        for i,v in next, children do 
+            if v:IsA("BasePart") and v.Name ~= "Egg" then 
+                v.Transparency = 0
+            end
+        end
+    end
+    local connection, connection2
+    local eggwars = {["Enabled"] = false}
+    eggwars = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
+        ["Name"] = "EggWars",
+        ["Function"] = function(callback) 
+            if callback then 
+                spawn(function()
+                    local connection2 = WORKSPACE:WaitForChild("Map"):WaitForChild("Blocks").ChildRemoved:Connect(function(v) 
+                        if v.Name ~= "bed" then 
+                            return nil
+                        end
+                        deleteegg(v)
+                    end)
+                    for i,v in next, getBeds() do 
+                        addegg(v)
+                    end
+                end)
+            else
+                for i,v in next, getBeds() do 
+                    deleteegg(v)   
+                end
+                if connection then 
+                    connection:Disconnect()
+                    connection = nil
+                end
+                if connection2 then 
+                    connection2:Disconnect()
+                    connection2 = nil
+                end
+            end
+            if BedESP.Enabled then 
+                BedESP.Toggle(nil, true, true)
+                BedESP.Toggle(nil, true, true)
             end
         end 
     })
@@ -1604,7 +1684,7 @@ do
             if callback then 
                 BindToStepped("Scaffold", function()
                     if isAlive() and lplr.Character:FindFirstChild("Humanoid") ~= nil then
-                        local block = getwool()
+                        local block = getblockitem()
                         local newpos = lplr.Character.HumanoidRootPart.Position
                         newpos = get3Vector( Vector3.new(newpos.X, lplr.Character.HumanoidRootPart.Position.Y - 4, newpos.Z) )
                         local movedir = lplr.Character:FindFirstChild("Humanoid").MoveDirection
