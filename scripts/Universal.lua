@@ -271,10 +271,8 @@ do
                 BindToStepped("Phase", function()
                     if phasemode["Value"] == "Normal" then
                         if isAlive() then
-                            print("phase")
                             for i,v in next, lplr.Character:GetDescendants() do 
                                 if v:IsA("BasePart") and v.CanCollide then 
-                                    print(v.CanCollide)
                                     cachedparts[v] = v
                                     v.CanCollide = false
                                 end

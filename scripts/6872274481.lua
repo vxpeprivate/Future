@@ -1060,6 +1060,7 @@ end
 
 
 -- // movement window 
+
 local stopSpeed = false
 GuiLibrary["RemoveObject"]("LongJumpOptionsButton")
 do 
@@ -1084,7 +1085,7 @@ do
                         if isAlive() then
                             stopSpeed = true
                             local params = RaycastParams.new()
-                            params.FilterDescendantsInstances = {lplr.Character}
+                            params.FilterDescendantsInstances = {lplr.Character, cam}
                             params.FilterType = Enum.RaycastFilterType.Blacklist
                             local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -7, 0), params)
                             if ray and ray.Instance then 
@@ -1100,9 +1101,9 @@ do
                             velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
                             lplr.Character:TranslateBy(velo)
                             local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
-                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, --[[math.random(-50, 50)]] 1, velo2.Z)
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, 1, velo2.Z)
                         end
-                    until not LongJump["Enabled"]
+                    until not LongJump.Enabled
                     stopSpeed = false
                 end)
             else
@@ -1127,6 +1128,7 @@ do
         ["Function"] = function(value) end,
     })
 end
+
 
 GuiLibrary["RemoveObject"]("SpeedOptionsButton")
 do
