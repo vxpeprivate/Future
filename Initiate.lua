@@ -501,7 +501,7 @@ end
 
 local success, _error = pcall(getscript, "Universal")
 local success2, _error2 = pcall(getscript)
-getplusscript()
+local success3, _error3 = pcall(getplusscript)
 if success then 
     print("[Future] Successfully retrieved Universal script!")
 else
@@ -512,12 +512,11 @@ if success2 then
 else
     fwarn("Unsuccessful attempt at retrieving Game script!\n report this in the discord.\n (".._error2..")")
 end
---[[
 if success3 then 
     print("[Future] Successfully retrieved FuturePlus Game script!")
 else
-    fwarn("Unsuccessful attempt at retrieving FuturePlus Game script!\n report this in the discord.\n (".._error3..")")
-end]]
+    fwarn("Unsuccessful attempt at retrieving FuturePlus Game script!\n (".._error3..")")
+end
 GuiLibrary["LoadConfig"](GuiLibrary["CurrentConfig"])
 
 

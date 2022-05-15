@@ -226,7 +226,6 @@ end
 
 local function getblockitem() 
     for i5, v5 in pairs(bedwars.getInventory(lplr).items) do
-        printtable(v5)
         if v5.itemType:match("wool") or v5.itemType:match("grass") or v5.itemType:match("stone_brick") or v5.itemType:match("wood_plank") or v5.itemType:match("stone") or v5.itemType:match("bedrock") then
 			return v5.itemType, v5.amount
 		end
@@ -408,6 +407,7 @@ bedwars = {
     ["WeldTable"] = require(game:GetService("ReplicatedStorage").TS.util["weld-util"]).WeldUtil,
     ["AttackRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.SwordController)["attackEntity"])),
     ["VelocityUtil"]  = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].util["velocity-util"]).VelocityUtil, 
+    ["ItemMeta"] = getupvalues(require(game:GetService("ReplicatedStorage").TS.item["item-meta"]).getItemMeta)[1]
 }
 
 local function getblock(pos)
@@ -948,6 +948,38 @@ do
 end
 -- // exploits window 
 
+do
+    local old = {}
+    local FastUse = {Enabled = false}
+    local FastUseTicks = {Value = 0}
+    FastUse = GuiLibrary.Objects.ExploitsWindow.API.CreateOptionsButton({
+        Name = "FastUse",
+        Function = function(callback) 
+            if callback then 
+                for i, v in next, bedwars["ItemMeta"] do 
+                    if v.consumable then 
+                        old[i] = old[i] or v.consumable.consumeTime
+                        v.consumable.consumeTime = v.consumable.consumeTime * (FastUseTicks.Value/20)
+                    end
+                end
+            else
+                for i, v in next, bedwars["ItemMeta"] do 
+                    if v.consumable and old[i] then 
+                      v.consumable.consumeTime = old[i]
+                    end
+                end
+            end
+        end,
+    })
+    FastUseTicks = FastUse.CreateSlider({
+        Name = "Ticks",
+        Function = function() end,
+        Min = 0,
+        Max = 20,
+        Round = 0
+    })
+end
+
 do 
     local reachConst1 = 14
     local reachConst2 = 18
@@ -1015,7 +1047,6 @@ do
         if not AutoLeave.Enabled then return end
 
         if plr and plr:IsInGroup(5774246) and plr:GetRankInGroup(5774246) >= 100 or plr.Name == "futureclient_xyz2" then 
-            print(AutoLeaveStaffMode.Value)
             if AutoLeaveStaffMode.Value == "Destruct" then 
                 GuiLibrary.SaveConfig(GuiLibrary.CurrentConfig)
                 GuiLibrary.Signals.onDestroy:Fire()
@@ -2508,7 +2539,6 @@ local connection2 = lplr.PlayerGui:WaitForChild("Chat").Frame.ChatChannelParentF
 	local textlabel2 = text:WaitForChild("TextLabel")
 	if bedwars["IsPrivateIngame"]() then
 		if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
-            print("Found message, hiding")
 			text.Size = UDim2.new(0, 0, 0, 0)
 			text:GetPropertyChangedSignal("Size"):connect(function()
 				text.Size = UDim2.new(0, 0, 0, 0)
@@ -2516,7 +2546,6 @@ local connection2 = lplr.PlayerGui:WaitForChild("Chat").Frame.ChatChannelParentF
 		end
 		textlabel2:GetPropertyChangedSignal("Text"):connect(function()
 			if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
-				print("Found message, hiding")
                 text.Size = UDim2.new(0, 0, 0, 0)
 				text:GetPropertyChangedSignal("Size"):connect(function()
 					text.Size = UDim2.new(0, 0, 0, 0)
