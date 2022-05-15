@@ -2127,7 +2127,6 @@ local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(
         local api = SessionInfoAPI
 		local stringtp = "shared.FutureSavedSessionInfo = {startTime ="..tostring(futureStartTime)..", kills = "..api.kills.Text..", wins = "..api.wins.Text..", lagbacks = "..api.lagbacks.Text.."}"
 		queueteleport(stringtp)
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
     end
 end)
 

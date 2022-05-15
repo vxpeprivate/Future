@@ -975,12 +975,10 @@ end
 GuiLibrary["SaveConfig"] = function(name, isAutosave) 
     local name = (name == nil or name == "") and "default" or name
     GuiLibrary["Debug"]("save Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
-    log("SaveConfig", "Saving "..name)
     local config = {}
     for i,v in next, GuiLibrary["Objects"] do 
         if v.Type == "OptionsButton" and not table.find(exclusionList, i) and not v.DisableOnLeave then 
             config[i] = {["Enabled"] = v.API.Enabled, ["Keybind"] = v.API.Keybind, ["Type"] = v.Type, ["Window"] = v.Window}
-            log("SaveConfig", "Saving "..i.." as "..tostring(v.API.Enabled))
         elseif v.Type == "Toggle" and --[[not table.find(exclusionList, v.OptionsButton) and]] not table.find(exclusionList, i) then
             config[i] = {["Enabled"] = v.API.Enabled, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
         elseif v.Type == "Slider" and not table.find(exclusionList, v.OptionsButton) then
@@ -1182,6 +1180,7 @@ GuiLibrary["LoadConfig"] = function(name)
             return HTTPSERVICE:JSONDecode(x)
         end)
         if success then 
+            print("[Future] Success loading configuration "..name)
             -- // turn off all modules incase they are switching configs (to prevent the old configs settings staying)
             for i,v in next, GuiLibrary.Objects do 
                 if v.Type == "Toggle" and not table.find(exclusionList, i) then 
@@ -1210,7 +1209,7 @@ GuiLibrary["LoadConfig"] = function(name)
                         API.Set(v.Value)
                     elseif v.Type == "OptionsButton" and GuiLibrary["Objects"][i].Window == v.Window and not table.find(exclusionList, i) then 
                         if v.Enabled then
-                            log("LoadConfig", "Loading "..i.." as ".. tostring(v.Enabled))
+                            --print("LoadConfig", "Loading "..i.." as ".. tostring(v.Enabled))
                             API.Toggle(v.Enabled, true, true)
                         end
                         API.SetKeybind(v.Keybind)
