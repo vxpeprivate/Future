@@ -217,11 +217,20 @@ end
 
 local function getwool()
 	for i5, v5 in pairs(bedwars["getInventory"](lplr)["items"]) do
-		if v5.itemType:match("wool") or v5.itemType:match("grass") then
+		if v5.itemType:match("wool") then
 			return v5.itemType, v5.amount
 		end
 	end	
 	return nil
+end
+
+local function getwoolamt()
+	for i5, v5 in pairs(bedwars["getInventory"](lplr)["items"]) do
+		if v5.itemType:match("wool") then
+			return v5.amount
+		end
+	end	
+	return 0
 end
 
 local function getblockitem() 
@@ -240,6 +249,15 @@ local function getItem(itemName)
 		end
 	end
 	return nil
+end
+
+local function getItemAmt(itemName)
+	for i5, v5 in pairs(bedwars["getInventory"](lplr)["items"]) do
+		if v5.itemType == itemName then
+			return v5.amount
+		end
+	end
+	return 0
 end
 
 local function hashvector(vec)
@@ -390,6 +408,7 @@ bedwars = {
     ["Roact"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["roact"].src),
     ["RuntimeLib"] = require(game:GetService("ReplicatedStorage")["rbxts_include"].RuntimeLib),
     ["Shop"] = require(game:GetService("ReplicatedStorage").TS.games.bedwars.shop["bedwars-shop"]).BedwarsShop,
+    ["TeamUpgrades"] = require(game:GetService("ReplicatedStorage").TS.games.bedwars.shop["bedwars-shop"]).BedwarsShop.TeamUpgrades,
     ["ShopItems"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.games.bedwars.shop["bedwars-shop"]).BedwarsShop.getShopItem, 2),
     ["ShopRight"] = require(lplr.PlayerScripts.TS.controllers.games.bedwars.shop.ui["item-shop"]["shop-left"]["shop-left"]).BedwarsItemShopLeft,
     ["SpawnRavenRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.RavenController).spawnRaven)),
@@ -959,7 +978,7 @@ do
                 for i, v in next, bedwars["ItemMeta"] do 
                     if v.consumable then 
                         old[i] = old[i] or v.consumable.consumeTime
-                        v.consumable.consumeTime = v.consumable.consumeTime * (FastUseTicks.Value/20)
+                        v.consumable.consumeTime = math.clamp(v.consumable.consumeTime * (FastUseTicks.Value/20), 0.1, 9999999)
                     end
                 end
             else
@@ -1035,6 +1054,120 @@ end
 
 
 --// misc window
+
+do
+    local connections = {}
+
+    local AutoToxic = {Enabled = false}
+    local AutoToxicKillMessage = {Value = ""}
+    local AutoToxicReplyMessage = {Value = ""}
+    local AutoToxicDeathMessage = {Value = ""}
+    local AutoToxicBedMessage = {Value = ""}
+
+    local sensitives = {
+        "hack",
+        "exploit",
+        "script",
+        "speed",
+        "aura", 
+    }
+
+    local function hasSensitiveMessage(msg) 
+        for i,v in next, sensitives do 
+            if msg:lower():find(v) then 
+                return true
+            end
+        end
+        return false
+    end
+
+    local function AutoToxicFunction(oftype, name) 
+        spawn(function()
+            task.wait(0.1)
+            if AutoToxic.Enabled == false then return end
+            if oftype == "Kill" then 
+                local message = AutoToxicKillMessage.Value:gsub("<plr>", name)
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+            elseif oftype == "Death" then
+                local message = AutoToxicDeathMessage.Value
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+            elseif oftype == "Reply" then
+                local message = AutoToxicReplyMessage.Value:gsub("<plr>", name)
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+            elseif oftype == "Bed" then
+                local message = AutoToxicBedMessage.Value:gsub("<team>", name)
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+            end
+        end)
+    end
+
+    AutoToxic = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
+        Name = "AutoToxic",
+        Function = function(callback)
+            if callback then 
+
+                bedwars["ClientHandler"]:WaitFor("EntityDeathEvent"):andThen(function(p6)
+                    connections[#connections+1] = p6:Connect(function(p7)
+                        if p7.fromEntity and p7.fromEntity.Name == lplr.Name then 
+                            AutoToxicFunction("Kill", p7.entityInstance.Name)
+                        elseif p7.entityInstance.Name == lplr.Name then
+                            AutoToxicFunction("Death")
+                        end
+                    end) 
+                end)
+                bedwars["ClientHandler"]:WaitFor("BedwarsBedBreak"):andThen(function(p6)
+                    connections[#connections+1] = p6:Connect(function(p7)
+                        if p7.player and p7.player.Name == lplr.Name then 
+                            AutoToxicFunction("Bed", p7.brokenBedTeam.displayName)
+                        end
+                    end) 
+                end)
+                for i, v in next, PLAYERS:GetPlayers() do
+                    connections[#connections+1] = v.Chatted:connect(function(msg) 
+                        if hasSensitiveMessage(msg) then
+                            AutoToxicFunction("Reply", v.Name)
+                        end
+                    end)
+                end
+                connections[#connections+1] = PLAYERS.PlayerAdded:connect(function(v) 
+                    connections[#connections+1] = v.Chatted:connect(function(msg) 
+                        if hasSensitiveMessage(msg) then
+                            AutoToxicFunction("Reply", v.Name)
+                        end
+                    end)
+                end)
+
+            else
+
+                for i,v in next, connections do 
+                    v:Disconnect()
+                    connections[i] = nil
+                end
+
+            end
+        end
+    })
+    AutoToxicKillMessage = AutoToxic.CreateTextbox({
+        Name = "Kill",
+        Function = function() end,
+        Default = "get pwned <plr>"
+    })
+    AutoToxicReplyMessage = AutoToxic.CreateTextbox({
+        Name = "Reply",
+        Function = function() end,
+        Default = "cope <plr>"
+    })
+    AutoToxicDeathMessage = AutoToxic.CreateTextbox({
+        Name = "Death",
+        Function = function() end,
+        Default = "my finger slipped."
+    })
+    AutoToxicBedMessage = AutoToxic.CreateTextbox({
+        Name = "Bed",
+        Function = function() end,
+        Default = "i broke ur bed <team>"
+    })
+end
 
 do
     local PlayerAddedConnection 
@@ -1645,12 +1778,27 @@ do
     local val = function(x,y,z,xr,yr,zr) 
         return CFrame.new(Vector3.new(x,y,z)) * CFrame.Angles(-math.rad(xr), -math.rad(yr), -math.rad(zr))
     end
+    local true_scale = function(x,y,z) 
+        local x = x<0 and (1/-x) or x
+        local y = y<0 and (1/-y) or y
+        local z = z<0 and (1/-z) or z
+
+        return Vector3.new(x,y,z)
+    end
+    local original_scale = function(name) 
+        if game:GetService("ReplicatedStorage").Items:FindFirstChild(name) and game:GetService("ReplicatedStorage").Items:FindFirstChild(name):FindFirstChildOfClass("MeshPart") then 
+            return game:GetService("ReplicatedStorage").Items:FindFirstChild(name):FindFirstChildOfClass("MeshPart").Size
+        end
+    end
     local X = {Value = 0}
     local Y = {Value = 0}
     local Z = {Value = 0}
     local Xr = {Value = 0}
     local Yr = {Value = 0}
     local Zr = {Value = 0}
+    local Xs = {Value = 0}
+    local Ys = {Value = 0}
+    local Zs = {Value = 0}
     ViewModel = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
         Name = "ViewModel",
         Function = function(callback) 
@@ -1660,14 +1808,18 @@ do
                     savedc0 = savedc0 or cam.Viewmodel.RightHand.RightWrist.C0
                     if not ViewModel.Enabled then return end
                     BindToStepped("ViewModel", function()
-                        if isAlive() and cam~=nil and cam:FindFirstChild("Viewmodel") then 
+                        if isAlive() and cam~=nil and cam:FindFirstChild("Viewmodel") and cam.Viewmodel:FindFirstChildWhichIsA("Accessory") then 
                             cam.Viewmodel.RightHand.RightWrist.C0 = savedc0 * val(X.Value, Y.Value, Z.Value, Xr.Value, Yr.Value, Zr.Value)
+                            cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name) * true_scale(Xs.Value+1, Ys.Value+1, Zs.Value+1)
                         end
                     end)
                 end)
             else
                 UnbindFromStepped("ViewModel")
                 cam.Viewmodel.RightHand.RightWrist.C0 = savedc0
+                if cam.Viewmodel:FindFirstChildWhichIsA("Accessory") then 
+                    cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildWhichIsA("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name)
+                end
             end
         end,
     })
@@ -1676,7 +1828,7 @@ do
         Function = function() end,
         Min = -10,
         Max = 10,
-        Round = 3,
+        Round = 1,
         Default = 0
     })
     Y = ViewModel.CreateSlider({
@@ -1684,7 +1836,7 @@ do
         Function = function() end,
         Min = -10,
         Max = 10,
-        Round = 3,
+        Round = 1,
         Default = 0
     })
     Z = ViewModel.CreateSlider({
@@ -1692,7 +1844,7 @@ do
         Function = function() end,
         Min = -10,
         Max = 10,
-        Round = 3,
+        Round = 1,
         Default = 0
     })
     Xr = ViewModel.CreateSlider({
@@ -1700,21 +1852,45 @@ do
         Function = function() end,
         Min = 0,
         Max = 360,
-        Round = 3,
+        Round = 1,
     })
     Yr = ViewModel.CreateSlider({
         Name = "YRot",
         Function = function() end,
         Min = 0,
         Max = 360,
-        Round = 3,
+        Round = 1,
     })
     Zr = ViewModel.CreateSlider({
         Name = "ZRot",
         Function = function() end,
         Min = 0,
         Max = 360,
-        Round = 3,
+        Round = 1,
+    })
+    Xs = ViewModel.CreateSlider({
+        Name = "XScale",
+        Function = function() end,
+        Min = -10,
+        Max = 10,
+        Round = 1,
+        Default = 0
+    })
+    Ys = ViewModel.CreateSlider({
+        Name = "YScale",
+        Function = function() end,
+        Min = -10,
+        Max = 10,
+        Round = 1,
+        Default = 0
+    })
+    Zs = ViewModel.CreateSlider({
+        Name = "ZScale",
+        Function = function() end,
+        Min = -10,
+        Max = 10,
+        Round = 1,
+        Default = 0
     })
 end
 
@@ -1762,6 +1938,208 @@ do
 		["Function"] = function() end,
 		["Default"] = 18
 	})
+end
+
+do 
+    local priolist = {
+        [1] = {
+            "leather_chestplate",
+            "iron_chestplate",
+            "diamond_chestplate",
+            "emerald_chestplate",
+        },
+        [2] = {
+            "stone_sword",
+            "iron_sword",
+            "diamond_sword",
+            "emerald_sword",
+        },
+        [3] = {
+            "stone_pickaxe",
+            "iron_pickaxe",
+            "diamond_pickaxe",
+        },
+        [4] = {
+            "wood_axe",
+            "stone_axe",
+            "iron_axe",
+            "diamond_axe"
+        },  
+        [5] = {
+            "wool_white"
+        },
+    }
+
+    local teampriolist = {
+        "armory",
+        "damage",
+        "armor"
+    }
+
+    local WoolCap = {Value = 16}
+    local AutoBuy = {Enabled = false}
+    local ABArmor = {Enabled = false}
+    local ABSwords = {Enabled = false}
+    local ABPickaxes = {Enabled = false}
+    local ABAxes = {Enabled = false}
+    local ABTeamUpgrades = {Enabled = false}
+    local ABWool = {Enabled = false}
+
+    local function getShopItem(_type) 
+        for i,v in next, bedwars.ShopItems do 
+            if v.itemType and v.itemType == _type then 
+                return v
+            end
+        end
+    end
+
+    local function getTeamUpgrade(id) 
+        for i,v in next, bedwars.TeamUpgrades do 
+            if v.id and v.id == id then 
+                return v
+            end
+        end
+    end
+
+    local function buy(item)
+        if item==nil then return end
+        local i = item.itemType
+        if table.find(priolist[1], i) and not ABArmor.Enabled then return end
+        if table.find(priolist[2], i) and not ABSwords.Enabled then return end
+        if table.find(priolist[3], i) and not ABPickaxes.Enabled then return end
+        if table.find(priolist[4], i) and not ABAxes.Enabled then return end
+        if table.find(priolist[5], i) and not ABWool.Enabled then return end
+        spawn(function()
+            game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.BedwarsPurchaseItem:InvokeServer({shopItem = item})
+        end)
+    end
+
+    local function upgrade(id, tier) 
+        local tier = tier or 0
+        if not ABTeamUpgrades.Enabled then return end
+        spawn(function() 
+            game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.BedwarsPurchaseTeamUpgrade:InvokeServer({["upgradeId"] = id,["tier"] = tier})
+        end)
+    end
+
+    local childadded
+    local tu = {}
+    local is = {}
+    AutoBuy = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
+        Name = "AutoBuy",
+        Function = function(callback) 
+            if callback then 
+                for i,v in next, WORKSPACE:GetChildren() do 
+                    if v.Name == "item_shop" then 
+                        is[#is+1] = v
+                    elseif v.Name:find("upgrade_shop") then
+                        tu[#tu+1] = v
+                    end
+                end
+                childadded = WORKSPACE.ChildAdded:Connect(function(v) 
+                    if v.Name == "item_shop" then 
+                        is[#is+1] = v
+                    elseif v.Name:find("upgrade_shop") then
+                        tu[#tu+1] = v
+                    end
+                end)
+                spawn(function()
+                    repeat task.wait(0.1)
+                        local currentTeamUpgrades = bedwars["ClientStoreHandler"]:getState().Bedwars.teamUpgrades
+                        --printtable(currentTeamUpgrades)
+                        if isAlive() then
+                            for i,v in next, is do
+                                local mag = (lplr.Character.HumanoidRootPart.Position - v.Position).magnitude
+                                if mag <= 15 then 
+                                    for b,a in ipairs(priolist) do 
+                                        local buyme
+                                        for i,v in next, a do
+                                            local item = getShopItem(v)
+                                            local amt = getItemAmt(item.currency)
+                                            if amt and item and item.price and amt >= item.price then
+                                                if item.itemType=="diamond_sword" or item.itemType=="emerald_sword" then 
+                                                    if currentTeamUpgrades.armory ~= nil then 
+                                                        buyme = item
+                                                    end
+                                                else
+                                                    buyme = item 
+                                                end
+                                                --print("can buy "..item.itemType)
+                                            end
+                                        end
+                                        if buyme and not getItem(buyme.itemType) then
+                                            if buyme.itemType=="wool_white" and getwoolamt() < WoolCap.Value then
+                                                buy(buyme)
+                                            elseif buyme.itemType ~= "wool_white" then
+                                                buy(buyme)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                            for i,v in next, tu do
+                                local mag = (lplr.Character.HumanoidRootPart.Position - v.Position).magnitude
+                                if mag <= 15 then 
+                                    for a,b in ipairs(teampriolist) do
+                                        local upgradetab = getTeamUpgrade(b)
+                                        local currentTier = currentTeamUpgrades[b] or -1
+                                        if currentTier+1 ~= #upgradetab.tiers then
+                                            for i,v in next, upgradetab.tiers do
+                                                --print("upgrade",b,i)
+                                                upgrade(b, i-1)
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    until not AutoBuy.Enabled
+                end)
+            else
+                childadded:Disconnect()
+                table.clear(is)
+                table.clear(tu)
+            end
+        end,
+    })
+    WoolCap = AutoBuy.CreateSlider({
+        Name = "WoolCap",
+        Function = function() end,
+        Min = 1,
+        Max = 128,
+        Round = 0,
+        Default = 16
+    })
+    ABWool = AutoBuy.CreateToggle({
+        Name = "Wool",
+        Function = function() end,
+        Default = true,
+    })
+    ABArmor = AutoBuy.CreateToggle({
+        Name = "Armor",
+        Function = function() end,
+        Default = true,
+    })
+    ABSwords = AutoBuy.CreateToggle({
+        Name = "Swords",
+        Function = function() end,
+        Default = true,
+    })
+    ABPickaxes = AutoBuy.CreateToggle({
+        Name = "Pickaxes",
+        Function = function() end,
+        Default = false,
+    })
+    ABAxes = AutoBuy.CreateToggle({
+        Name = "Axes",
+        Function = function() end,
+        Default = false,
+    })
+    ABTeamUpgrades = AutoBuy.CreateToggle({
+        Name = "TeamUpgrades",
+        Function = function() end,
+        Default = false,
+    })
 end
 
 do 

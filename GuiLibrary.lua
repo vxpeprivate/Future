@@ -106,6 +106,12 @@ ClickGUI.Size = UDim2.new(1,0,1,0)
 ClickGUI.BackgroundTransparency = 1
 ClickGUI.Name = "ClickGUI"
 ClickGUI.Visible = false
+local NotificationWindow = Instance.new("Frame")
+NotificationWindow.BackgroundTransparency = 1
+NotificationWindow.Active = false
+NotificationWindow.Size = UDim2.new(1, 0, 1, 0)
+NotificationWindow.Name = "NotificationWindow"
+NotificationWindow.Parent = ScreenGui
 GuiLibrary["ScreenGui"] = ScreenGui
 GuiLibrary["ClickGUI"] = ClickGUI
 makefolder("Future")
@@ -339,44 +345,80 @@ end
 GuiLibrary["GetColor"] = function() 
     return Color3.fromHSV(GuiLibrary.ColorTheme.H, GuiLibrary.ColorTheme.S, GuiLibrary.ColorTheme.V)
 end
+
+local function bettertween(obj, newpos, dir, style, tim, override)
+    spawn(function()
+        local frame = Instance.new("Frame")
+        frame.Visible = false
+        frame.Position = obj.Position
+        frame.Parent = ScreenGui
+        frame:GetPropertyChangedSignal("Position"):Connect(function()
+            obj.Position = UDim2.new(obj.Position.X.Scale, obj.Position.X.Offset, frame.Position.Y.Scale, frame.Position.Y.Offset)
+        end)
+        frame:TweenPosition(newpos, dir, style, tim, override)
+        frame.Parent = nil
+        task.wait(tim)
+        frame:Remove()
+    end)
+end
+
+local function bettertween2(obj, newpos, dir, style, tim, override)
+    spawn(function()
+        local frame = Instance.new("Frame")
+        frame.Visible = false
+        frame.Position = obj.Position
+        frame.Parent = ScreenGui
+        frame:GetPropertyChangedSignal("Position"):Connect(function()
+            obj.Position = UDim2.new(frame.Position.X.Scale, frame.Position.X.Offset, obj.Position.Y.Scale, obj.Position.Y.Offset)
+        end)
+        pcall(function()
+            frame:TweenPosition(newpos, dir, style, tim, override)
+        end)
+        frame.Parent = nil
+        task.wait(tim)
+        frame:Remove()
+    end)
+end
+
+local NotificationSize = UDim2.new(0, 300, 0, 100)
 GuiLibrary["CreateToast"] = function(title, text, showtime) 
     spawn(function()
-
-        local showtime = showtime or .7
+        local showtime = showtime or 2
         local title = title or "Notification"
         local text = text or "No text has been put here..."
-    
-        if GuiLibrary["CurrentToast"] ~= nil then 
-            repeat task.wait() until GuiLibrary["CurrentToast"] == nil
-        end
 
-        if not GuiLibrary["AllowNotifications"] or not GuiLibrary.HUDEnabled then
-            return
-        end
-
+        local offset = #NotificationWindow:GetChildren()
         local ToastNotification = Instance.new("Frame")
         local Topbar = Instance.new("Frame")
+        local Bottombar = Instance.new("Frame")
         local Title = Instance.new("TextLabel")
         local Text = Instance.new("TextLabel")
         ToastNotification.Name = "ToastNotification"
-        ToastNotification.Parent = GuiLibrary["ScreenGui"]
+        ToastNotification.Parent = NotificationWindow
         ToastNotification.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
         ToastNotification.BackgroundTransparency = 0.250
         ToastNotification.BorderSizePixel = 0
-        ToastNotification.Position = UDim2.new(0.75, 0, 1, 0)
-        ToastNotification.Size = UDim2.new(0, 228, 0, 79)
+        ToastNotification.Position = UDim2.new(1, 0, 1, -((5 + NotificationSize.Y.Offset) * (offset + 1)))
+        ToastNotification.Size = NotificationSize
         Topbar.Name = "Topbar"
         Topbar.Parent = ToastNotification
         Topbar.BackgroundColor3 = GuiLibrary["GetColor"]()
         Topbar.BackgroundTransparency = 0.6
         Topbar.BorderSizePixel = 0
-        Topbar.Size = UDim2.new(0, 228, 0, 25)
+        Topbar.Size = UDim2.new(0, NotificationSize.X.Offset, 0, NotificationSize.Y.Offset/3.16)
+        Bottombar.Name = "Bottombar"
+        Bottombar.Parent = ToastNotification
+        Bottombar.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        Bottombar.BackgroundTransparency = 0.6
+        Bottombar.BorderSizePixel = 0
+        Bottombar.Size = UDim2.new(0, NotificationSize.X.Offset, 0, 5)
+        Bottombar.Position = UDim2.new(0.5,0, 1, -5)
+        Bottombar.AnchorPoint = Vector2.new(0.5, 0)
         Title.Name = "Title"
         Title.Parent = Topbar
-        Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         Title.BackgroundTransparency = 1.000
         Title.Position = UDim2.new(0.0260000005, 0, 0, 0)
-        Title.Size = UDim2.new(0, 196, 0, 25)
+        Title.Size = UDim2.new(0, NotificationSize.X.Offset/1.16326531, 0, NotificationSize.Y.Offset/3.16)
         Title.Font = Enum.Font.GothamBold
         Title.Text = title
         Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -384,10 +426,9 @@ GuiLibrary["CreateToast"] = function(title, text, showtime)
         Title.TextXAlignment = Enum.TextXAlignment.Left
         Text.Name = "Text"
         Text.Parent = ToastNotification
-        Text.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         Text.BackgroundTransparency = 1.000
-        Text.Position = UDim2.new(0.0260000005, 0, 0, 26)
-        Text.Size = UDim2.new(0, 200, 0, 75)
+        Text.Position = UDim2.new(0.0260000005, 0, 0, Topbar.Size.Y.Offset + 5)
+        Text.Size = UDim2.new(0, NotificationSize.X.Offset/1.14, 0, NotificationSize.Y.Offset/1.05333333)
         Text.Font = Enum.Font.GothamSemibold
         Text.Text = text
         Text.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -399,19 +440,22 @@ GuiLibrary["CreateToast"] = function(title, text, showtime)
             Topbar.BackgroundColor3 = GuiLibrary["GetColor"]()
         end)
 
-        GuiLibrary["CurrentToast"] = ToastNotification
-        local Tween = TS:Create(ToastNotification, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.Out, 0, false, 0), {Position = UDim2.new(0.75, 0, 0.91, 0)})
-        Tween:Play()
-        Tween.Completed:Wait()
+        bettertween2(ToastNotification, UDim2.new(1, -(NotificationSize.X.Offset + 10), 1, -((5 + NotificationSize.Y.Offset) * (offset + 1))), Enum.EasingDirection.In, Enum.EasingStyle.Sine, 0.15, true)
+        task.wait(0.15)
+        Bottombar:TweenSize(UDim2.new(0, 0, 0, 5), Enum.EasingDirection.In, Enum.EasingStyle.Linear, showtime, true)
         task.wait(showtime)
-        local Tween2 = TS:Create(ToastNotification, TweenInfo.new(0.5, Enum.EasingStyle.Exponential, Enum.EasingDirection.In, 0, false, 0), {Position = UDim2.new(0.75, 0, 1, 0)})
-        Tween2:Play()
-        Tween2.Completed:Wait()
-        GuiLibrary["CurrentToast"] = nil
+        bettertween2(ToastNotification, UDim2.new(1, 0, 1, ToastNotification.Position.Y.Offset), Enum.EasingDirection.In, Enum.EasingStyle.Sine, 0.15, true)
+        task.wait(0.15)
         ToastNotification:Destroy()
         toDis:Disconnect()
     end)
 end
+
+NotificationWindow.ChildRemoved:Connect(function()
+    for i,v in pairs(NotificationWindow:GetChildren()) do
+        bettertween(v, UDim2.new(1, v.Position.X.Offset, 1, -((5 + NotificationSize.Y.Offset) * (i - 1))), Enum.EasingDirection.In, Enum.EasingStyle.Sine, 0.15, true)
+    end
+end)
 
 GuiLibrary["PrepareTargetHUD"] = function() 
     local api = {}
