@@ -1324,7 +1324,9 @@ do
     Intensity = Gravity.CreateSlider({
         Name = "Intensity",
         Function = function(value) 
-            WORKSPACE.Gravity = value
+            if Gravity.Enabled then
+                WORKSPACE.Gravity = value
+            end
         end,
         Min = 0,
         Round = 0,
