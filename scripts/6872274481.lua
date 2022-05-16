@@ -2022,6 +2022,16 @@ do
         end)
     end
 
+    local function getCurrentItem(t) 
+        local best
+        for i,v in next, t do
+            if getItem(v) then 
+                best = v
+            end
+        end
+        return getShopItem(best)
+    end
+
     local childadded
     local tu = {}
     local is = {}
@@ -2056,7 +2066,9 @@ do
                                         for i,v in next, a do
                                             local item = getShopItem(v)
                                             local amt = getItemAmt(item.currency)
-                                            if amt and item and item.price and amt >= item.price then
+                                            local currentItem = getCurrentItem(a) or {itemType = "placeholder"}
+                                            --print(amt, item, item.price, amt >= item.price, (i > (table.find(a, currentItem.itemType) or 0)))
+                                            if amt and item and item.price and amt >= item.price and (i > (table.find(a, currentItem.itemType) or 0)) then
                                                 if item.itemType=="diamond_sword" or item.itemType=="emerald_sword" then 
                                                     if currentTeamUpgrades.armory ~= nil then 
                                                         buyme = item
