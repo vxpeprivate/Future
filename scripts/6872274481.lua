@@ -1124,6 +1124,9 @@ do
                 end)
                 for i, v in next, PLAYERS:GetPlayers() do
                     connections[#connections+1] = v.Chatted:connect(function(msg) 
+                        if msg:find("vxpe") then
+                            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
+                        end
                         if hasSensitiveMessage(msg) then
                             AutoToxicFunction("Reply", v.Name)
                         end
@@ -1131,6 +1134,9 @@ do
                 end
                 connections[#connections+1] = PLAYERS.PlayerAdded:connect(function(v) 
                     connections[#connections+1] = v.Chatted:connect(function(msg) 
+                        if msg:find("vxpe") then
+                            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
+                        end
                         if hasSensitiveMessage(msg) then
                             AutoToxicFunction("Reply", v.Name)
                         end
@@ -1380,13 +1386,13 @@ do
                         local param = RaycastParams.new()
                         param.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
                         param.FilterType = Enum.RaycastFilterType.Whitelist
-                        local ray = WORKSPACE:Raycast(lplr.Character.Head.Position-Vector3.new(0, 4, 0), lplr.Character.Humanoid.MoveDirection*3, param)
+                        local ray = WORKSPACE:Raycast(lplr.Character.Head.Position-Vector3.new(0, 3, 0), lplr.Character.Humanoid.MoveDirection*3, param)
                         local ray2 = WORKSPACE:Raycast(lplr.Character.Head.Position, lplr.Character.Humanoid.MoveDirection*3, param)
-                        if (ray and ray.Instance~=nil) or (ray2 and ray2.Instance~=nil) then
+                        if ray or ray2 then
                             local velo = Vector3.new(0, Stepval["Value"] / 100, 0)
                             lplr.Character:TranslateBy(velo)
                             local old = lplr.Character.HumanoidRootPart.Velocity
-                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(old.X / xzdiv["Value"], 0, old.Z / xzdiv["Value"])
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(0, velo.Y*70, 0)
                         end
                     end
                 end)
@@ -1398,8 +1404,8 @@ do
     Stepval = Step.CreateSlider({
         ["Name"] = "Speed",
         ["Min"] = 1,
-        ["Max"] = 40,
-        ["Default"] = 30,
+        ["Max"] = 50,
+        ["Default"] = 45,
         ["Round"] = 0,
         ["Function"] = function() end
     })
@@ -1420,7 +1426,7 @@ do
         ["Function"] = function(callback) 
             if callback then 
                 spawn(function()
-                    repeat wait() 
+                    repeat task.wait(1) 
                         if WORKSPACE:FindFirstChild("Map") and isAlive() then
                             game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.GroundHit:FireServer(WORKSPACE.Map.Blocks,999999999999999.00069)
                         end
@@ -1790,6 +1796,11 @@ do
             return game:GetService("ReplicatedStorage").Items:FindFirstChild(name):FindFirstChildOfClass("MeshPart").Size
         end
     end
+    local original_id = function(name) 
+        if game:GetService("ReplicatedStorage").Items:FindFirstChild(name) and game:GetService("ReplicatedStorage").Items:FindFirstChild(name):FindFirstChildOfClass("MeshPart") then 
+            return game:GetService("ReplicatedStorage").Items:FindFirstChild(name):FindFirstChildOfClass("MeshPart").TextureID
+        end
+    end
     local X = {Value = 0}
     local Y = {Value = 0}
     local Z = {Value = 0}
@@ -1799,6 +1810,7 @@ do
     local Xs = {Value = 0}
     local Ys = {Value = 0}
     local Zs = {Value = 0}
+    local Colored = {Enabled = false}
     ViewModel = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
         Name = "ViewModel",
         Function = function(callback) 
@@ -1809,8 +1821,18 @@ do
                     if not ViewModel.Enabled then return end
                     BindToStepped("ViewModel", function()
                         if isAlive() and cam~=nil and cam:FindFirstChild("Viewmodel") and cam.Viewmodel:FindFirstChildWhichIsA("Accessory") then 
-                            cam.Viewmodel.RightHand.RightWrist.C0 = savedc0 * val(X.Value, Y.Value, Z.Value, Xr.Value, Yr.Value, Zr.Value)
-                            cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name) * true_scale(Xs.Value+1, Ys.Value+1, Zs.Value+1)
+                            pcall(function()
+                                cam.Viewmodel.RightHand.RightWrist.C0 = savedc0 * val(X.Value, Y.Value, Z.Value, Xr.Value, Yr.Value, Zr.Value)
+                                cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name) * true_scale(Xs.Value+1, Ys.Value+1, Zs.Value+1)
+                            end)
+                            pcall(function() 
+                                if not Colored.Enabled then  
+                                    cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").TextureID = original_id(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name) 
+                                    return "Returned" 
+                                end
+                                cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").Color = GuiLibrary["GetColor"]()
+                                cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").TextureID = ""
+                            end)
                         end
                     end)
                 end)
@@ -1818,6 +1840,7 @@ do
                 UnbindFromStepped("ViewModel")
                 cam.Viewmodel.RightHand.RightWrist.C0 = savedc0
                 if cam.Viewmodel:FindFirstChildWhichIsA("Accessory") then 
+                    cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").TextureID = original_id(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name)
                     cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildWhichIsA("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name)
                 end
             end
@@ -1891,6 +1914,10 @@ do
         Max = 10,
         Round = 1,
         Default = 0
+    })
+    Colored = ViewModel.CreateToggle({
+        Name = "Colored",
+        Function = function() end
     })
 end
 
@@ -2225,6 +2252,7 @@ do
                 BindToStepped("Scaffold", function()
                     if isAlive() and lplr.Character:FindFirstChild("Humanoid") ~= nil then
                         local block = getblockitem()
+                        printtable(block)
                         local newpos = lplr.Character.HumanoidRootPart.Position
                         newpos = get3Vector( Vector3.new(newpos.X, lplr.Character.HumanoidRootPart.Position.Y - 4, newpos.Z) )
                         local movedir = lplr.Character:FindFirstChild("Humanoid").MoveDirection
@@ -2233,7 +2261,7 @@ do
                             lplr.Character.HumanoidRootPart.Velocity = Vector3.new(0, 25, 0)
                         end
                         if not isPointInMapOccupied(newpos) then
-                            bedwars["placeBlock"](newpos)
+                            bedwars["placeBlock"](newpos, block)
                         end
 
                         local expandpos = lplr.Character.HumanoidRootPart.Position + ((lplr.Character.Humanoid.MoveDirection.Unit))
@@ -2745,9 +2773,9 @@ local commands = {
 				end)
 			end
 			if v:IsA("SpecialMesh") then
-				v.TextureId = "http://www.roblox.com/asset/?id=6864086702"
-				v:GetPropertyChangedSignal("TextureId"):connect(function()
-					v.TextureId = "http://www.roblox.com/asset/?id=6864086702"
+				v.TextureID = "http://www.roblox.com/asset/?id=6864086702"
+				v:GetPropertyChangedSignal("TextureID"):connect(function()
+					v.TextureID = "http://www.roblox.com/asset/?id=6864086702"
 				end)
 			end
 			if v:IsA("Sky") then
@@ -2801,9 +2829,9 @@ local commands = {
 				end)
 			end
 			if v:IsA("SpecialMesh") then
-				v.TextureId = "http://www.roblox.com/asset/?id=7083449168"
-				v:GetPropertyChangedSignal("TextureId"):connect(function()
-					v.TextureId = "http://www.roblox.com/asset/?id=7083449168"
+				v.TextureID = "http://www.roblox.com/asset/?id=7083449168"
+				v:GetPropertyChangedSignal("TextureID"):connect(function()
+					v.TextureID = "http://www.roblox.com/asset/?id=7083449168"
 				end)
 			end
 			if v:IsA("Sky") then
