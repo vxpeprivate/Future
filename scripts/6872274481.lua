@@ -1186,7 +1186,7 @@ do
 
         if not AutoLeave.Enabled then return end
 
-        if plr and plr:IsInGroup(5774246) and plr:GetRankInGroup(5774246) >= 100 or plr.Name == "futureclient_xyz2" then 
+        if plr and plr:IsInGroup(5774246) and plr:GetRankInGroup(5774246) >= 100 then 
             if AutoLeaveStaffMode.Value == "Destruct" then 
                 GuiLibrary.SaveConfig(GuiLibrary.CurrentConfig)
                 GuiLibrary.Signals.onDestroy:Fire()
