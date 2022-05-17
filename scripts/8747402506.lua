@@ -1,5 +1,5 @@
 -- Prophunt for future!
-
+do return end
 repeat wait() until game:IsLoaded()
 local GuiLibrary = shared.Future.GuiLibrary
 local UIS = game:GetService("UserInputService")
