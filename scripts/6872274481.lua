@@ -2253,7 +2253,7 @@ do
                 BindToStepped("Scaffold", function()
                     if isAlive() and lplr.Character:FindFirstChild("Humanoid") ~= nil then
                         local block = getblockitem()
-                        printtable(block)
+                        --printtable(block)
                         local newpos = lplr.Character.HumanoidRootPart.Position
                         newpos = get3Vector( Vector3.new(newpos.X, lplr.Character.HumanoidRootPart.Position.Y - 4, newpos.Z) )
                         local movedir = lplr.Character:FindFirstChild("Humanoid").MoveDirection
