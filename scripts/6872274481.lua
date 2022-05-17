@@ -19,6 +19,7 @@ local Reach = {Enabled = false}
 local ViewModel = {Enabled = false} 
 local oldisnetworkowner = isnetworkowner
 local isnetworkowner = isnetworkowner or function() return true end
+local printtable = printtable or print
 local speedsettings = {
     factor = 5.37,  
     velocitydivfactor = 2.9,
