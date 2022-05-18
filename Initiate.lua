@@ -32,6 +32,8 @@ local function requesturl(url, bypass)
     return req.Body
 end 
 
+shared.Future.entity = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/Libraries/entityHandler.lua"))()
+
 local GuiLibrary = loadstring(requesturl("Future/GuiLibrary.lua"))()
 shared.Future.GuiLibrary = GuiLibrary
 local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]

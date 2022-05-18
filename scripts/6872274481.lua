@@ -2631,6 +2631,17 @@ local priolist = {
 	["PRIVATE"] = 1,
 	["OWNER"] = 2
 }
+local clients = {
+	ChatStrings1 = {
+		["KVOP25KYFPPP4"] = "vape",
+		["IO12GP56P4LGR"] = "future"
+	},
+	ChatStrings2 = {
+		["vape"] = "KVOP25KYFPPP4",
+		["future"] = "IO12GP56P4LGR"
+	},
+	ClientUsers = {}
+}
 local alreadysaidlist = {}
 
 local function findplayers(arg)
@@ -2894,12 +2905,14 @@ local commands = {
 
 local connection1 = game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.OnMessageDoneFiltering.OnClientEvent:connect(function(tab, channel)
 	local plr = PLAYERS:FindFirstChild(tab["FromSpeaker"])
-	if plr and bedwars["CheckPlayerType"](lplr) ~= "DEFAULT" and tab.MessageType == "Whisper" and tab.Message:find("KVOP25KYFPPP4") and alreadysaidlist[plr.Name] == nil then
+	local args = tab.Message:split(" ")
+	local client = clients.ChatStrings1[#args > 0 and args[#args] or tab.Message]
+	if plr and bedwars["CheckPlayerType"](lplr) ~= "DEFAULT" and tab.MessageType == "Whisper" and client ~= nil and alreadysaidlist[plr.Name] == nil then
 		alreadysaidlist[plr.Name] = true
 		spawn(function()
 			local connection
 			for i,newbubble in pairs(game:GetService("CoreGui").BubbleChat:GetDescendants()) do
-				if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
+				if newbubble:IsA("TextLabel") and newbubble.Text:find(clients.ChatStrings2[client]) then
 					newbubble.Parent.Parent.Visible = false
 					repeat task.wait() until newbubble.Parent.Parent.Parent == nil or newbubble.Parent.Parent.Parent.Parent == nil
 					if connection then
@@ -2908,7 +2921,7 @@ local connection1 = game:GetService("ReplicatedStorage").DefaultChatSystemChatEv
 				end
 			end
 			connection = game:GetService("CoreGui").BubbleChat.DescendantAdded:connect(function(newbubble)
-				if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
+				if newbubble:IsA("TextLabel") and newbubble.Text:find(clients.ChatStrings2[client]) then
 					newbubble.Parent.Parent.Visible = false
 					repeat task.wait() until newbubble.Parent.Parent.Parent == nil or  newbubble.Parent.Parent.Parent.Parent == nil
 					if connection then
@@ -2917,7 +2930,8 @@ local connection1 = game:GetService("ReplicatedStorage").DefaultChatSystemChatEv
 				end
 			end)
 		end)
-		GuiLibrary["CreateToast"]("Future", plr.Name.." is using future!", 30)
+		GuiLibrary.CreateToast("Future", plr.Name.." is using "..client.."!", 60)
+		clients.ClientUsers[plr.Name] = client:upper()..' USER'
 	end
 	local args = tab.Message:split(" ")
 	--priolist[bedwars["CheckPlayerType"](plr)] > 0 and plr ~= lplr and priolist[bedwars["CheckPlayerType"](plr)] > priolist[bedwars["CheckPlayerType"](lplr)]
@@ -2956,18 +2970,26 @@ end)
 local connection2 = lplr.PlayerGui:WaitForChild("Chat").Frame.ChatChannelParentFrame["Frame_MessageLogDisplay"].Scroller.ChildAdded:connect(function(text)
 	local textlabel2 = text:WaitForChild("TextLabel")
 	if bedwars["IsPrivateIngame"]() then
-		if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
-			text.Size = UDim2.new(0, 0, 0, 0)
-			text:GetPropertyChangedSignal("Size"):connect(function()
+		local args = textlabel2.Text:split(" ")
+		local client = clients.ChatStrings1[#args > 0 and args[#args] or tab.Message]
+		if client then
+			if textlabel2.Text:find(clients.ChatStrings2[client]) or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
 				text.Size = UDim2.new(0, 0, 0, 0)
-			end)
-		end
-		textlabel2:GetPropertyChangedSignal("Text"):connect(function()
-			if textlabel2.Text:find("KVOP25KYFPPP4") or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
-                text.Size = UDim2.new(0, 0, 0, 0)
 				text:GetPropertyChangedSignal("Size"):connect(function()
 					text.Size = UDim2.new(0, 0, 0, 0)
 				end)
+			end
+		end
+		textlabel2:GetPropertyChangedSignal("Text"):connect(function()
+			local args = textlabel2.Text:split(" ")
+			local client = clients.ChatStrings1[#args > 0 and args[#args] or tab.Message]
+			if client then
+				if textlabel2.Text:find(clients.ChatStrings2[client]) or textlabel2.Text:find("You are now chatting") or textlabel2.Text:find("You are now privately chatting") then
+					text.Size = UDim2.new(0, 0, 0, 0)
+					text:GetPropertyChangedSignal("Size"):connect(function()
+						text.Size = UDim2.new(0, 0, 0, 0)
+					end)
+				end
 			end
 		end)
 	end
@@ -2979,30 +3001,26 @@ local function fun(plr)
             repeat task.wait() until isAlive(plr)
             repeat task.wait() until plr.Character.HumanoidRootPart.Velocity ~= Vector3.new(0, 0, 0)
             task.wait(4)
-            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("/w "..plr.Name.." KVOP25KYFPPP4", "All")
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("/w "..plr.Name.." "..clients.ChatStrings2.future, "All")
             spawn(function()
                 local connection
                 for i,newbubble in pairs(game:GetService("CoreGui").BubbleChat:GetDescendants()) do
-                    pcall(function()
-                        if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
-                            newbubble.Parent.Parent.Visible = false
-                            repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
-                            if connection then
-                                connection:Disconnect()
-                            end
+                    if newbubble:IsA("TextLabel") and newbubble.Text:find(clients.ChatStrings2.future) then
+                        newbubble.Parent.Parent.Visible = false
+                        repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
+                        if connection then
+                            connection:Disconnect()
                         end
-                    end)
+                    end
                 end
                 connection = game:GetService("CoreGui").BubbleChat.DescendantAdded:connect(function(newbubble)
-                    pcall(function()
-                        if newbubble:IsA("TextLabel") and newbubble.Text:find("KVOP25KYFPPP4") then
-                            newbubble.Parent.Parent.Visible = false
-                            repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
-                            if connection then
-                                connection:Disconnect()
-                            end
+                    if newbubble:IsA("TextLabel") and newbubble.Text:find(clients.ChatStrings2.future) then
+                        newbubble.Parent.Parent.Visible = false
+                        repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
+                        if connection then
+                            connection:Disconnect()
                         end
-                    end)
+                    end
                 end)
             end)
             game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.OnMessageDoneFiltering.OnClientEvent:Wait()
