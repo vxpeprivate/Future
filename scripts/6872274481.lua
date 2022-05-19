@@ -800,7 +800,7 @@ do
                     cam.Viewmodel.RightHand.RightWrist.C0 = origC0 * CFrame.new(Vector3.new(-1.78,0.5,0), Vector3.new(7, -100, 0))
                 end
                 spawn(function()
-                    repeat wait() 
+                    repeat skipFrame()
                         for i,v in next, getAllPlrsNear() do 
                             if isAlive(v) and not bedwars["CheckWhitelisted"](v) then
                                 if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
@@ -822,6 +822,7 @@ do
                                     spawn(function()
                                         hitremote:InvokeServer(attackArgs)
                                     end)
+                                    task.wait(0.03)
 
                                     GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
 
@@ -2189,7 +2190,7 @@ do
         ["Function"] = function(callback) 
             if callback then 
                 spawn(function() 
-                    repeat task.wait(0.2) 
+                    repeat task.wait(0.3) 
                         local bed = getBedNear(20)
                         if bed then 
                             local bestSide = getbestside(bed.Position)
