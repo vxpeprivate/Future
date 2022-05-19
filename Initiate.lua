@@ -5,7 +5,7 @@ print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
 if shared.Future~=nil then print("[Future] Detected future already executed, not executing!") return end
 getgenv().futureStartTime = game:GetService("Workspace"):GetServerTimeNow()
-local startTime = game:GetService("Workspace"):GetServerTimeNow()
+local startTime = futureStartTime
 shared.Future = {}
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
@@ -17,6 +17,7 @@ local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or flux
 local spawn = function(func) 
     return coroutine.wrap(func)()
 end
+
 
 local function requesturl(url, bypass) 
     if isfile(url) then 
@@ -32,9 +33,10 @@ local function requesturl(url, bypass)
     return req.Body
 end 
 
-shared.Future.entity = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/Libraries/entityHandler.lua"))()
+--shared.Future.entity = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/Libraries/entityHandler.lua"))()
 
 local GuiLibrary = loadstring(requesturl("Future/GuiLibrary.lua"))()
+
 shared.Future.GuiLibrary = GuiLibrary
 local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]
 GuiLibrary["LoadOnlyGuiConfig"]()
@@ -153,7 +155,6 @@ local function getplusscript(id) -- future plus moment
         --fwarn("[Future] invalid script (error "..tostring(req)..")") -- game is not supported
     end
 end
-
 GuiLibrary["LoadOnlyGuiConfig"]()
 
 local CombatWindow = GuiLibrary.CreateWindow({["Name"] = "Combat"})
@@ -481,7 +482,6 @@ local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(
         end
         ]]
 		queueteleport(stringtp)
-        GuiLibrary["Signals"]["onDestroy"]:Fire()
     end
 end)
 
@@ -508,17 +508,24 @@ if success then
     print("[Future] Successfully retrieved Universal script!")
 else
     fwarn("Unsuccessful attempt at retrieving Universal script!\n report this in the discord.\n (".._error..")")
+    GuiLibrary.Signals.onDestroy:Fire()
+    return
 end
 if success2 then 
     print("[Future] Successfully retrieved Game script!")
 else
     fwarn("Unsuccessful attempt at retrieving Game script!\n report this in the discord.\n (".._error2..")")
+    GuiLibrary.Signals.onDestroy:Fire()
+    return
 end
 if success3 then 
     print("[Future] Successfully retrieved FuturePlus Game script!")
 else
     fwarn("Unsuccessful attempt at retrieving FuturePlus Game script!\n (".._error3..")")
+    GuiLibrary.Signals.onDestroy:Fire()
+    return
 end
+
 GuiLibrary["LoadConfig"](GuiLibrary["CurrentConfig"])
 
 
@@ -529,6 +536,7 @@ local leaving = PLAYERS.PlayerRemoving:connect(function(player)
 end)
 
 GuiLibrary.Signals.onDestroy:connect(function()
+    shared.Future.Destructing = true
     UnbindFromRenderStep("stats")
     for i,v in next, GuiLibrary.Objects do 
         if v.Type == "OptionsButton" and i ~= "DestructOptionsButton" and v.API.Enabled then 
@@ -572,16 +580,16 @@ end)
 
 spawn(function()
     repeat
-        if not shared.Future then 
+        if not shared.Future or shared.Future.Destructing then 
             break
         end
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"], true)
         for i = 1, 100 do 
             task.wait(0.02)
-            if not shared.Future then 
+            if not shared.Future or shared.Future.Destructing then 
                 break
             end
         end
+        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"], true)
     until not shared.Future
 end)
 fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.\nPlease join the discord for changelogs and to report bugs. \ndiscord.gg/bdjT5UmmDJ\nEnjoy using Future v".._FUTUREVERSION.."")

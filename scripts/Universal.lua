@@ -1221,6 +1221,87 @@ do
 end
 
 do 
+    local connections = {}
+    local renamedInstances = {}
+    local textservice = game:GetService("TextService")
+    local function x(v) 
+        return v:gsub(lplr.Name, "Player")
+        :gsub(tostring(lplr.UserId), "1")
+        :gsub(lplr.DisplayName, "Player")
+    end
+    local function replace(v) 
+        if pcall(function() return v.Text end) and typeof(v.Text)=="string" then
+            renamedInstances[v] = {Original = v.Text, Property = "Text"}
+            local y = x(v.Text)
+            v.Text = y
+            connections[#connections+1] = v:GetPropertyChangedSignal("Text"):connect(function() 
+                renamedInstances[v].Original = v.Text
+                v.Text = x(v.Text)
+            end)
+            return y
+        end    
+        if pcall(function() return v.Image end) and typeof(v.Image)=="string" then 
+            renamedInstances[v] = {Original = v.Image, Property = "Image"}
+            local y = x(v.Image)
+            v.Image = y
+            connections[#connections+1] = v:GetPropertyChangedSignal("Image"):connect(function() 
+                renamedInstances[v].Original = v.Image
+                v.Image = x(v.Image)
+            end)
+            return y
+        end   
+    end
+
+    local mt = getrawmetatable(game)
+    setreadonly(mt, false)
+    local oldnamecall = mt.__namecall
+
+    local StopFPSIssue = {Enabled = false}
+    local NameProtect = {Enabled = false}
+    NameProtect = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
+        Name = "NameProtect",
+        Function = function(callback) 
+            if callback then 
+                spawn(function()
+                    for i,v in next, game:GetDescendants() do
+                        replace(v)
+                        if StopFPSIssue.Enabled and i % 500 == 0 then 
+                            skipFrame()
+                        end
+                    end
+                end)
+                connections[#connections+1] = game.DescendantAdded:connect(function(v)
+                    replace(v)
+                end)
+                mt.__namecall = newcclosure(function(self, ...) 
+                    local args = {...}
+                    local ncm = getnamecallmethod()
+                    if ncm == "GetTextSize" and self == textservice then 
+                        replace(args[1])    
+                    end
+                    return oldnamecall(self, table.unpack(args))
+                end)
+            else
+                for i,v in next, connections do 
+                    v:Disconnect()
+                    connections[i] = nil
+                end
+                mt.__namecall = oldnamecall
+                for i,v in next, renamedInstances do 
+                    if typeof(i)=="Instance" and i.Parent ~= nil then 
+                        i[v.Property] = v.Original   
+                    end
+                end
+            end
+        end
+    })
+    StopFPSIssue = NameProtect.CreateToggle({
+        Name = "StopFreeze",
+        Function = function(callback) end,
+    })
+end
+
+do 
     local norenderconnection
     local norender = {["Enabled"] = false}
     local norenderparticles = {["Enabled"] = false}

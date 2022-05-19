@@ -1185,23 +1185,24 @@ do
     local function AutoLeaveStaffFunction(plr) 
 
         if not AutoLeave.Enabled then return end
-
-        if plr and plr:IsInGroup(5774246) and plr:GetRankInGroup(5774246) >= 100 then 
-            if AutoLeaveStaffMode.Value == "Destruct" then 
-                GuiLibrary.SaveConfig(GuiLibrary.CurrentConfig)
-                GuiLibrary.Signals.onDestroy:Fire()
-            elseif AutoLeaveStaffMode.Value == "Requeue" then
-                local tpdata = game:GetService("TeleportService"):GetLocalPlayerTeleportData()
-                if tpdata and tpdata.match then 
-                    tpdata = tpdata.match.queueType
+        pcall(function()
+            if plr and plr:IsInGroup(5774246) and plr:GetRankInGroup(5774246) >= 100 then 
+                if AutoLeaveStaffMode.Value == "Destruct" then 
+                    GuiLibrary.SaveConfig(GuiLibrary.CurrentConfig)
+                    GuiLibrary.Signals.onDestroy:Fire()
+                elseif AutoLeaveStaffMode.Value == "Requeue" then
+                    local tpdata = game:GetService("TeleportService"):GetLocalPlayerTeleportData()
+                    if tpdata and tpdata.match then 
+                        tpdata = tpdata.match.queueType
+                    end
+                    if type(tpdata)~="table" then
+                        game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = tpdata})
+                    end
+                elseif AutoLeaveStaffMode.Value == "Lobby" then
+                    game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.TeleportToLobby:FireServer()
                 end
-                if type(tpdata)~="table" then
-                    game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = tpdata})
-                end
-            elseif AutoLeaveStaffMode.Value == "Lobby" then
-                game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.TeleportToLobby:FireServer()
             end
-        end
+        end)
     end
     AutoLeave = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
         Name = "AutoLeave",
@@ -1348,8 +1349,8 @@ do
                             end
                         end
 
-                        --local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
-                        --lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
+                        local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
+                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
                     end
                 end)
             else
@@ -1839,7 +1840,7 @@ do
                 end)
             else
                 UnbindFromStepped("ViewModel")
-                cam.Viewmodel.RightHand.RightWrist.C0 = savedc0
+                cam.Viewmodel.RightHand.RightWrist.C0 = (savedc0 or game:GetService("ReplicatedStorage").Assets.Viewmodel.RightHand.RightWrist.C0)
                 if cam.Viewmodel:FindFirstChildWhichIsA("Accessory") then 
                     cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").TextureID = original_id(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name)
                     cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildWhichIsA("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name)
@@ -3006,20 +3007,24 @@ local function fun(plr)
                 local connection
                 for i,newbubble in pairs(game:GetService("CoreGui").BubbleChat:GetDescendants()) do
                     if newbubble:IsA("TextLabel") and newbubble.Text:find(clients.ChatStrings2.future) then
-                        newbubble.Parent.Parent.Visible = false
-                        repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
-                        if connection then
-                            connection:Disconnect()
-                        end
+                        pcall(function()
+                            newbubble.Parent.Parent.Visible = false
+                            repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
+                            if connection then
+                                connection:Disconnect()
+                            end
+                        end)
                     end
                 end
                 connection = game:GetService("CoreGui").BubbleChat.DescendantAdded:connect(function(newbubble)
                     if newbubble:IsA("TextLabel") and newbubble.Text:find(clients.ChatStrings2.future) then
-                        newbubble.Parent.Parent.Visible = false
-                        repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
-                        if connection then
-                            connection:Disconnect()
-                        end
+                        pcall(function()
+                            newbubble.Parent.Parent.Visible = false
+                            repeat task.wait() until newbubble.Parent.Parent.Parent.Parent == nil
+                            if connection then
+                                connection:Disconnect()
+                            end
+                        end)
                     end
                 end)
             end)

@@ -575,7 +575,7 @@ GuiLibrary["PrepareTargetHUD"] = function()
 
     function api.update(plr, health, distance) 
         api.target = plr
-        TargetHUD.Visible = true
+        --TargetHUD.Visible = true
         Headshot.Image = "rbxthumb://type=AvatarHeadShot&id="..tostring(plr.UserId).."&w=420&h=420"
         Name.Text = plr.Name
         Health.Text = tostring(health or plr.Character:FindFirstChildOfClass("Humanoid").Health).." HP"
@@ -1021,6 +1021,7 @@ GuiLibrary["Debug"] = function(content)
     print("[Future] [DEBUG] "..content)
 end
 GuiLibrary["SaveConfig"] = function(name, isAutosave) 
+    if shared.Future.Destructing then return end
     local name = (name == nil or name == "") and "default" or name
     GuiLibrary["Debug"]("save Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     local config = {}
@@ -1218,6 +1219,7 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
     end
 end
 GuiLibrary["LoadConfig"] = function(name) 
+    if shared.Future.Destructing then return end
     local name = name or "default"
     GuiLibrary["Debug"]("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     if isfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 
@@ -1245,6 +1247,7 @@ GuiLibrary["LoadConfig"] = function(name)
             for i,v in next, config do 
                 if GuiLibrary["Objects"][i] then 
                     local API = GuiLibrary["Objects"][i]["API"]
+                    local start = WORKSPACE:GetServerTimeNow()
                     if v.Type == "Toggle" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, i) then
                         if v.Enabled then 
                             API.Toggle(v.Enabled, true)
@@ -1261,6 +1264,10 @@ GuiLibrary["LoadConfig"] = function(name)
                             API.Toggle(v.Enabled, true, true)
                         end
                         API.SetKeybind(v.Keybind)
+                    end
+                    local time_ = WORKSPACE:GetServerTimeNow() - start
+                    if time_ > 0.01 then
+                        print("Loaded", i,"as", (v.Enabled~=nil and v.Enabled or v.Value), "in", time_)
                     end
                 end
             end
@@ -1352,8 +1359,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
     table.insert(GuiLibrary.Connections, connection222)
 
     windowapi["CreateOptionsButton"] = function(argstable) 
+        local starttime = WORKSPACE:GetServerTimeNow()
         local buttonapi = {["Enabled"] = false, ["Expanded"] = false, ["Keybind"] = nil, ["IsRecording"] = false}
-
+        
         local OptionsButton = Instance.new("TextButton")
         local Name = Instance.new("TextLabel")
         local Gear = Instance.new("ImageButton")
@@ -1883,7 +1891,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             GuiLibrary["Objects"][OptionsButton.Name..argstable.Name.."Textbox"] = {["API"] = textboxapi, ["Instance"] = Textbox, ["Type"] = "Textbox", ["OptionsButton"] = OptionsButton.Name, ["Window"] = Window.Name}
             return textboxapi
         end
-
+        
 
         GuiLibrary["Objects"][argstable.Name.."OptionsButton"] = {["Name"] = argstable.Name, ["API"] = buttonapi, ["Instance"] = OptionsButton, ["Type"] = "OptionsButton", ["Window"] = Window.Name, ["DisableOnLeave"] = argstable.DisableOnLeave, ["ArrayText"] = argstable.ArrayText}
         return buttonapi
