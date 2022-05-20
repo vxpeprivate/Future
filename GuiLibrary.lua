@@ -14,6 +14,10 @@ local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or flux
 local spawn = function(func) 
     return coroutine.wrap(func)()
 end
+local betterisfile = function(file)
+	local suc, res = pcall(function() return readfile(file) end)
+	return suc and res ~= nil
+end
 local chatchildaddedconnection
 local GuiLibrary = {
     ["getRobloxAsset"] = function(path) 
@@ -121,7 +125,7 @@ makefolder("Future/configs")
 makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
 
 local function requesturl(url, bypass) 
-    if isfile(url) then 
+    if betterisfile(url) then 
         return readfile(url)
     end
     local repourl = bypass and "https://raw.githubusercontent.com/joeengo/" or "https://raw.githubusercontent.com/joeengo/Future/main/"
@@ -135,27 +139,27 @@ local function requesturl(url, bypass)
 end 
 
 local function getasset(path)
-	--[[if not isfile(path) then
+	--[[if not betterisfile(path) then
 		local req = requestfunc({
 			Url = "https://raw.githubusercontent.com/joeengo/Future/main/"..path:gsub("Future/assets", "assets"),
 			Method = "GET"
 		})
         print("[Future] downloading "..path.." asset.")
 		writefile(path, req.Body)
-        repeat task.wait() until isfile(path)
+        repeat task.wait() until betterisfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end]]
 	return GuiLibrary.getRobloxAsset(path) 
 end
 
 --[[
-if isfile("Future/logs/latestmove.log") then 
+if betterisfile("Future/logs/latestmove.log") then 
     local data = readfile("Future/logs/latestmove.log")
     delfile("Future/logs/latestmove.log")
     local date = data:split("\n")[1]
     writefile(("Future/logs/"..date:gsub(" ", "_"):gsub("[^%w%s_:-]+", ""):gsub(":", "-")..".log"), data)
 end
-if isfile("Future/latest.log") then 
+if betterisfile("Future/latest.log") then 
     local data = readfile("Future/latest.log")
     delfile("Future/latest.log")
     writefile(("Future/logs/latestmove.log"), data)
@@ -165,7 +169,7 @@ local function log(sys, mes)
     local prefix = timePrefix.." ["..tostring(sys).."] "
     local toPush = prefix..tostring(mes).."\n"
 
-    if not isfile("Future/latest.log") then 
+    if not betterisfile("Future/latest.log") then 
         writefile("Future/latest.log", os.date("%c").."\n"..toPush)
     else
         appendfile("Future/latest.log", toPush)
@@ -1065,7 +1069,7 @@ GuiLibrary["SaveConfig"] = function(name, isAutosave)
     local path = "Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json"
     makefolder("Future/configs")
     makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
-    if isfile((path)) then 
+    if betterisfile((path)) then 
         delfile(path)
     end
 
@@ -1104,15 +1108,15 @@ GuiLibrary["SaveConfig"] = function(name, isAutosave)
     }
 
     writefile(path, HTTPSERVICE:JSONEncode(config))
-    repeat task.wait() until isfile((path))
-    if isfile("Future/configs/GUIconfig.json") then 
+    repeat task.wait() until betterisfile((path))
+    if betterisfile("Future/configs/GUIconfig.json") then 
         delfile("Future/configs/GUIconfig.json")
     end
     writefile("Future/configs/GUIconfig.json", HTTPSERVICE:JSONEncode(guiconfig))
-    repeat task.wait() until isfile("Future/configs/GUIconfig.json")
+    repeat task.wait() until betterisfile("Future/configs/GUIconfig.json")
 end
 GuiLibrary["LoadOnlyGuiConfig"] = function() 
-    if isfile("Future/configs/GUIconfig.json") then 
+    if betterisfile("Future/configs/GUIconfig.json") then 
         local success, config = pcall(function() 
             local x = readfile("Future/configs/GUIconfig.json")
             return HTTPSERVICE:JSONDecode(x)
@@ -1222,7 +1226,7 @@ GuiLibrary["LoadConfig"] = function(name)
     if shared.Future==nil or shared.Future.Destructing then return end
     local name = name or "default"
     GuiLibrary["Debug"]("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
-    if isfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 
+    if betterisfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 
         print("[Future] Loading configuration "..name)
         log("LoadConfig", "Loading "..name)
         local success, config = pcall(function() 

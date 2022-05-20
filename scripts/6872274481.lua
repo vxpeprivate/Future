@@ -14,6 +14,10 @@ local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or flux
 local spawn = function(func) 
     return coroutine.wrap(func)()
 end
+local betterisfile = function(file)
+	local suc, res = pcall(function() return readfile(file) end)
+	return suc and res ~= nil
+end
 local bedwars = {} 
 local Reach = {Enabled = false}
 local ViewModel = {Enabled = false} 
@@ -32,7 +36,7 @@ pcall(function()
 end)
 
 local function requesturl(url, bypass) 
-    if isfile(url) and shared.FutureDeveloper then 
+    if betterisfile(url) and shared.FutureDeveloper then 
         return readfile(url)
     end
     local repourl = bypass and "https://raw.githubusercontent.com/joeengo/" or "https://raw.githubusercontent.com/joeengo/Future/main/"
@@ -47,14 +51,14 @@ end
 local shalib = loadstring(requesturl("lib/sha.lua"))()
 
 local function getasset(path)
-	if not isfile(path) then
+	if not betterisfile(path) then
 		local req = requestfunc({
 			Url = "https://raw.githubusercontent.com/joeengo/Future/main/"..path:gsub("Future/assets", "assets"),
 			Method = "GET"
 		})
         print("[Future] downloading "..path.." asset.")
 		writefile(path, req.Body)
-        repeat task.wait() until isfile(path)
+        repeat task.wait() until betterisfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end
 	return getcustomasset(path) 
@@ -2307,7 +2311,7 @@ local function PrepareSessionInfo()
             ["Offset"] = 0
         }
     }
-    if isfile("Future/configs/SessionInfo.json") then 
+    if betterisfile("Future/configs/SessionInfo.json") then 
         local suc, value = pcall(function() 
             return HTTPSERVICE:JSONDecode(readfile("Future/configs/SessionInfo.json"))
         end)
@@ -2618,7 +2622,7 @@ GuiLibrary.Signals.onDestroy:connect(function()
         return HTTPSERVICE:JSONEncode(posTable)
     end)
     if suc then 
-        if isfile("Future/configs/SessionInfo.json") then 
+        if betterisfile("Future/configs/SessionInfo.json") then 
             delfile("Future/configs/SessionInfo.json")
         end
         writefile("Future/configs/SessionInfo.json", value)

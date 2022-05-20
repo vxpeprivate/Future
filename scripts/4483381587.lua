@@ -13,9 +13,13 @@ local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or flux
 local spawn = function(func) 
     return coroutine.wrap(func)()
 end
+local betterisfile = function(file)
+	local suc, res = pcall(function() return readfile(file) end)
+	return suc and res ~= nil
+end
 
 local function requesturl(url, bypass) 
-    if isfile(url) and shared.FutureDeveloper then 
+    if betterisfile(url) and shared.FutureDeveloper then 
         return readfile(url)
     end
     local repourl = bypass and "https://raw.githubusercontent.com/joeengo/" or "https://raw.githubusercontent.com/joeengo/Future/main/"
@@ -29,7 +33,7 @@ local function requesturl(url, bypass)
 end 
 
 local function getasset(path)
-	if not isfile(path) then
+	if not betterisfile(path) then
 		local req = requestfunc({
 			Url = "https://raw.githubusercontent.com/joeengo/Future/main/"..path:gsub("Future/assets", "assets"),
 			Method = "GET"

@@ -17,10 +17,14 @@ local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or flux
 local spawn = function(func) 
     return coroutine.wrap(func)()
 end
+local betterisfile = function(file)
+	local suc, res = pcall(function() return readfile(file) end)
+	return suc and res ~= nil
+end
 
 
 local function requesturl(url, bypass) 
-    if isfile(url) then 
+    if betterisfile(url) then 
         return readfile(url)
     end
     local repourl = bypass and "https://raw.githubusercontent.com/joeengo/" or "https://raw.githubusercontent.com/joeengo/Future/main/"
@@ -121,14 +125,14 @@ local function fprint(...)
 end
 
 local function getasset(path)
-	if not isfile(path) then
+	if not betterisfile(path) then
 		local req = requestfunc({
 			Url = "https://raw.githubusercontent.com/joeengo/Future/main/"..path:gsub("Future/assets", "assets"),
 			Method = "GET"
 		})
         print("[Future] downloading "..path.." asset.")
 		writefile(path, req.Body)
-        repeat task.wait() until isfile(path)
+        repeat task.wait() until betterisfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end
 	return getcustomasset(path) 
@@ -176,7 +180,7 @@ local configBox; configBox = configButton.CreateTextbox({
     ["Function"] = function(value)
         spawn(function()
             GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
-            if isfile("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/"..value..".json") then
+            if betterisfile("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/"..value..".json") then
                 GuiLibrary["LoadConfig"](value)
             end
             GuiLibrary["CurrentConfig"] = value
@@ -475,7 +479,7 @@ local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(
     if State == Enum.TeleportState.Started then
 		local stringtp = [[
         repeat wait() until game:IsLoaded()
-        if isfile("Future/Initiate.lua") then 
+        if shared.FutureDeveloper then 
             loadfile("Future/Initiate.lua")() 
         else 
             loadstring(game:HttpGet("https://raw.githubusercontent.com/joeengo/Future/main/Initiate.lua", true))() 
