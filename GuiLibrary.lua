@@ -145,7 +145,7 @@ local function getasset(path)
         repeat task.wait() until isfile(path)
         print("[Future] downloaded "..path.." asset successfully!")
 	end]]
-	return getcustomasset(path) 
+	return GuiLibrary.getRobloxAsset(path) 
 end
 
 --[[
@@ -1021,7 +1021,7 @@ GuiLibrary["Debug"] = function(content)
     print("[Future] [DEBUG] "..content)
 end
 GuiLibrary["SaveConfig"] = function(name, isAutosave) 
-    if shared.Future.Destructing then return end
+    if shared.Future==nil or shared.Future.Destructing then return end
     local name = (name == nil or name == "") and "default" or name
     GuiLibrary["Debug"]("save Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     local config = {}
@@ -1219,7 +1219,7 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
     end
 end
 GuiLibrary["LoadConfig"] = function(name) 
-    if shared.Future.Destructing then return end
+    if shared.Future==nil or shared.Future.Destructing then return end
     local name = name or "default"
     GuiLibrary["Debug"]("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     if isfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 

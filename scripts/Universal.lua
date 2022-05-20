@@ -312,7 +312,7 @@ do
                     BindToHeartbeat("SendFakeLag", function() 
                         if isAlive() then
                             sethiddenproperty(lplr.Character.HumanoidRootPart, "NetworkIsSleeping", true)
-                            game:GetService("NetworkClient"):SetOutgoingKBPSLimit(1)
+                            --game:GetService("NetworkClient"):SetOutgoingKBPSLimit(1)
                         end
                     end)
                 end
@@ -629,18 +629,25 @@ do
     local flyspeed = {["Value"] = 40}
     local flyglide = {["Value"] = 0}
     local fly = {["Enabled"] = false}
+    local flymode = {["Value"] = "Velo"}
     fly = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Flight",
         ["Function"] = function(callback)
             if callback then
-                BindToStepped("Fly", function()
+                BindToStepped("Fly", function(time,dt)
                     if isAlive() then
-                        local updirection = 1.125 - flyglide["Value"]
+                        local dt = flymode.Value == "Velo" and 1 or dt
+                        local updirection = 0 - flyglide["Value"]
                         if UIS:GetFocusedTextBox()==nil then
-                            updirection = flyup and vertspeed["Value"] or flydown and -vertspeed["Value"] or 1.125 - flyglide["Value"]
+                            updirection = (flyup and vertspeed["Value"] or flydown and -vertspeed["Value"] or 0 - flyglide["Value"])*dt
                         end
-                        local MoveDirection = lplr.Character.Humanoid.MoveDirection * flyspeed["Value"]
-                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(MoveDirection.X, verttoggle["Enabled"] and (updirection) or 1.125 - flyglide["Value"], MoveDirection.Z)
+                        local MoveDirection = lplr.Character.Humanoid.MoveDirection * (flyspeed["Value"]*dt)
+                        if flymode.Value == "Velo" then
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(MoveDirection.X, verttoggle["Enabled"] and (updirection) or 0 - flyglide["Value"], MoveDirection.Z)
+                        elseif flymode.Value == "CFrame" then
+                            lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame + Vector3.new(MoveDirection.X, verttoggle["Enabled"] and (updirection) or 0 - flyglide["Value"], MoveDirection.Z)
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new()
+                        end
                     end
                 end)
                 flyupconnection = UIS.InputBegan:connect(function(input)
@@ -669,8 +676,14 @@ do
                 if flydownconnection then
                     flydownconnection:Disconnect()
                 end
+                WORKSPACE.Gravity = 196.2
             end
         end
+    })
+    flymode = fly.CreateSelector({
+        Name = "Mode", 
+        Function = function() end,
+        List = {"Velo", "CFrame"}
     })
     flyspeed = fly.CreateSlider({
         ["Name"] = "Speed",
