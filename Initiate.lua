@@ -1,5 +1,6 @@
 -- // credits to anyones code i used/looked at.
-getgenv()._FUTUREVERSION = "1.1.3 | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
+if not getgenv then error("No getgenv, please use KRNL or Synapse X.") end
+getgenv()._FUTUREVERSION = "1.1.4 | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
 getgenv()._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
@@ -12,7 +13,7 @@ local TS = game:GetService("TweenService")
 local HTTPSERVICE = game:GetService("HttpService")
 local PLAYERS = game:GetService("Players")
 local lplr = PLAYERS.LocalPlayer
-local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
+local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
 local spawn = function(func) 
     return coroutine.wrap(func)()
@@ -38,6 +39,10 @@ local function requesturl(url, bypass)
 end 
 
 --shared.Future.entity = loadstring(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/VapeV4ForRoblox/main/Libraries/entityHandler.lua"))()
+
+if game:GetService("CoreGui"):FindFirstChild("RobloxVRGui") then 
+    game:GetService("CoreGui"):FindFirstChild("RobloxVRGui"):Destroy()
+end
 
 local GuiLibrary = loadstring(requesturl("Future/GuiLibrary.lua"))()
 

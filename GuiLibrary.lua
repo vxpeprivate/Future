@@ -96,15 +96,15 @@ local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRob
 local exclusionList = {
     "ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", 
     "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton",
-     "NotificationsToggle", "RainbowToggle", "ClickSoundsToggle",
-     "ArrayListToggle", "ListBackgroundToggle", "ListLinesToggle", "WatermarkToggle",
-     "WMLineToggle", "WMBackgroundToggle", "HUDOptionsButtonRenderingSelector",
-     "FPSToggle", "SpeedToggle", "CoordsToggle", "PingToggle", "TargetHUDToggle",
+     "HUDOptionsButtonNotificationsToggle", "ColorsOptionsButtonRainbowToggle", "ClickGuiOptionsButtonClickSoundsToggle",
+     "HUDOptionsButtonArrayListToggle", "HUDOptionsButtonListBackgroundToggle", "HUDOptionsButtonListLinesToggle", "HUDOptionsButtonWatermarkToggle",
+     "HUDOptionsButtonWMLineToggle", "HUDOptionsButtonWMBackgroundToggle", "HUDOptionsButtonRenderingSelector",
+     "HUDOptionsButtonFPSToggle", "HUDOptionsButtonSpeedToggle", "HUDOptionsButtonCoordsToggle", "HUDOptionsButtonPingToggle", "HUDOptionsButtonTargetHUDToggle",
      "RestartOptionsButton"
 }
 
 local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
-ScreenGui.Name = tostring(math.random(1,10))
+ScreenGui.Name = tostring("RobloxVRGui")
 local ClickGUI = Instance.new("Frame", ScreenGui)
 ClickGUI.Size = UDim2.new(1,0,1,0)
 ClickGUI.BackgroundTransparency = 1
@@ -1130,55 +1130,55 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
                     v.API.Toggle(config.HUDEnabled, true, true)
                 elseif i == "ClickGuiOptionsButton" then
                     v.API.SetKeybind(config.GuiKeybind)
-                elseif i == "NotificationsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonNotificationsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Toggle(config.AllowNotifications, true)
-                elseif i == "ArrayListToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonArrayListToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.ArrayList then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "ListBackgroundToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonListBackgroundToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.ListBackground then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "ListLinesToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonListLinesToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.ListLines then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "WatermarkToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonWatermarkToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.DrawWatermark then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "WMLineToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonWMLineToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.WatermarkLine then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "WMBackgroundToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonWMBackgroundToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.WatermarkBackground then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "CoordsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonCoordsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.DrawCoords then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "SpeedToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonSpeedToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.DrawSpeed then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "FPSToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonFPSToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.DrawFPS then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "PingToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonPingToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.DrawPing then
                         v.API.Toggle(true, true)
                     end
-                elseif i == "TargetHUDToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "HUDOptionsButtonTargetHUDToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if (config.TargetHUDEnabled) then
                         v.API.Toggle(true, true)
                     end
                 elseif i == "HUDOptionsButtonRenderingSelector" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Select(config.Rendering)
-                elseif i == "ClickSoundsToggle" and v.OptionsButton == "ClickGuiOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "ClickGuiOptionsButtonClickSoundsToggle" and v.OptionsButton == "ClickGuiOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Toggle(config.ClickSounds, true)
                 elseif i == "ColorsOptionsButtonHueSlider" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Set(config.ColorTheme.H / 0.002777777777777)
@@ -1186,7 +1186,7 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
                     v.API.Set(config.ColorTheme.S * 100)
                 elseif i == "ColorsOptionsButtonLightnessSlider" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Set(config.ColorTheme.V * 100)
-                elseif i == "RainbowToggle" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
+                elseif i == "ColorsOptionsButtonRainbowToggle" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     if config.Rainbow then
                         v.API.Toggle(true, true)
                     else
@@ -1257,7 +1257,7 @@ GuiLibrary["LoadConfig"] = function(name)
                             API.Toggle(v.Enabled, true)
                         end
                     elseif v.Type == "Slider" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, v.OptionsButton) then
-                        API.Set(v.Value)
+                        API.Set(v.Value, true)
                     elseif v.Type == "Selector" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
                         API.Select(v.Value)
                     elseif v.Type == "Textbox" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
@@ -1357,7 +1357,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
     ButtonContainer.Size = UDim2.new(0, 175, 0, 30)
     UIListLayout.Parent = ButtonContainer
     UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    UIListLayout.SortOrder = Enum.SortOrder.Name
     UIListLayout.Padding = UDim.new(0, 1)
     local connection222 = UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):connect(windowapi.Update)
     table.insert(GuiLibrary.Connections, connection222)
@@ -1365,7 +1365,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
     windowapi["CreateOptionsButton"] = function(argstable) 
         local starttime = WORKSPACE:GetServerTimeNow()
         local buttonapi = {["Enabled"] = false, ["Expanded"] = false, ["Keybind"] = nil, ["IsRecording"] = false}
-        
+
         local OptionsButton = Instance.new("TextButton")
         local Name = Instance.new("TextLabel")
         local Gear = Instance.new("ImageButton")
@@ -1417,7 +1417,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
         Gear.Image = getasset("Future/assets/gear.png") --"rbxassetid://8905804106"
         Gear.ImageColor3 = Color3.fromRGB(181, 181, 181)
         Gear.SliceScale = 0.000
-        ChildrenContainer.Name = argstable.Name.."ChildrenContainer"
+        ChildrenContainer.Name = argstable.Name.."__ZZZZZ__ChildrenContainer"
         ChildrenContainer.Parent = ButtonContainer
         ChildrenContainer.AnchorPoint = Vector2.new(0.5, 0.5)
         ChildrenContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1623,7 +1623,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
                 toggleapi.Toggle(argstable.Default, true)
             end
             Toggle.MouseButton1Click:Connect(toggleapi.Toggle)
-            GuiLibrary["Objects"][argstable.Name.."Toggle"] = {["API"] = toggleapi, ["Instance"] = Toggle, ["Type"] = "Toggle", ["OptionsButton"] = OptionsButton.Name, ["Window"] = Window.Name}
+            GuiLibrary["Objects"][OptionsButton.Name..argstable.Name.."Toggle"] = {["API"] = toggleapi, ["Instance"] = Toggle, ["Type"] = "Toggle", ["OptionsButton"] = OptionsButton.Name, ["Window"] = Window.Name}
             return toggleapi
         end
 
@@ -1740,12 +1740,14 @@ GuiLibrary["CreateWindow"] = function(argstable)
 
         buttonapi["CreateSlider"] = function(argstable) 
             local sliderapi = {["Value"] = argstable.Default or argstable.Min}
-            local min, max, roundval = argstable.Min, argstable.Max, (argstable.Round or 2)
+            local min, max, roundval = argstable.Min, argstable.Max, (argstable.Round or 1)
             local Slider = Instance.new("TextButton")
             local SliderFill = Instance.new("Frame")
             local SliderContainer = Instance.new("Frame")
             local UIListLayout_5 = Instance.new("UIListLayout")
             local Name_3 = Instance.new("TextLabel")
+            local Textbox = Instance.new("TextButton")
+            local RealTextbox = Instance.new("TextBox")
             Slider.Name = argstable.Name.."Slider"
             Slider.Parent = ModuleContainer
             Slider.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -1795,6 +1797,42 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Name_3.TextColor3 = Color3.fromRGB(255, 255, 255)
             Name_3.TextSize = 19.000
             Name_3.TextXAlignment = Enum.TextXAlignment.Left
+            Textbox.Name = "InputTextbox"
+            Textbox.Parent = ModuleContainer
+            Textbox.BackgroundTransparency = 1.000
+            Textbox.BorderSizePixel = 0
+            Textbox.Position = UDim2.new(0.0171428565, 0, 0, 0)
+            Textbox.Size = UDim2.new(0, 168, 0, 30)
+            Textbox.AutoButtonColor = false
+            Textbox.Font = Enum.Font.SourceSans
+            Textbox.Text = ""
+            Textbox.TextColor3 = Color3.fromRGB(0, 0, 0)
+            Textbox.TextSize = 14.000
+            Textbox.TextXAlignment = Enum.TextXAlignment.Left
+            Textbox.Visible = false
+            RealTextbox.Name = "RealTextbox"
+            RealTextbox.Parent = Textbox
+            RealTextbox.AnchorPoint = Vector2.new(0.5, 0.5)
+            RealTextbox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            RealTextbox.BackgroundTransparency = 1.000
+            RealTextbox.Position = UDim2.new(0.51767838, 0, 0.5, 0)
+            RealTextbox.Size = UDim2.new(0, 162, 0, 30)
+            RealTextbox.ClearTextOnFocus = false
+            RealTextbox.Font = Enum.Font.GothamSemibold
+            RealTextbox.PlaceholderColor3 = Color3.fromRGB(170, 170, 170)
+            RealTextbox.PlaceholderText = "Input Value"
+            RealTextbox.Text = ""
+            RealTextbox.TextColor3 = Color3.fromRGB(255, 255, 255)
+            RealTextbox.TextSize = 19.000
+            RealTextbox.TextXAlignment = Enum.TextXAlignment.Left
+            RealTextbox.FocusLost:connect(function() 
+                if tonumber(RealTextbox.Text) then 
+                    sliderapi.Set(tonumber(RealTextbox.Text), true)
+                end
+                RealTextbox.Text = ""
+                Textbox.Visible = false
+                Slider.Visible = true
+            end)
             
             local function slide(input)
                 local sizeX = math.clamp((input.Position.X - Slider.AbsolutePosition.X) / Slider.AbsoluteSize.X, 0, 1)
@@ -1809,6 +1847,12 @@ GuiLibrary["CreateWindow"] = function(argstable)
             local sliding
             Slider.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
+                        Textbox.Visible = true
+                        Slider.Visible = false
+                        RealTextbox:CaptureFocus()
+                        return
+                    end
                     sliding = true
                     slide(input)
                     playclicksound()
@@ -1832,10 +1876,11 @@ GuiLibrary["CreateWindow"] = function(argstable)
                 end
             end)
 
-            sliderapi["Set"] = function(value)
-                local value = math.floor((math.clamp(value, min, max) * (10^roundval))+0.5)/(10^roundval)
+            sliderapi["Set"] = function(value, useOverMax)
+                local value = not useOverMax and math.floor((math.clamp(value, min, max) * (10^roundval))+0.5)/(10^roundval) or math.clamp(value, (argstable.RealMin or -math.huge), (argstable.RealMax or math.huge))
+                local sizeValue = math.floor((math.clamp(value, min, max) * (10^roundval))+0.5)/(10^roundval)
                 sliderapi["Value"] = value
-                SliderFill.Size = UDim2.new((value - min) / (max - min), 0, 1, 0)
+                SliderFill.Size = UDim2.new((sizeValue - min) / (max - min), 0, 1, 0)
                 Name_3.Text = argstable.Name.." <font color='rgb(170,170,170)'>"..tostring(value).."</font>"
                 argstable.Function(value)
             end
@@ -1983,6 +2028,7 @@ end)
 
 onDestroySignal:Connect(function()
     GuiLibrary["ArrayListAPI"].clearArrayObjects()
+    GuiLibrary["ScreenGui"].Enabled = false
     GuiLibrary["ScreenGui"]:Destroy()
     for i,v in next, GuiLibrary.Connections do 
         v:Disconnect()

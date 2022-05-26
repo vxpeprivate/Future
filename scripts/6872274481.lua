@@ -34,7 +34,7 @@ local storedshahashes = {}
 pcall(function()
 	whitelisted = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://raw.githubusercontent.com/7GrandDadPGN/whitelists/main/whitelist2.json", true))
 end)
-
+local antivoidpart
 local function requesturl(url, bypass) 
     if betterisfile(url) and shared.FutureDeveloper then 
         return readfile(url)
@@ -431,9 +431,9 @@ bedwars = {
     ["WeldTable"] = require(game:GetService("ReplicatedStorage").TS.util["weld-util"]).WeldUtil,
     ["AttackRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.SwordController)["attackEntity"])),
     ["VelocityUtil"]  = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].util["velocity-util"]).VelocityUtil, 
-    ["ItemMeta"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.item["item-meta"]).getItemMeta, 1)
+    ["ItemMeta"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.item["item-meta"]).getItemMeta, 1),
+    ["PlayerVacuumRemote"] = getremote(debug.getconstants(debug.getproto(KnitClient.Controllers.PlayerVacuumController.onEnable, 4))),
 }
-
 local function getblock(pos)
 	return bedwars["BlockController"]:getStore():getBlockAt(bedwars["BlockController"]:getBlockPosition(pos)), bedwars["BlockController"]:getBlockPosition(pos)
 end
@@ -784,9 +784,9 @@ end
 
 local function ViewmodelC0() 
     if ViewModel.Enabled then 
-        return cam and cam.Viewmodel.RightHand.RightWrist.C0 or nil
+        return cam and cam.Viewmodel.RightHand.RightWrist.C0 or game.ReplicatedStorage.Assets.Viewmodel.RightHand.RightWrist.C0
     end
-    return
+    return game.ReplicatedStorage.Assets.Viewmodel.RightHand.RightWrist.C0
 end
 do 
     local origC0
@@ -806,7 +806,7 @@ do
                 spawn(function()
                     repeat skipFrame()
                         for i,v in next, getAllPlrsNear() do 
-                            if isAlive(v) and not bedwars["CheckWhitelisted"](v) then
+                            if v.Character and isAlive(v) and not bedwars["CheckWhitelisted"](v) then
                                 if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
                                     local weapon, slot = getBestSword()
                                     local selfpos = lplr.Character.HumanoidRootPart.Position + (auradist["Value"] > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
@@ -826,14 +826,11 @@ do
                                     spawn(function()
                                         hitremote:InvokeServer(attackArgs)
                                     end)
-                                    task.wait(0.03)
 
                                     GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
 
                                     playanimation("rbxassetid://4947108314")
 
-                                    -- animation stuff (thx 7grand once again)
-                                    
                                     local origC0 = ViewmodelC0() or origC0
                                     if not stopTween then
                                         local Tween
@@ -871,6 +868,9 @@ do
                                             end)
                                         end
                                     end
+
+                                    task.wait(0.03)
+
                                 end
                             else
                                 GuiLibrary["TargetHUDAPI"].clear()
@@ -909,7 +909,7 @@ do
     local veloh, velov = {["Value"] = 0},{["Value"] = 0}
     local velocity = {["Enabled"] = false}
     local oldveloh, oldvelov, oldvelofunc = bedwars["KnockbackTable"]["kbDirectionStrength"], bedwars["KnockbackTable"]["kbUpwardStrength"], bedwars["VelocityUtil"].applyVelocity
-    velocity = GuiLibrary.Objects.CombatWindow.API.CreateOptionsButton({
+    velocity = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "Velocity",
         ["Function"] = function(callback) 
             if callback then 
@@ -1027,8 +1027,8 @@ do
         ["Name"] = "HitboxAdd",
         ["Function"] = function(value) 
             if Reach["Enabled"] then 
-                debug.setconstant(bedwars["SwingSwordRegion"], 10, old*(value+1))
-                debug.setconstant(bedwars["SwingSwordRegion"], 15, old2*(value+1))
+                debug.setconstant(bedwars["SwingSwordRegion"], reachConst1, old*(value+1))
+                debug.setconstant(bedwars["SwingSwordRegion"], reachConst2, old2*(value+1))
             end
         end,
         ["Min"] = 0,
@@ -1263,16 +1263,21 @@ end
 local stopSpeed = false
 GuiLibrary["RemoveObject"]("LongJumpOptionsButton")
 do 
-    local longjumptick = tick()
-    local speedval, timeval = {["Value"] = 0},{["Value"] = 0}
+    local doRay = false
+    local speedval, timeval,distance = {["Value"] = 0},{["Value"] = 0},{["Value"] = 0}
     local LongJump = {["Enabled"] = false}; LongJump = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "LongJump",
         ["Function"] = function(callback) 
             if callback then
-                spawn(function() 
-                    task.wait(timeval["Value"])
+                if isAlive() then 
+                    lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1, 0)
+                else
+                    LongJump.Toggle(false, true, true)
+                    return
+                end
+                task.delay(timeval["Value"], function() 
                     if LongJump.Enabled then
-                        LongJump.Toggle(false, true)
+                        LongJump.Toggle(false, true, true)
                     end
                 end)
                 spawn(function()
@@ -1283,48 +1288,79 @@ do
                         local dt = WORKSPACE:GetServerTimeNow() - bt
                         if isAlive() then
                             stopSpeed = true
-                            local params = RaycastParams.new()
-                            params.FilterDescendantsInstances = {lplr.Character, cam}
-                            params.FilterType = Enum.RaycastFilterType.Blacklist
-                            local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -7, 0), params)
-                            if ray and ray.Instance then 
-                                if LongJump.Enabled then
-                                    LongJump.Toggle(false, true)
-                                    stopSpeed = false
+                            if doRay then
+                                local params = RaycastParams.new()
+                                params.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
+                                params.FilterType = Enum.RaycastFilterType.Whitelist
+                                local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -10, 0), params)
+                                if ray and ray.Instance then 
+                                    if LongJump.Enabled then
+                                        LongJump.Toggle(false, true, true)
+                                        stopSpeed = false
+                                    end
+                                    break
                                 end
-                                break
                             end
 
                             lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
-                            local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
+                            local movedir = lplr.Character.Humanoid.MoveDirection~=Vector3.new() and lplr.Character.Humanoid.MoveDirection or lplr.Character.HumanoidRootPart.CFrame.lookVector
+                            local velo = movedir * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
                             velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
                             lplr.Character:TranslateBy(velo)
-                            local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
+                            local velo2 = (movedir * speedval["Value"]) / speedsettings.velocitydivfactor
                             lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, 1, velo2.Z)
                         end
                     until not LongJump.Enabled
                     stopSpeed = false
                 end)
+                spawn(function() 
+                    for i = 1, math.round(timeval["Value"])*4 do 
+                        task.wait(0.25) 
+                        if not LongJump.Enabled then break end
+                        if isAlive() then 
+                            local newCframe = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -distance.Value)
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
+                            params.FilterType = Enum.RaycastFilterType.Whitelist
+                            local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, CFrame.new(0, 0, -distance.Value).p, params)
+                            if not (ray and ray.Instance) then
+                                lplr.Character.HumanoidRootPart.CFrame = newCframe
+                            else
+                                lplr.Character.HumanoidRootPart.CFrame = CFrame.new(ray.Position)
+                            end
+                        end
+                        if i >= timeval["Value"] then doRay = true end
+                    end
+                end)
             else
+                doRay = false
                 stopSpeed = false
             end
         end,
     })
     speedval = LongJump.CreateSlider({
         ["Name"] = "Speed",
-        ["Default"] = 50, 
+        ["Default"] = 44, 
         ["Min"] = 10,
         ["Round"] = 0,
-        ["Max"] = 90,
+        ["Max"] = 44,
         ["Function"] = function(value) end,
     })
     timeval = LongJump.CreateSlider({
         ["Name"] = "Duration",
-        ["Default"] = 9, 
-        ["Min"] = 2,
-        ["Round"] = 0,
-        ["Max"] = 9,
+        ["Default"] = 2, 
+        ["Min"] = 1,
+        ["Round"] = 1,
+        ["Max"] = 3,
         ["Function"] = function(value) end,
+    })
+    distance = LongJump.CreateSlider({
+        Name = "BypassDist",
+        Default = 6,
+        Min = 4,
+        Round = 1,
+        Max = 7,
+        Function = function() end
     })
 end
 
@@ -1367,14 +1403,112 @@ do
     speedval = speed.CreateSlider({
         ["Name"] = "Speed",
         ["Min"] = 1,
-        ["Max"] = 42,
-        ["Default"] = 42,
+        ["Max"] = 45,
+        ["Default"] = 45,
         ["Round"] = 0,
         ["Function"] = function() end
     })
     hop = speed.CreateToggle({
         Name = "Hop",
         Function = function() end,
+    })
+end
+
+GuiLibrary["RemoveObject"]("FlightOptionsButton")
+do
+    local flyup
+    local flydown
+    local flydownconnection
+    local flyupconnection
+    local vertspeed = {["Value"] = 40}
+    local verttoggle = {["Enabled"] = false}
+    local vertbind = {["Value"] = "LShift"}
+    local flyspeed = {["Value"] = 40}
+    local flyglide = {["Value"] = 0}
+    local fly = {["Enabled"] = false}
+    local flymode = {["Value"] = "Velo"}
+    fly = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Flight",
+        ["Function"] = function(callback)
+            if callback then
+                BindToStepped("Fly", function(time,dt)
+                    if isAlive() then
+                        local dt = flymode.Value == "Velo" and 1 or dt
+                        local updirection = 0 - flyglide["Value"]
+                        if UIS:GetFocusedTextBox()==nil then
+                            updirection = (flyup and vertspeed["Value"] or flydown and -vertspeed["Value"] or 0 - flyglide["Value"])*dt
+                        end
+                        local MoveDirection = lplr.Character.Humanoid.MoveDirection * (flyspeed["Value"]*dt)
+                        if flymode.Value == "Velo" then
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(MoveDirection.X, verttoggle["Enabled"] and (updirection) or 0 - flyglide["Value"], MoveDirection.Z)
+                        elseif flymode.Value == "CFrame" then
+                            lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame + Vector3.new(MoveDirection.X, verttoggle["Enabled"] and (updirection) or 0 - flyglide["Value"], MoveDirection.Z)
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new()
+                        end
+                    end
+                end)
+                flyupconnection = UIS.InputBegan:connect(function(input)
+                    if input.KeyCode == Enum.KeyCode.Space then
+                        flyup = true
+                    end
+                    if input.KeyCode == (vertbind.Value == "LShift" and Enum.KeyCode.LeftShift or Enum.KeyCode.LeftControl) then
+                        flydown = true
+                    end
+                end)
+                flydownconnection = UIS.InputEnded:connect(function(input)
+                    if input.KeyCode == Enum.KeyCode.Space then
+                        flyup = false
+                    end
+                    if input.KeyCode == (vertbind.Value == "LShift" and Enum.KeyCode.LeftShift or Enum.KeyCode.LeftControl) then
+                        flydown = false
+                    end
+                end)
+            else
+                flyup = false
+                flydown = false
+                UnbindFromStepped("Fly")
+                if flyupconnection then
+                    flyupconnection:Disconnect()
+                end
+                if flydownconnection then
+                    flydownconnection:Disconnect()
+                end
+                WORKSPACE.Gravity = 196.2
+            end
+        end
+    })
+    flymode = fly.CreateSelector({
+        Name = "Mode", 
+        Function = function() end,
+        List = {"Velo", "CFrame"}
+    })
+    flyspeed = fly.CreateSlider({
+        ["Name"] = "Speed",
+        ["Min"] = 1,
+        ["Max"] = 300,
+        ["Function"] = function() end
+    })
+    verttoggle = fly.CreateToggle({
+        ["Name"] = "Vertical",
+        ["Function"] = function() end
+    })
+    vertbind = fly.CreateSelector({
+        ["Name"] = "VBind",
+        ["Function"] = function() end,
+        ["List"] = {"LShift", "LCtrl"},
+    })
+    vertspeed = fly.CreateSlider({
+        ["Name"] = "VSpeed",
+        ["Min"] = 1,
+        ["Max"] = 300,
+        ["Function"] = function() end
+    })
+    flyglide = fly.CreateSlider({
+        ["Name"] = "Glide",
+        ["Min"] = -100,
+        ["Default"] = 0,
+        ["Max"] = 100,
+        ["Function"] = function() end
     })
 end
 
@@ -1757,6 +1891,268 @@ do
     })
 end
 
+GuiLibrary.RemoveObject("NametagsOptionsButton")
+do 
+    local nametags = {["Enabled"] = false}
+    local NametagsFolder = Instance.new("Folder", GuiLibrary["ScreenGui"])
+    NametagsFolder.Name = "Nametags"
+    local tagsarmor = {["Enabled"] = false}
+    local tagsitemname = {["Enabled"] = false}
+    local tagshealth = {["Enabled"] = false}
+    local tagsscale = {Value = 1}
+    nametags = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Nametags",
+        ["Function"] = function(callback) 
+            if callback then 
+                BindToStepped("Nametags", function() 
+                    for i,v in next, PLAYERS:GetPlayers() do 
+                        if lplr~=v and isAlive(v) then
+                            local frame
+                            local MainText
+                            local UIScale
+                            local ItemContainer
+                            local ImageContainer
+                            local ItemName
+                            local raw = v.DisplayName..(tagshealth.Enabled and ' '..tostring(math.round(v.Character.Humanoid.Health)) or '')
+                            local text = '<font color="#ed4d4d">'..v.DisplayName..'</font>'..(tagshealth.Enabled and ' <font color="#'..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex())..'">'..tostring(math.round(v.Character.Humanoid.Health))..'</font>' or '')
+                            if NametagsFolder:FindFirstChild(v.Name) then 
+                                frame = NametagsFolder:FindFirstChild(v.Name)
+                                ImageContainer = frame:FindFirstChild("ItemContainer"):FindFirstChild("ImageContainer")
+                                ItemContainer = frame:FindFirstChild("ItemContainer")
+                                MainText = frame:FindFirstChild("MainText")
+                                MainText.Text = text
+                                UIScale = frame:FindFirstChild("UIScale")
+                                UIScale.Scale = tagsscale.Value
+                            else
+                                frame = Instance.new("Frame")
+                                local Nametag = frame
+                                MainText = Instance.new("TextLabel")
+                                UIScale = Instance.new("UIScale", Nametag)
+                                UIScale.Scale = tagsscale.Value
+                                Nametag.Name = v.Name
+                                Nametag.Parent = NametagsFolder
+                                Nametag.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                                Nametag.BackgroundTransparency = 0.500
+                                Nametag.BorderSizePixel = 0
+                                Nametag.Position = UDim2.new(0, 0, 0, 0)
+                                Nametag.AnchorPoint = Vector2.new(0,0)
+                                Nametag.Size = UDim2.new(0, 300, 0, 30)
+                                Nametag.ZIndex = -1
+                                MainText.Name = "MainText"
+                                MainText.RichText = true
+                                MainText.Parent = Nametag
+                                MainText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                MainText.BackgroundTransparency = 1.000
+                                MainText.Position = UDim2.new(0.5, 0, 0.5, 0)
+                                MainText.AnchorPoint = Vector2.new(0.5,0.5)
+                                MainText.Size = UDim2.new(0, 300, 0, 30)
+                                MainText.Font = Enum.Font.GothamSemibold
+                                MainText.Text = text
+                                MainText.TextSize = (18)
+                                MainText.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                MainText.ZIndex = -1
+                                ItemContainer = Instance.new("Frame")
+                                ImageContainer = Instance.new("Frame")
+                                local UIListLayout = Instance.new("UIListLayout")
+                                local Item = Instance.new("Frame")
+                                local Image = Instance.new("ImageLabel")
+                                local Helmet = Instance.new("Frame")
+                                local Image_2 = Instance.new("ImageLabel")
+                                local Chestplate = Instance.new("Frame")
+                                local Image_3 = Instance.new("ImageLabel")
+                                local Boots = Instance.new("Frame")
+                                local Image_4 = Instance.new("ImageLabel")
+                                ItemName = Instance.new("TextLabel")
+                                ItemContainer.Name = "ItemContainer"
+                                ItemContainer.Parent = frame
+                                ItemContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                ItemContainer.BackgroundTransparency = 1.000
+                                --ItemContainer.Position = UDim2.new(0, 0.3, 0, 0)
+                                ItemContainer.Size = UDim2.new(0, 300, 0, 100)
+                                ImageContainer.Name = "ImageContainer"
+                                ImageContainer.Parent = ItemContainer
+                                ImageContainer.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                ImageContainer.BackgroundTransparency = 1.000
+                                ImageContainer.BorderSizePixel = 0
+                                ImageContainer.Position = UDim2.new(0, 0, 0.150000006, 0)
+                                ImageContainer.Size = UDim2.new(0, 300, 0, 85)
+                                UIListLayout.Parent = ImageContainer
+                                UIListLayout.FillDirection = Enum.FillDirection.Horizontal
+                                UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                                UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                                Item.Name = "Item"
+                                Item.Parent = ImageContainer
+                                Item.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Item.BackgroundTransparency = 1.000
+                                Item.Position = UDim2.new(0.389999986, 0, -0.0759493634, 0)
+                                Item.Size = UDim2.new(0, 47.1, 0, 60)
+                                local Amount = Instance.new("TextLabel")
+                                Amount.Name = "Amount"
+                                Amount.Parent = Item
+                                Amount.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Amount.BackgroundTransparency = 1.000
+                                Amount.Position = UDim2.new(0.590909123, 0, 0.761904776, 0)
+                                Amount.Size = UDim2.new(0, 21, 0, 21)
+                                Amount.ZIndex = 10
+                                Amount.Font = Enum.Font.SourceSans
+                                Amount.Text = ""
+                                Amount.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                Amount.TextSize = 16.000
+                                Amount.TextStrokeTransparency = 0.000
+                                Amount.TextWrapped = true
+                                Image.Name = "Image"
+                                Image.Parent = Item
+                                Image.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Image.BackgroundTransparency = 1.000
+                                Image.BorderSizePixel = 0
+                                Image.Position = UDim2.new(0, 0, 0.225274742, 0)
+                                Image.Size = UDim2.new(0, 47.1, 0, 47.1)
+                                Image.Image = ""
+                                Image.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                                Helmet.Name = "Helmet"
+                                Helmet.Parent = ImageContainer
+                                Helmet.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Helmet.BackgroundTransparency = 1.000
+                                Helmet.Position = UDim2.new(0.389999986, 0, -0.0759493634, 0)
+                                Helmet.Size = UDim2.new(0, 47.1, 0, 60)
+                                Image_2.Name = "Image"
+                                Image_2.Parent = Helmet
+                                Image_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Image_2.BackgroundTransparency = 1.000
+                                Image_2.BorderSizePixel = 0
+                                Image_2.Position = UDim2.new(0, 0, 0.225274742, 0)
+                                Image_2.Size = UDim2.new(0, 47.1, 0, 47.1)
+                                Image_2.Image = ""
+                                Image_2.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                                Chestplate.Name = "Chestplate"
+                                Chestplate.Parent = ImageContainer
+                                Chestplate.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Chestplate.BackgroundTransparency = 1.000
+                                Chestplate.Position = UDim2.new(0.389999986, 0, -0.0759493634, 0)
+                                Chestplate.Size = UDim2.new(0, 47.1, 0, 60)
+                                Image_3.Name = "Image"
+                                Image_3.Parent = Chestplate
+                                Image_3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Image_3.BackgroundTransparency = 1.000
+                                Image_3.BorderSizePixel = 0
+                                Image_3.Position = UDim2.new(0, 0, 0.225274742, 0)
+                                Image_3.Size = UDim2.new(0, 47.1, 0, 47.1)
+                                Image_3.Image = ""
+                                Image_3.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                                Boots.Name = "Boots"
+                                Boots.Parent = ImageContainer
+                                Boots.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Boots.BackgroundTransparency = 1.000
+                                Boots.Position = UDim2.new(0.389999986, 0, -0.0759493634, 0)
+                                Boots.Size = UDim2.new(0, 47.1, 0, 60)
+                                Image_4.Name = "Image"
+                                Image_4.Parent = Boots
+                                Image_4.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                Image_4.BackgroundTransparency = 1.000
+                                Image_4.BorderSizePixel = 0
+                                Image_4.Position = UDim2.new(0, 0, 0.225274742, 0)
+                                Image_4.Size = UDim2.new(0, 47.1, 0, 47.1)
+                                Image_4.Image = ""
+                                Image_4.ImageColor3 = Color3.fromRGB(255, 255, 255)
+                                ItemName.Name = "ItemName"
+                                ItemName.Parent = ItemContainer
+                                ItemName.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                ItemName.BackgroundTransparency = 1.000
+                                ItemName.Position = UDim2.new(0.389999986, 0, 0.150000006, 0)
+                                ItemName.Size = UDim2.new(0, 66, 0, 18)
+                                ItemName.Font = Enum.Font.Gotham
+                                ItemName.Text = "Diamond Sword"
+                                ItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                ItemName.TextSize = 14.000
+                                ItemName.TextStrokeTransparency = 0.000
+                            end
+
+                            local inv = bedwars.getInventory(v)
+                            if inv.hand then
+                                ImageContainer.Item.Visible = true
+                                ImageContainer.Item.Image.Image =  bedwars.getIcon(inv.hand, tagsarmor.Enabled)
+                                ImageContainer.Item.Amount.Text = tostring(inv.hand.amount)
+                            else
+                                ImageContainer.Item.Visible = false
+                            end
+                            if inv.armor[4] then 
+                                ImageContainer.Helmet.Visible = true
+                                ImageContainer.Helmet.Image.Image =  bedwars.getIcon(inv.armor[4], tagsarmor.Enabled)
+                            else
+                                ImageContainer.Helmet.Visible = false
+                            end
+                            if inv.armor[5] then 
+                                ImageContainer.Chestplate.Visible = true
+                                ImageContainer.Chestplate.Image.Image =  bedwars.getIcon(inv.armor[5], tagsarmor.Enabled)
+                            else
+                                ImageContainer.Chestplate.Visible = false
+                            end
+                            if inv.armor[6] then 
+                                ImageContainer.Boots.Visible = true
+                                ImageContainer.Boots.Image.Image =  bedwars.getIcon(inv.armor[6], tagsarmor.Enabled)
+                            else
+                                ImageContainer.Boots.Visible = false
+                            end
+                            if tagsitemname.Enabled then 
+                                if inv.hand and inv.hand.itemType then 
+                                    local meta = bedwars.getItemMetadata(inv.hand.itemType)
+                                    ItemContainer.ItemName.Text = meta.displayName
+                                else
+                                    ItemContainer.ItemName.Text = ""
+                                end
+                            else
+                                ItemContainer.ItemName.Text = ""
+                            end
+
+                            ItemContainer.AnchorPoint = Vector2.new(0.5, 0)
+
+                            ItemContainer.Position = UDim2.new(0.5, 0, -4.3, 0)
+
+                            local tsize = game:GetService("TextService"):GetTextSize(raw, MainText.TextSize, MainText.Font, MainText.AbsoluteSize)
+                            frame.Size = UDim2.new(0, tsize.X + 10, 0, tsize.Y)
+                            local rootPos, rootVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+							local headPos, headVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position + Vector3.new(0, 1 + v.Character.Humanoid.HipHeight, 0))
+                            frame.Visible = rootVis
+                            if rootVis then 
+                                frame.Position = UDim2.new(0, (rootPos.X - frame.Size.X.Offset / 2* UIScale.Scale), 0, (headPos.Y - frame.Size.Y.Offset / 2) - 42)
+                            end
+                        end
+                    end
+                    for i,v in next, NametagsFolder:GetChildren() do 
+                        if not PLAYERS:FindFirstChild(v.Name) or not isAlive(PLAYERS:FindFirstChild(v.Name)) then
+                            v:Destroy()
+                        end
+                    end
+                end)
+            else
+                UnbindFromStepped("Nametags")
+                NametagsFolder:ClearAllChildren()
+            end
+        end
+    })
+
+    tagsscale = nametags.CreateSlider({
+        Name = "Scale",
+        Min = 0.8,
+        Max = 1.5,
+        Round = 1,
+        Default = 1,
+        Function = function() end,
+    })
+    tagsarmor = nametags.CreateToggle({
+        ["Name"] = "Armor",
+        ["Function"] = function() end,
+    })
+    tagsitemname = nametags.CreateToggle({
+        ["Name"] = "ItemName",
+        ["Function"] = function() end,
+    })
+    tagshealth = nametags.CreateToggle({
+        ["Name"] = "Health",
+        ["Function"] = function() end,
+    })
+end
+
 do 
     local onspawn
     local NoNameTag = {Enabled = false}
@@ -1934,7 +2330,7 @@ do
     local ChestStealer = {["Enabled"] = false}
 	local ChestStealerDistance = {["Value"] = 1}
 	local ChestStealDelay = tick()
-	ChestStealer = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
+	ChestStealer = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
 		["Name"] = "ChestStealer",
 		["Function"] = function(callback)
 			if callback then
@@ -2069,7 +2465,7 @@ do
     local childadded
     local tu = {}
     local is = {}
-    AutoBuy = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
+    AutoBuy = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
         Name = "AutoBuy",
         Function = function(callback) 
             if callback then 
@@ -2190,7 +2586,7 @@ end
 
 do 
     local bedaura = {["Enabled"] = false}; bedaura = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
-        ["Name"] = "BedAura",
+        ["Name"] = "Nuker",
         ["Function"] = function(callback) 
             if callback then 
                 spawn(function() 
@@ -2209,40 +2605,55 @@ do
     })
 end
 
-do 
-    local controls = require(game:GetService("Players").LocalPlayer.PlayerScripts.PlayerModule):GetControls()
-    local AntiVoid = {["Enabled"] = false}; 
+do
+    local lowestY = 9999999999999
+    spawn(function() 
+        for i,v in next, WORKSPACE:WaitForChild("Map"):WaitForChild("Blocks"):GetChildren() do 
+            local Y = v.CFrame.p.Y
+            if Y < lowestY then
+                lowestY = Y
+            end
+        end
+    end)
+
+    local connection 
+    local AntiVoid = {Enabled = false}; 
     AntiVoid = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
-        ["Name"] = "AntiVoid",
-        ["Function"] = function(callback)
+        Name = "Avoid",
+        Function = function(callback)
             if callback then 
                 spawn(function()
-                    local lastValid 
-                    repeat task.wait(0.05)
-                        if isAlive() then 
-                            if lplr.Character.Humanoid.FloorMaterial ~= Enum.Material.Air then 
-                                lastValid = lplr.Character.HumanoidRootPart.CFrame
-                            else
-                                local params = RaycastParams.new()
-                                params.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
-                                params.FilterType = Enum.RaycastFilterType.Whitelist
-                                local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -999999999999, 0), params)
-                                if ray and not ray.Instance or not ray then 
-                                    local mag = (lplr.Character.HumanoidRootPart.Position - lastValid.p).magnitude
-                                    local magY = (lplr.Character.HumanoidRootPart.Position.Y - lastValid.p.Y)
-                                    if magY <= -10 then 
-                                        spawn(function()
-                                            controls:Disable()
-                                            lplr.Character.HumanoidRootPart.CFrame = lastValid:lerp(lplr.Character.HumanoidRootPart.CFrame, 0.5)
-                                            task.wait(0.2)
-                                            lplr.Character.HumanoidRootPart.CFrame = lastValid
-                                            controls:Enable()
-                                        end)
-                                    end
-                                end
+                    repeat task.wait() until lowestY~=nil and lowestY~=9999999999999
+                    antivoidpart = Instance.new("Part", WORKSPACE)
+                    antivoidpart.Size = Vector3.new(999999, 2, 999999)
+                    antivoidpart.Position = Vector3.new(0, lowestY, 0)
+                    antivoidpart.Anchored = true
+                    antivoidpart.Transparency = 0.75
+                    connection = antivoidpart.Touched:connect(function(v) 
+                        if isAlive() and v:IsDescendantOf(lplr.Character) then 
+                            if ((lastValidPos or lplr.Character.HumanoidRootPart.CFrame).p - lplr.Character.HumanoidRootPart.Position).Magnitude <= 30 then 
+                                lplr.Character.HumanoidRootPart.CFrame = lastValidPos
                             end
                         end
-                    until not AntiVoid["Enabled"] 
+                    end)
+
+                    repeat task.wait(0.1) 
+                        if isAlive() then
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {game:GetService("CollectionService"):GetTagged("block")}
+                            params.FilterType = Enum.RaycastFilterType.Whitelist
+                            local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -5, 0), params)
+                            if ray and ray.Instance then 
+                                lastValidPos = CFrame.new(ray.Position)
+                            end
+                        end
+                    until not AntiVoid.Enabled
+                end)
+            else
+                spawn(function()
+                    repeat task.wait() until lowestY~=nil and lowestY~=9999999999999
+                    if antivoidpart then antivoidpart:Destroy(); antivoidpart=nil end
+                    if connection then connection:Disconnect(); connection=nil end
                 end)
             end
         end,

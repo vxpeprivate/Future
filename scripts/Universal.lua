@@ -526,7 +526,7 @@ do
     local oldmovefunc
     local safewalk = {["Enabled"] = false}
     safewalk = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
-        ["Name"] = "SafeWalk",
+        ["Name"] = "Sneak",
         ["Function"] = function(callback) 
             if callback then 
                 local controls = require(lplr.PlayerScripts.PlayerModule).controls
@@ -722,8 +722,16 @@ end
 do
     local HighJumpHeight = {["Value"] = 0}
     local HighJumpMode = {["Value"] = "Normal"}
-    local highjumpconnection
+    local highjumpconnection, highjumpconnection2
     local HighJump = {["Enabled"] = false}
+    local function hj() 
+        if not HighJump.Enabled then return end
+        if HighJumpMode["Value"] == "Velocity" then 
+            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(lplr.Character.HumanoidRootPart.Velocity.X, lplr.Character.HumanoidRootPart.Velocity.Y + HighJumpHeight["Value"], lplr.Character.HumanoidRootPart.Velocity.Z)
+        elseif HighJumpMode["Value"] == "TP" then
+            lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame + Vector3.new(0,HighJumpHeight["Value"]/1.5,0)
+        end
+    end
     HighJump = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
         ["Name"] = "HighJump",
         ["Function"] = function(callback) 
@@ -731,12 +739,11 @@ do
                 spawn(function()
                     repeat wait() until isAlive() or not HighJump["Enabled"]
                     if HighJump["Enabled"] then
-                        highjumpconnection = lplr.Character.Humanoid.Jumping:Connect(function() 
-                            if HighJumpMode["Value"] == "Velocity" then 
-                                lplr.Character.HumanoidRootPart.Velocity = Vector3.new(lplr.Character.HumanoidRootPart.Velocity.X, lplr.Character.HumanoidRootPart.Velocity.Y + HighJumpHeight["Value"], lplr.Character.HumanoidRootPart.Velocity.Z)
-                            elseif HighJumpMode["Value"] == "TP" then
-                                lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame + Vector3.new(0,HighJumpHeight["Value"],0)
-                            end
+                        highjumpconnection = lplr.Character.Humanoid.Jumping:Connect(hj)
+                        highjumpconnection2 = lplr.CharacterAdded:Connect(function(char) 
+                            if highjumpconnection then highjumpconnection:Disconnect() end
+                            repeat wait() until isAlive() or not HighJump["Enabled"]
+                            highjumpconnection = lplr.Character.Humanoid.Jumping:Connect(hj)
                         end)
                     end
                 end)
@@ -744,6 +751,10 @@ do
                 if highjumpconnection then 
                     highjumpconnection:Disconnect()
                     highjumpconnection = nil
+                end
+                if highjumpconnection2 then 
+                    highjumpconnection2:Disconnect()
+                    highjumpconnection2 = nil
                 end
             end
         end
@@ -857,6 +868,22 @@ do
         ["Min"] = 40,
         ["Max"] = 120,
         ["Default"] = 120
+    })
+end
+
+do 
+    local CameraFix = {Enabled = false} 
+    CameraFix = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
+        Name = "CameraFix",
+        Function = function(callback) 
+            spawn(function()
+                repeat
+                    task.wait()
+                    if (not CameraFix.Enabled) then break end
+                    UserSettings():GetService("UserGameSettings").RotationType = ((cam.CFrame.Position - cam.Focus.Position).Magnitude <= 0.5 and Enum.RotationType.CameraRelative or Enum.RotationType.MovementRelative)
+                until (not CameraFix.Enabled)
+            end)
+        end,
     })
 end
 
@@ -1238,6 +1265,109 @@ do
 end
 
 do 
+    local nametags = {["Enabled"] = false}
+    local NametagsFolder = Instance.new("Folder", GuiLibrary["ScreenGui"])
+    NametagsFolder.Name = "Nametags"
+    local tagsarmor = {["Enabled"] = false}
+    local tagsitemname = {["Enabled"] = false}
+    local tagshealth = {["Enabled"] = false}
+    local tagsscale = {Value = 1}
+    nametags = GuiLibrary["Objects"]["RenderWindow"]["API"].CreateOptionsButton({
+        ["Name"] = "Nametags",
+        ["Function"] = function(callback) 
+            if callback then 
+                BindToStepped("Nametags", function() 
+                    for i,v in next, PLAYERS:GetPlayers() do 
+                        if v~=lplr and isAlive(v) then
+                            local frame
+                            local MainText
+                            local UIScale
+                            local raw = v.DisplayName..(tagshealth.Enabled and ' '..tostring(math.round(v.Character.Humanoid.Health)) or '')
+                            local text = '<font color="#ed4d4d">'..v.DisplayName..'</font>'..(tagshealth.Enabled and ' <font color="#'..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex())..'">'..tostring(math.round(v.Character.Humanoid.Health))..'</font>' or '')
+                            if NametagsFolder:FindFirstChild(v.Name) then 
+                                frame = NametagsFolder:FindFirstChild(v.Name)
+                                local name = v.DisplayName
+                                MainText = frame:FindFirstChild("MainText")
+                                MainText.Text = text
+                                UIScale = frame:FindFirstChild("UIScale")
+                                UIScale.Scale = tagsscale.Value
+                            else
+                                frame = Instance.new("Frame")
+                                local Nametag = frame
+                                MainText = Instance.new("TextLabel")
+                                UIScale = Instance.new("UIScale", Nametag)
+                                UIScale.Scale = tagsscale.Value
+                                Nametag.Name = v.Name
+                                Nametag.Parent = NametagsFolder
+                                Nametag.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                                Nametag.BackgroundTransparency = 0.500
+                                Nametag.BorderSizePixel = 0
+                                Nametag.Position = UDim2.new(0, 0, 0, 0)
+                                Nametag.AnchorPoint = Vector2.new(0,0)
+                                Nametag.Size = UDim2.new(0, 300, 0, 30)
+                                Nametag.ZIndex = -1
+                                MainText.Name = "MainText"
+                                MainText.RichText = true
+                                MainText.Parent = Nametag
+                                MainText.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                                MainText.BackgroundTransparency = 1.000
+                                MainText.Position = UDim2.new(0.5, 0, 0.5, 0)
+                                MainText.AnchorPoint = Vector2.new(0.5,0.5)
+                                MainText.Size = UDim2.new(0, 300, 0, 30)
+                                MainText.Font = Enum.Font.GothamSemibold
+                                MainText.Text = text
+                                MainText.TextSize = (18)
+                                MainText.TextColor3 = Color3.fromRGB(255, 255, 255)
+                                MainText.ZIndex = -1
+                            end
+                            local tsize = game:GetService("TextService"):GetTextSize(raw, MainText.TextSize, MainText.Font, MainText.AbsoluteSize)
+                            frame.Size = UDim2.new(0, tsize.X + 10, 0, tsize.Y)
+                            local rootPos, rootVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
+							local headPos, headVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position + Vector3.new(0, 1 + v.Character.Humanoid.HipHeight, 0))
+                            frame.Visible = rootVis
+                            if rootVis then 
+                                frame.Position = UDim2.new(0, (rootPos.X - frame.Size.X.Offset / 2* UIScale.Scale), 0, (headPos.Y - frame.Size.Y.Offset / 2) - 42)
+                            end
+                        end
+                    end
+                    for i,v in next, NametagsFolder:GetChildren() do 
+                        if not PLAYERS:FindFirstChild(v.Name) or not isAlive(PLAYERS:FindFirstChild(v.Name)) then
+                            v:Destroy()
+                        end
+                    end
+                end)
+            else
+                UnbindFromStepped("Nametags")
+                NametagsFolder:ClearAllChildren()
+            end
+        end
+    })
+
+    tagsscale = nametags.CreateSlider({
+        Name = "Scale",
+        Min = 0.8,
+        Max = 1.5,
+        RealMin = 0.8,
+        RealMax = 5,
+        Round = 1,
+        Default = 1,
+        Function = function() end,
+    })
+    --[[tagsarmor = nametags.CreateToggle({
+        ["Name"] = "Armor",
+        ["Function"] = function() end,
+    })
+    tagsitemname = nametags.CreateToggle({
+        ["Name"] = "ItemName",
+        ["Function"] = function() end,
+    })]]
+    tagshealth = nametags.CreateToggle({
+        ["Name"] = "Health",
+        ["Function"] = function() end,
+    })
+end
+
+do 
     local connections = {}
     local renamedInstances = {}
     local textservice = game:GetService("TextService")
@@ -1486,7 +1616,7 @@ do
     local oldg, oldws
     local timerspeed = {["Value"] = 10}
     local Timer = {["Enabled"] = false}
-    Timer = GuiLibrary["Objects"]["WorldWindow"]["API"].CreateOptionsButton({
+    Timer = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({
         ["Name"] = "Timer",
         ["ArrayText"] = function() return timerspeed["Value"] end,
         ["Function"] = function(callback) 
