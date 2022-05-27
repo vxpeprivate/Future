@@ -25,7 +25,7 @@ end
 
 
 local function requesturl(url, bypass) 
-    if betterisfile(url) then 
+    if betterisfile(url) and shared.FutureDeveloper then 
         return readfile(url)
     end
     local repourl = bypass and "https://raw.githubusercontent.com/joeengo/" or "https://raw.githubusercontent.com/joeengo/Future/main/"
