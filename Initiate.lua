@@ -1,6 +1,6 @@
 -- // credits to anyones code i used/looked at.
 if not getgenv then error("No getgenv, please use KRNL or Synapse X.") end
-getgenv()._FUTUREVERSION = "1.1.4 | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
+getgenv()._FUTUREVERSION = "1.1.4a | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
 getgenv()._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
@@ -22,7 +22,6 @@ local betterisfile = function(file)
 	local suc, res = pcall(function() return readfile(file) end)
 	return suc and res ~= nil
 end
-
 
 local function requesturl(url, bypass) 
     if betterisfile(url) and shared.FutureDeveloper then 
@@ -48,8 +47,7 @@ local GuiLibrary = loadstring(requesturl("Future/GuiLibrary.lua"))()
 
 shared.Future.GuiLibrary = GuiLibrary
 local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]
-GuiLibrary["LoadOnlyGuiConfig"]()
-
+GuiLibrary.LoadOnlyGuiConfig()
 
 local HeartbeatTable = {}
 local RenderStepTable = {}
@@ -164,6 +162,23 @@ local function getplusscript(id) -- future plus moment
         --fwarn("[Future] invalid script (error "..tostring(req)..")") -- game is not supported
     end
 end
+local function formatConfig(file) 
+    return file:gsub("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/", ""):gsub(".json", "")
+end
+local function betterlistfiles(fileloc) 
+    local files = listfiles(fileloc)
+    for i,v in next, files do 
+        files[i] = formatConfig(v)
+    end
+    return files
+end
+
+--print(betterisfile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId)..".txt"), ("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId)..".txt"))
+if betterisfile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId)..".txt") then 
+    GuiLibrary.CurrentConfig = readfile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId)..".txt") 
+    --print("Setting")
+end
+
 GuiLibrary["LoadOnlyGuiConfig"]()
 
 local CombatWindow = GuiLibrary.CreateWindow({["Name"] = "Combat"})
@@ -180,18 +195,31 @@ local configButton; configButton = OtherWindow.CreateOptionsButton({
     end,
     ["NoKeybind"] = true,
 })
-local configBox; configBox = configButton.CreateTextbox({
-    ["Name"] = "ConfigName",
-    ["Function"] = function(value)
+local configSelector = {}; configSelector = configButton.CreateSelector({
+    Name = "",
+    Function = function(value)
         spawn(function()
-            GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
-            if betterisfile("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/"..value..".json") then
+            if betterisfile("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/"..formatConfig(value)..".json") and shared.Future.FullyInjected then
+                GuiLibrary["SaveConfig"](GuiLibrary.CurrentConfig)
                 GuiLibrary["LoadConfig"](value)
+                GuiLibrary.CurrentConfig = formatConfig(value)
             end
-            GuiLibrary["CurrentConfig"] = value
+            configSelector.SetList(betterlistfiles("Future/configs/"..tostring(shared.FuturePlaceId).."/"))
         end)
     end,
-    ["Default"] = "default"
+    List = betterlistfiles("Future/configs/"..tostring(shared.FuturePlaceId).."/")
+})
+configSelector.Select(GuiLibrary.CurrentConfig)
+local newConfig = {}; newConfig = configButton.CreateTextbox({
+    Name = "New config",
+    Function = function(value)
+        spawn(function()
+            GuiLibrary["SaveConfig"](GuiLibrary.CurrentConfig)
+            GuiLibrary.CurrentConfig = value
+            configSelector.SetList(betterlistfiles("Future/configs/"..tostring(shared.FuturePlaceId).."/"))
+            configSelector.Select(formatConfig(value))
+        end)
+    end,
 })
 local clickGuiButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "ClickGui",
@@ -419,7 +447,7 @@ local destructButton; destructButton = OtherWindow.CreateOptionsButton({
     ["Function"] = function(callback)
         if callback then
             spawn(function()
-                GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+                GuiLibrary["SaveConfig"](GuiLibrary.CurrentConfig)
                 GuiLibrary.Signals.onDestroy:Fire()
             end)
         end
@@ -432,7 +460,7 @@ local restartButton; restartButton = OtherWindow.CreateOptionsButton({
         if callback then 
             spawn(function() 
                 restartButton.Toggle(nil, true, true)
-                GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+                GuiLibrary["SaveConfig"](GuiLibrary.CurrentConfig)
                 GuiLibrary.Signals.onDestroy:Fire()
                 task.wait(0.5)
                 if shared.FutureDeveloper then 
@@ -535,16 +563,17 @@ else
     return
 end
 
-GuiLibrary["LoadConfig"](GuiLibrary["CurrentConfig"])
+GuiLibrary["LoadConfig"](GuiLibrary.CurrentConfig)
 
 
 local leaving = PLAYERS.PlayerRemoving:connect(function(player)
     if player == lplr then
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
+        GuiLibrary["SaveConfig"](GuiLibrary.CurrentConfig)
     end
 end)
 
 GuiLibrary.Signals.onDestroy:connect(function()
+    writefile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId)..".txt", GuiLibrary.CurrentConfig) 
     shared.Future.Destructing = true
     UnbindFromRenderStep("stats")
     for i,v in next, GuiLibrary.Objects do 
@@ -598,8 +627,9 @@ spawn(function()
                 break
             end
         end
-        GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"], true)
+        GuiLibrary["SaveConfig"](GuiLibrary.CurrentConfig, true)
     until not shared.Future
 end)
 fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.\nPlease join the discord for changelogs and to report bugs. \ndiscord.gg/bdjT5UmmDJ\nEnjoy using Future v".._FUTUREVERSION.."")
 shared._FUTURECACHED = true
+shared.Future.FullyInjected = true
