@@ -92,15 +92,15 @@ local GuiLibrary = {
         },
     },
 }
-local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary.getRobloxAsset
+local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary["getRobloxAsset"]
 local exclusionList = {
     "ConfigOptionsButton", "DestructOptionsButton", "HUDOptionsButton", 
     "ClickGuiOptionsButton", "ColorsOptionsButton", "DiscordOptionsButton",
-    "HUDOptionsButtonNotificationsToggle", "ColorsOptionsButtonRainbowToggle", "ClickGuiOptionsButtonClickSoundsToggle",
-    "HUDOptionsButtonArrayListToggle", "HUDOptionsButtonListBackgroundToggle", "HUDOptionsButtonListLinesToggle", "HUDOptionsButtonWatermarkToggle",
-    "HUDOptionsButtonWMLineToggle", "HUDOptionsButtonWMBackgroundToggle", "HUDOptionsButtonRenderingSelector",
-    "HUDOptionsButtonFPSToggle", "HUDOptionsButtonSpeedToggle", "HUDOptionsButtonCoordsToggle", "HUDOptionsButtonPingToggle", "HUDOptionsButtonTargetHUDToggle",
-    "RestartOptionsButton", "ConfigOptionsButtonNew configTextbox", "ConfigOptionsButtonSelector"
+     "HUDOptionsButtonNotificationsToggle", "ColorsOptionsButtonRainbowToggle", "ClickGuiOptionsButtonClickSoundsToggle",
+     "HUDOptionsButtonArrayListToggle", "HUDOptionsButtonListBackgroundToggle", "HUDOptionsButtonListLinesToggle", "HUDOptionsButtonWatermarkToggle",
+     "HUDOptionsButtonWMLineToggle", "HUDOptionsButtonWMBackgroundToggle", "HUDOptionsButtonRenderingSelector",
+     "HUDOptionsButtonFPSToggle", "HUDOptionsButtonSpeedToggle", "HUDOptionsButtonCoordsToggle", "HUDOptionsButtonPingToggle", "HUDOptionsButtonTargetHUDToggle",
+     "RestartOptionsButton"
 }
 
 local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
@@ -123,7 +123,6 @@ makefolder("Future/logs")
 makefolder("Future/assets")
 makefolder("Future/configs")
 makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
-makefolder("Future/configs/!SelectedConfigs/")
 
 local function requesturl(url, bypass) 
     if betterisfile(url) then 
@@ -1226,7 +1225,6 @@ end
 GuiLibrary["LoadConfig"] = function(name) 
     if shared.Future==nil or shared.Future.Destructing then return end
     local name = name or "default"
-    writefile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId)..".txt", name) 
     GuiLibrary["Debug"]("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     if betterisfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 
         print("[Future] Loading configuration "..name)
@@ -1731,10 +1729,6 @@ GuiLibrary["CreateWindow"] = function(argstable)
                     warn("[Future] NewIndex in selector ("..argstable.Name..") in function `SelectPrevious` was not found!")
                 end
                 playclicksound()
-            end
-    
-            selectorapi["SetList"] = function(newList) 
-                selectorapi.List = (newList)
             end
 
             Selector.MouseButton1Click:Connect(selectorapi.SelectNext)

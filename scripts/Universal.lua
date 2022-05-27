@@ -976,8 +976,8 @@ do
             ["Name"] = "Mode",
             ["Function"] = function()
                 if breadcrumbs["Enabled"] then 
-                    breadcrumbs.Toggle(nil, true, true)
-                    breadcrumbs.Toggle(nil ,true, true)
+                    breadcrumbs.Toggle(nil, true)
+                    breadcrumbs.Toggle(nil ,true)
                 end
             end,
             ["List"] = {"Ball", "Line"}
