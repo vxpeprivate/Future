@@ -123,6 +123,7 @@ makefolder("Future/logs")
 makefolder("Future/assets")
 makefolder("Future/configs")
 makefolder("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId))
+makefolder("Future/configs/!SelectedConfigs/")
 
 local function requesturl(url, bypass) 
     if betterisfile(url) then 
@@ -215,6 +216,11 @@ local function RelativeXY(GuiObject, location)
     x = math.clamp(x, 0, xm)
     y = math.clamp(y, 0, ym)
     return x, y, x/xm, y/ym, x2/xm
+end
+
+local function getRichTextElements(text) 
+    local renderedText = text:match("<.*>(.*)<.*>")
+    return renderedText, text:gsub(renderedText, "") -- return text that will be rendered and the tags
 end
 
 local function dragGUI(gui, dragpart)
@@ -1010,6 +1016,7 @@ GuiLibrary["CreateArrayList"] = function()
 end
 GuiLibrary["ArrayListAPI"] = GuiLibrary.CreateArrayList()
 
+
 GuiLibrary["CreateNotification"] = function(content)
     if GuiLibrary["AllowNotifications"] then
         chatchildaddedconnection = chatchildaddedconnection or PLAYERS.LocalPlayer.PlayerGui.Chat.Frame.ChatChannelParentFrame["Frame_MessageLogDisplay"].Scroller.ChildAdded:Connect(function(child) 
@@ -1127,11 +1134,11 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
             end
             for i,v in next, GuiLibrary.Objects do 
                 if i == "HUDOptionsButton" then 
-                    v.API.Toggle(config.HUDEnabled, true, true)
+                    v.API.Toggle(config.HUDEnabled, false, false)
                 elseif i == "ClickGuiOptionsButton" then
                     v.API.SetKeybind(config.GuiKeybind)
                 elseif i == "HUDOptionsButtonNotificationsToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
-                    v.API.Toggle(config.AllowNotifications, true)
+                    v.API.Toggle(config.AllowNotifications, false, true)
                 elseif i == "HUDOptionsButtonArrayListToggle" and v.OptionsButton == "HUDOptionsButton" and v.Window == "OtherWindow" then
                     if config.ArrayList then
                         v.API.Toggle(true, true)
@@ -1188,9 +1195,9 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
                     v.API.Set(config.ColorTheme.V * 100)
                 elseif i == "ColorsOptionsButtonRainbowToggle" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     if config.Rainbow then
-                        v.API.Toggle(true, true)
+                        v.API.Toggle(true, false)
                     else
-                        v.API.Toggle(false, true)
+                        v.API.Toggle(false, false)
                     end
                 elseif i == "ColorsOptionsButtonRBSpeedSlider" and v.OptionsButton == "ColorsOptionsButton" and v.Window == "OtherWindow" then
                     v.API.Set(config.RainbowSpeed)
@@ -1225,6 +1232,7 @@ end
 GuiLibrary["LoadConfig"] = function(name) 
     if shared.Future==nil or shared.Future.Destructing then return end
     local name = name or "default"
+    writefile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId or game.PlaceId)..".txt", name) 
     GuiLibrary["Debug"]("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json")
     if betterisfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json") then 
         print("[Future] Loading configuration "..name)
@@ -1244,7 +1252,7 @@ GuiLibrary["LoadConfig"] = function(name)
                 end
                 if v.Type == "OptionsButton" and not table.find(exclusionList, i) then 
                     if v.API.Enabled then 
-                        v.API.Toggle(false, true, true)
+                        v.API.Toggle(false)
                     end
                 end
             end
@@ -1252,22 +1260,22 @@ GuiLibrary["LoadConfig"] = function(name)
                 if GuiLibrary["Objects"][i] then 
                     local API = GuiLibrary["Objects"][i]["API"]
                     local start = WORKSPACE:GetServerTimeNow()
-                    if v.Type == "Toggle" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, i) then
-                        if v.Enabled then 
-                            API.Toggle(v.Enabled, true)
+                    if v.Type == "OptionsButton" and GuiLibrary["Objects"][i].Window == v.Window and not table.find(exclusionList, i) then 
+                        if v.Enabled then
+                            --print("LoadConfig", "Loading "..i.." as ".. tostring(v.Enabled))
+                            API.Toggle(v.Enabled, false, false)
                         end
+                        API.SetKeybind(v.Keybind)
                     elseif v.Type == "Slider" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, v.OptionsButton) then
                         API.Set(v.Value, true)
                     elseif v.Type == "Selector" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
                         API.Select(v.Value)
                     elseif v.Type == "Textbox" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
                         API.Set(v.Value)
-                    elseif v.Type == "OptionsButton" and GuiLibrary["Objects"][i].Window == v.Window and not table.find(exclusionList, i) then 
-                        if v.Enabled then
-                            --print("LoadConfig", "Loading "..i.." as ".. tostring(v.Enabled))
-                            API.Toggle(v.Enabled, true, true)
+                    elseif v.Type == "Toggle" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, i) then
+                        if v.Enabled then 
+                            API.Toggle(v.Enabled, true)
                         end
-                        API.SetKeybind(v.Keybind)
                     end
                     local time_ = WORKSPACE:GetServerTimeNow() - start
                     if time_ > 0.01 then
@@ -1359,8 +1367,6 @@ GuiLibrary["CreateWindow"] = function(argstable)
     UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     UIListLayout.SortOrder = Enum.SortOrder.Name
     UIListLayout.Padding = UDim.new(0, 1)
-    local connection222 = UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):connect(windowapi.Update)
-    table.insert(GuiLibrary.Connections, connection222)
 
     windowapi["CreateOptionsButton"] = function(argstable) 
         local starttime = WORKSPACE:GetServerTimeNow()
@@ -1504,7 +1510,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
         end
 
         buttonapi["Toggle"] = function(boolean, stopclick, isConfigLoad) 
-            local doToggle = boolean
+            local doToggle, stopclick, isConfigLoad = boolean, not stopclick, not isConfigLoad
             if boolean==nil then doToggle = not buttonapi.Enabled end
             OptionsButton.BackgroundTransparency = doToggle and 0 or 0.7
             buttonapi.Enabled = doToggle
@@ -1523,8 +1529,8 @@ GuiLibrary["CreateWindow"] = function(argstable)
                 playclicksound()
             end
         end
-        if (argstable.Default~=nil) and buttonapi.Enabled ~= argstable.Default then 
-            buttonapi.Toggle(argstable.Default, true)
+        if (argstable.Default~=nil) and buttonapi.Enabled ~= argstable.Default and argstable.Default then 
+            buttonapi.Toggle(argstable.Default, false, false)
         end
 
         buttonapi["SetKeybind"] = function(key) 
@@ -1552,7 +1558,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
                     return
                 end
                 if input.KeyCode.Name == buttonapi.Keybind and UIS:GetFocusedTextBox() == nil then 
-                    buttonapi.Toggle(nil, true)
+                    buttonapi.Toggle(nil, false, true)
                 end
             end)
             table.insert(GuiLibrary.Connections, bindconnection)
@@ -1620,7 +1626,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             end
             toggleapi["Instance"] = Toggle
             if (argstable.Default~=nil) and toggleapi.Enabled ~= argstable.Default then 
-                toggleapi.Toggle(argstable.Default, true)
+                toggleapi.Toggle(argstable.Default, false, true)
             end
             Toggle.MouseButton1Click:Connect(toggleapi.Toggle)
             GuiLibrary["Objects"][OptionsButton.Name..argstable.Name.."Toggle"] = {["API"] = toggleapi, ["Instance"] = Toggle, ["Type"] = "Toggle", ["OptionsButton"] = OptionsButton.Name, ["Window"] = Window.Name}
@@ -1967,6 +1973,8 @@ GuiLibrary["CreateWindow"] = function(argstable)
     Expand.MouseButton1Click:Connect(windowapi["Expand"])
     Window_2.MouseButton2Click:Connect(windowapi["Expand"])
     dragGUI(Window, Window_2)
+    local connection222 = UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):connect(windowapi.Update)
+    table.insert(GuiLibrary.Connections, connection222)
 
     GuiLibrary["Objects"][argstable.Name.."Window"] = {["API"] = windowapi, ["Instance"] = Window, ["Type"] = "Window"}
     return windowapi

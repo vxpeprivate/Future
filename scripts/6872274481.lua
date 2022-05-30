@@ -1,5 +1,6 @@
 repeat task.wait() until game:IsLoaded()
-local GuiLibrary = shared.Future.GuiLibrary
+local Future = shared.Future
+local GuiLibrary = Future.GuiLibrary
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local WORKSPACE = game:GetService("Workspace")
@@ -752,10 +753,11 @@ local function playanimation(id)
     end
 end
 
-local function getBedNear(max)
+local nukerblocks = {}
+local function getBlockNear(max, blocktab)
     local returning, nearestnum = nil, max
-    for i,v in next, getBeds() do 
-        if isAlive() and v.Covers.BrickColor ~= lplr.TeamColor then
+    for i,v in next, nukerblocks do 
+        if isAlive() and table.find(blocktab, v.Name) and (v.Name=="bed" and v.Covers.BrickColor ~= lplr.TeamColor or v.Name~="bed") then
             local mag = (v.Position - lplr.Character.HumanoidRootPart.Position).Magnitude
             if mag < nearestnum then 
                 nearestnum = mag
@@ -765,6 +767,27 @@ local function getBedNear(max)
     end
     return returning
 end
+
+local removeNukerFunc, addNukerFunc = function(i,v) 
+    local v = v==nil and i or v
+    if v.Name == "bed" or v.Name:find("lucky_block") and table.find(nukerblocks, v) then 
+        table.remove(nukerblocks, table.find(nukerblocks, v))
+    end
+end, function(i, v)
+    local v = v==nil and i or v
+    if v.Name == "bed" or v.Name:find("lucky_block") then 
+        nukerblocks[#nukerblocks + 1] = v
+    end
+end
+spawn(function()
+    WORKSPACE:WaitForChild("Map"):WaitForChild("Blocks")
+    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.ChildAdded:connect(addNukerFunc)
+    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.ChildRemoved:connect(removeNukerFunc)
+    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.Map.Blocks.ChildAdded:connect(addNukerFunc)
+    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.Map.Blocks.ChildRemoved:connect(removeNukerFunc)
+    table.foreach(WORKSPACE.Map.Blocks:GetChildren(), addNukerFunc)
+    table.foreach(WORKSPACE:GetChildren(), addNukerFunc)
+end)
 
 local function colorToRichText(color) 
     return " rgb("..tostring(color.R*255)..", "..tostring(color.G*255)..", "..tostring(color.B*255)..")"
@@ -895,8 +918,8 @@ do
         ["Name"] = "Anim",
         ["Function"] = function()
             if aura.Enabled then 
-                aura.Toggle(nil, true, true)
-                aura.Toggle(nil, true, true)
+                aura.Toggle()
+                aura.Toggle()
             end
         end,
         ["List"] = {"Slow", "Medium", "Fast", "Slice", "Dong", "None"},
@@ -931,8 +954,8 @@ do
         ["Name"] = "Horizontal",
         ["Function"] = function(value)
             if velocity["Enabled"] then 
-                velocity.Toggle(nil, true, true)
-                velocity.Toggle(nil, true, true)
+                velocity.Toggle()
+                velocity.Toggle()
             end
         end,
         ["Min"] = 0,
@@ -944,8 +967,8 @@ do
         ["Name"] = "Vertical",
         ["Function"] = function(value)
             if velocity["Enabled"] then 
-                velocity.Toggle(nil, true, true)
-                velocity.Toggle(nil, true, true)
+                velocity.Toggle()
+                velocity.Toggle()
             end
         end,
         ["Min"] = 0,
@@ -1260,6 +1283,47 @@ end
 
 -- // movement window 
 
+GuiLibrary.RemoveObject("HighJumpOptionsButton")
+do
+    local Duration,Power = {Value = 50},{Value = 5}
+    local HighJump = {}; HighJump = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
+        Name = "HighJump",
+        Function = function(callback) 
+            if callback then 
+                spawn(function() 
+                    if isAlive() then
+                        for i = 1, Duration.Value do 
+                            lplr.Character.HumanoidRootPart.Velocity = lplr.Character.HumanoidRootPart.Velocity + Vector3.new(0, Power.Value, 0)
+                            if not HighJump.Enabled then
+                                break
+                            end
+                            task.wait()
+                        end
+                        if HighJump.Enabled then 
+                            HighJump.Toggle()
+                        end
+                    end
+                end)
+            end
+        end,
+    })
+    Duration = HighJump.CreateSlider({
+        Name = "Duration",
+        Function = function() end,
+        Min = 1,
+        Max = 500,
+        Round = 1,
+        Default = 50,
+    })
+    Power = HighJump.CreateSlider({
+        Name = "Power",
+        Function = function() end,
+        Min = 1,
+        Max = 6,
+        Default = 5
+    })
+end
+
 local stopSpeed = false
 GuiLibrary["RemoveObject"]("LongJumpOptionsButton")
 do 
@@ -1272,12 +1336,12 @@ do
                 if isAlive() then 
                     lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1, 0)
                 else
-                    LongJump.Toggle(false, true, true)
+                    LongJump.Toggle()
                     return
                 end
                 task.delay(timeval["Value"], function() 
                     if LongJump.Enabled then
-                        LongJump.Toggle(false, true, true)
+                        LongJump.Toggle()
                     end
                 end)
                 spawn(function()
@@ -1295,7 +1359,7 @@ do
                                 local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -10, 0), params)
                                 if ray and ray.Instance then 
                                     if LongJump.Enabled then
-                                        LongJump.Toggle(false, true, true)
+                                        LongJump.Toggle()
                                         stopSpeed = false
                                     end
                                     break
@@ -1329,7 +1393,7 @@ do
                                 lplr.Character.HumanoidRootPart.CFrame = CFrame.new(ray.Position)
                             end
                         end
-                        if i >= timeval["Value"] then doRay = true end
+                        if i-1 >= timeval["Value"] then doRay = true end
                     end
                 end)
             else
@@ -1765,8 +1829,8 @@ do
                 end
             end
             if BedESP.Enabled then 
-                BedESP.Toggle(nil, true, true)
-                BedESP.Toggle(nil, true, true)
+                BedESP.Toggle()
+                BedESP.Toggle()
             end
         end 
     })
@@ -2585,23 +2649,35 @@ do
 end
 
 do 
+    local beds, luckyblocks = {Enabled = false}, {Enabled = false}
     local bedaura = {["Enabled"] = false}; bedaura = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
         ["Name"] = "Nuker",
         ["Function"] = function(callback) 
             if callback then 
                 spawn(function() 
                     repeat task.wait(0.3) 
-                        local bed = getBedNear(20)
-                        if bed then 
-                            local bestSide = getbestside(bed.Position)
+                        local blocktab = {(beds.Enabled and "bed" or nil), (luckyblocks.Enabled and "lucky_block" or nil), (luckyblocks.Enabled and "purple_lucky_block" or nil)}
+                        local block = getBlockNear(40, blocktab)
+                        if block then 
+                            local bestSide = getbestside(block.Position)
                             if bestSide then
-                                bedwars["breakBlock"](bed.Position, true, bestSide)
+                                bedwars["breakBlock"](block.Position, true, bestSide)
                             end
                         end
                     until bedaura["Enabled"] == false
                 end)
             end
         end
+    })
+    beds = bedaura.CreateToggle({
+        Name = "Beds",
+        Function = function() end,
+        Default = true,
+    })
+    luckyblocks = bedaura.CreateToggle({
+        Name = "LuckyBlocks",
+        Function = function() end,
+        Default = true,
     })
 end
 

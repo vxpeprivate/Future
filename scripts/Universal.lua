@@ -1,10 +1,12 @@
 repeat wait() until game:IsLoaded()
-local GuiLibrary = shared.Future.GuiLibrary
+local Future = shared.Future
+local GuiLibrary = Future.GuiLibrary
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local WORKSPACE = game:GetService("Workspace")
 local PLAYERS = game:GetService("Players")
 local COREGUI = game:GetService("CoreGui")
+local HTTPSERVICE = game:GetService("HttpService")
 local lplr = PLAYERS.LocalPlayer
 local mouse = lplr:GetMouse()
 local cam = WORKSPACE.CurrentCamera
@@ -297,8 +299,8 @@ do
         ["Name"] = "Mode",
         ["Function"] = function()
             if phase.Enabled then
-                phase.Toggle(nil, true)
-                phase.Toggle(nil, true)
+                phase.Toggle()
+                phase.Toggle()
             end
         end,
         ["List"] = {"Normal"}
@@ -486,8 +488,8 @@ do
             if value ~= "" and isfile("Future/"..value) then 
                 messagetable = readfile(("Future/"..value)):split("\n")
                 if spammer["Enabled"] then 
-                    spammer.Toggle(nil, true)
-                    spammer.Toggle(nil, true)
+                    spammer.Toggle()
+                    spammer.Toggle()
                 end
             elseif value ~= "" and spammer.Enabled then
                 fprint("Future/"..value.." is not a valid file, please make sure it is in your workspace folder and you include the file extension")
@@ -819,7 +821,7 @@ do
         ["Function"] = function() 
             if LongJump["Enabled"] then 
                 for i = 1, 2 do 
-                    LongJump.Toggle(nil, true)
+                    LongJump.Toggle()
                 end
             end
         end,
@@ -836,6 +838,114 @@ do
 end
 
 -- // renderwindow
+
+do 
+    local searchfor, connections, objects = {}, {}, {}
+    local searchfolder = Instance.new("Folder", GuiLibrary.ScreenGui)
+    local search = {Enabled = false}
+
+    local function addHighlight(v) 
+        if not search.Enabled then return end
+        --print("Adding Highlight", v:GetFullName())
+        local highlight = Instance.new("Highlight", searchfolder)
+        highlight.Enabled = true
+        highlight.Adornee = v
+        highlight.Name = v:GetFullName()
+        highlight.FillColor =  GuiLibrary["GetColor"]()
+        GuiLibrary["Signals"]["UpdateColor"]:connect(function()
+            highlight.FillColor = GuiLibrary["GetColor"]()
+        end)
+        highlight.OutlineColor = Color3.new(1,1,1)
+        highlight.OutlineTransparency = 1
+        highlight.FillTransparency = 0.01
+        highlight.DepthMode = 0
+        objects[#objects+1] = {Highlight = highlight, Instance = v}
+    end
+
+    local function removeHighlight(x) 
+        for i,v in next, objects do 
+            if v.Instance == x then 
+                --print("Removing ins:", x:GetFullName(), "highlight: ", v.Highlight:GetFullName())
+                v.Highlight:Destroy()
+            end
+        end
+    end
+
+    local function refresh()
+        searchfolder:ClearAllChildren()
+        objects = {}
+        for i, v in next, connections do 
+            v:Disconnect()
+            connections[i] = nil
+        end
+        spawn(function()
+            for i,v in next, WORKSPACE:GetDescendants() do 
+                if table.find(searchfor, v.Name) and (v:IsA("BasePart") or v:IsA("Model")) then 
+                    addHighlight(v)
+                end
+            end
+        end)
+        connections[#connections+1] = WORKSPACE.DescendantAdded:connect(function(v) 
+            if table.find(searchfor, v.Name) and (v:IsA("BasePart") or v:IsA("Model"))  then 
+                addHighlight(v)
+            end
+        end)
+        connections[#connections+1] = WORKSPACE.DescendantRemoving:connect(function(v) 
+            if table.find(searchfor, v.Name) and (v:IsA("BasePart") or v:IsA("Model"))  then 
+                removeHighlight(v)
+            end
+        end)
+    end
+
+    Future.AddCommand("search", {Function = function(args) 
+        local mode,name = args[1], args[2]
+        if mode == nil then  GuiLibrary.CreateNotification("Expected 1 or 2 arguments in command 'search', got 0.") return end
+        if mode == "add" then 
+            searchfor[#searchfor+1] = name
+            refresh()
+        elseif mode == "remove" or mode == "del" or mode == "delete" then
+            table.remove(searchfor, table.find(searchfor, name))
+            refresh()
+        elseif mode == "clear" then
+            searchfor = {}
+            refresh()
+        end
+    end, Help = ".search add/del/clear &lt;part-name&gt;"})
+
+    search = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
+        Name = "Search",
+        Function = function(callback) 
+            if callback then 
+                refresh()
+            else
+                for i, v in next, connections do 
+                    v:Disconnect()
+                    connections[i] = nil
+                end
+                searchfolder:ClearAllChildren()
+            end
+        end
+    })
+
+    local oldsave = GuiLibrary.SaveConfig
+    GuiLibrary.SaveConfig = function(name, isAutosave) 
+        local path = ("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".search.json")
+        writefile(path, HTTPSERVICE:JSONEncode(searchfor))
+        return oldsave(name, isAutosave)
+    end
+
+    local oldload = GuiLibrary.LoadConfig
+    GuiLibrary.LoadConfig = function(name) 
+        local path = ("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".search.json")
+        if betterisfile(path) then
+            searchfor = HTTPSERVICE:JSONDecode(readfile(path))
+        else
+            searchfor = {}
+        end
+        refresh()
+        return oldload(name)
+    end
+end
 
 do 
     local connection
@@ -976,8 +1086,8 @@ do
             ["Name"] = "Mode",
             ["Function"] = function()
                 if breadcrumbs["Enabled"] then 
-                    breadcrumbs.Toggle(nil, true)
-                    breadcrumbs.Toggle(nil ,true)
+                    breadcrumbs.Toggle()
+                    breadcrumbs.Toggle()
                 end
             end,
             ["List"] = {"Ball", "Line"}
@@ -1022,7 +1132,7 @@ do
 
     local function addHighlight(plr)
         spawn(function()
-            repeat wait() until isAlive(plr)
+            if not isAlive(plr) then repeat task.wait() until isAlive(plr) end
             if (chamsteamcheck["Enabled"] and plr.Team ~= lplr.Team or not chamsteamcheck["Enabled"]) and (not chamslplr["Enabled"] and plr ~= lplr or chamslplr["Enabled"]) then
                 local highlight
                 if not chamsfolder:FindFirstChild(plr.Name) then
@@ -1115,7 +1225,12 @@ do
     }) 
     chamsteamcheck = chams.CreateToggle({
         ["Name"] = "TeamCheck",
-        ["Function"] = function() end,
+        ["Function"] = function()
+            if chams.Enabled then
+                chams.Toggle()
+                chams.Toggle()
+            end
+        end,
         ["Default"] = true
     })
     chamswalls = chams.CreateToggle({
@@ -1501,8 +1616,8 @@ do
         ["Name"] = "Effects",
         ["Function"] = function()
             if norender.Enabled then
-                norender.Toggle(nil, true)
-                norender.Toggle(nil, true)
+                norender.Toggle()
+                norender.Toggle()
             end
         end
     })
@@ -1654,8 +1769,8 @@ do
         ["OnInputEnded"] = true,
         ["Function"] = function(value) 
             if Timer.Enabled then 
-                Timer.Toggle(nil, true, true) 
-                Timer.Toggle(nil, true, true)
+                Timer.Toggle() 
+                Timer.Toggle()
             end
         end
     })

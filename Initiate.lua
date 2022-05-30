@@ -1,6 +1,6 @@
 -- // credits to anyones code i used/looked at.
 if not getgenv then error("No getgenv, please use KRNL or Synapse X.") end
-getgenv()._FUTUREVERSION = "1.1.4 | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
+getgenv()._FUTUREVERSION = "1.1.5 | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
 getgenv()._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
@@ -15,6 +15,8 @@ local PLAYERS = game:GetService("Players")
 local lplr = PLAYERS.LocalPlayer
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
+local setthreadidentityfunc = syn and syn.set_thread_identity or set_thread_identity or setidentity or setthreadidentity
+local getthreadidentityfunc = syn and syn.get_thread_identity or get_thread_identity or getidentity or getthreadidentity
 local spawn = function(func) 
     return coroutine.wrap(func)()
 end
@@ -157,7 +159,8 @@ end
 local function getplusscript(id) -- future plus moment
     local id = id or shared.FuturePlaceId or game.PlaceId
     id = tostring(id)
-    local req = requesturl("Future/plus/"..id..".fp")
+    if not betterisfile("Future/plus/"..id..".fp") then return end
+    local req = readfile("Future/plus/"..id..".fp")
     if type(req) == "string" then
         return loadstring(req)()
     else
@@ -185,7 +188,7 @@ local configBox; configBox = configButton.CreateTextbox({
     ["Function"] = function(value)
         spawn(function()
             GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
-            if betterisfile("Future/configs/"..tostring((shared.Future and shared.Future.PlaceId) or game.PlaceId).."/"..value..".json") then
+            if betterisfile("Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..value..".json") then
                 GuiLibrary["LoadConfig"](value)
             end
             GuiLibrary["CurrentConfig"] = value
@@ -193,6 +196,11 @@ local configBox; configBox = configButton.CreateTextbox({
     end,
     ["Default"] = "default"
 })
+if betterisfile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId or game.PlaceId)..".txt") then 
+    GuiLibrary.CurrentConfig = readfile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId or game.PlaceId)..".txt") 
+    configBox.Set(GuiLibrary.CurrentConfig, true)
+    print("[Future] Detected config "..GuiLibrary.CurrentConfig.." used last time!")
+end
 local clickGuiButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "ClickGui",
     ["Function"] = function(callback) 
@@ -328,7 +336,7 @@ local colorButton; colorButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "Colors",
     ["Function"] = function(callback) 
         if not callback then 
-            colorButton.Toggle(true, true)
+            colorButton.Toggle(true)
         end
     end,
     ["Default"] = true,
@@ -431,7 +439,7 @@ local restartButton; restartButton = OtherWindow.CreateOptionsButton({
     ["Function"] = function(callback) 
         if callback then 
             spawn(function() 
-                restartButton.Toggle(nil, true, true)
+                restartButton.Toggle(nil)
                 GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"])
                 GuiLibrary.Signals.onDestroy:Fire()
                 task.wait(0.5)
@@ -444,8 +452,27 @@ local restartButton; restartButton = OtherWindow.CreateOptionsButton({
         end
     end
 })
-
 GuiLibrary["LoadOnlyGuiConfig"]()
+
+local function keyconcat(t, join) 
+    local new = {} 
+    for i,v in next, t do new[#new+1] = i end
+
+    return table.concat(new, join) 
+end
+
+--commands
+local commands = {}
+commands.help = {Function = function(args) 
+    if #args == 1 and commands[args[1]:lower()] then
+        GuiLibrary.CreateNotification(commands[args[1]:lower()].Help or "Help has not been set for this command.")
+        return
+    end
+    GuiLibrary.CreateNotification("commands: "..keyconcat(commands, ", "))
+end, Help = ".help"}
+shared.Future.AddCommand = function(name, func) 
+    commands[name] = func
+end
 
 -- Calculate Speed, FPS and Coords
 local Coords, Speed, FPS = Vector3.new(), 0, 0
@@ -494,6 +521,7 @@ local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(
     end
 end)
 
+
 local bedwarsidtable = {
     6872274481,
     8444591321,
@@ -509,6 +537,7 @@ local minerscaveidtable = {
 if table.find(minerscaveidtable, game.PlaceId) then 
     shared.FuturePlaceId = 6604417568
 end
+
 
 local success, _error = pcall(getscript, "Universal")
 local success2, _error2 = pcall(getscript)
@@ -534,9 +563,39 @@ else
     GuiLibrary.Signals.onDestroy:Fire()
     return
 end
-
 GuiLibrary["LoadConfig"](GuiLibrary["CurrentConfig"])
 
+-- Future command system
+
+local oldtab
+local oldfunc
+local suc, res = pcall(function()
+    for i,v in next, getconnections(game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.OnNewMessage.OnClientEvent) do
+        if v.Function and #debug.getupvalues(v.Function) > 0 and type(debug.getupvalues(v.Function)[1]) == "table" and getmetatable(debug.getupvalues(v.Function)[1]) and getmetatable(debug.getupvalues(v.Function)[1]).GetChannel then
+            oldfunc = getmetatable(debug.getupvalues(v.Function)[1].ChatBar.CommandProcessor).ProcessCompletedChatMessage
+            oldtab = getmetatable(debug.getupvalues(v.Function)[1].ChatBar.CommandProcessor)
+            getmetatable(debug.getupvalues(v.Function)[1].ChatBar.CommandProcessor).ProcessCompletedChatMessage = function(self, message, chatwindow)
+                local res = oldfunc(self, message, chatwindow)
+                local oldident = getthreadidentityfunc() or 2
+                if message:sub(1,1) == "." then
+                    setthreadidentityfunc(8)
+                    local splitmessage = message:sub(2, #message):split(" ")
+                    if #splitmessage >= 1 and commands[splitmessage[1]:lower()] then
+                        local commandfunc = commands[splitmessage[1]:lower()].Function
+                        table.remove(splitmessage, 1)
+                        commandfunc(splitmessage)
+                    else
+                        GuiLibrary.CreateNotification("Unknown command.")
+                    end
+                    return true
+                end
+                setthreadidentityfunc(oldident)
+                return res
+            end
+        end
+    end
+end)
+if not suc then warn("[Future] Chat hook failed, aborting command system. \n(Error: "..res..")") end
 
 local leaving = PLAYERS.PlayerRemoving:connect(function(player)
     if player == lplr then
@@ -545,11 +604,13 @@ local leaving = PLAYERS.PlayerRemoving:connect(function(player)
 end)
 
 GuiLibrary.Signals.onDestroy:connect(function()
+    oldtab.ProcessCompletedChatMessage = oldfunc
     shared.Future.Destructing = true
+    writefile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId)..".txt", GuiLibrary.CurrentConfig) 
     UnbindFromRenderStep("stats")
     for i,v in next, GuiLibrary.Objects do 
         if v.Type == "OptionsButton" and i ~= "DestructOptionsButton" and v.API.Enabled then 
-            v.API.Toggle(false, true)
+            v.API.Toggle(false)
         end
     end
     if ontp then ontp:Disconnect() end

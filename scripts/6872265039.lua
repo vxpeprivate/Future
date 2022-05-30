@@ -1,5 +1,6 @@
 repeat wait() until game:IsLoaded()
-local GuiLibrary = shared.Future.GuiLibrary
+local Future = shared.Future
+local GuiLibrary = Future.GuiLibrary
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local WORKSPACE = game:GetService("Workspace")
@@ -231,8 +232,8 @@ do
         ["Name"] = "",
         ["Function"] = function()
             if AutoQueue["Enabled"] then 
-                AutoQueue.Toggle(nil, true)
-                AutoQueue.Toggle(nil, true)
+                AutoQueue.Toggle()
+                AutoQueue.Toggle()
             end
         end, 
         ["List"] = QueueTypes
