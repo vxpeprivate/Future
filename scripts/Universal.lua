@@ -1536,14 +1536,11 @@ do
                     replace(v)
                 end)
                 mt.__namecall = newcclosure(function(self, ...) 
-		    local suc, res = pcall(function()
-			local args = {...}
-			local ncm = getnamecallmethod()
-			if ncm == "GetTextSize" and self == textservice then 
-				replace(args[1])    
-			end
-		    end)
-			if not suc and rconsoleprint then rconsoleprint("[Future] [ERROR] "..tostring(res))
+                    local args = {...}
+                    local ncm = getnamecallmethod()
+                    if ncm == "GetTextSize" and self == textservice then 
+                        replace(args[1])    
+                    end
                     return oldnamecall(self, table.unpack(args))
                 end)
             else
