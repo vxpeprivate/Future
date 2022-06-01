@@ -208,10 +208,7 @@ local function getAllPlrsNear()
 end
 
 local function canBeTargeted(plr, doTeamCheck) 
-    if isAlive(plr) and plr~=lplr and (doTeamCheck and plr.Team ~=lplr.Team or not doTeamCheck) then 
-        return true
-    end
-    return false
+    return Future.canBeTargeted(plr)
 end
 
 local function getMoveDirection(plr) 
@@ -273,6 +270,7 @@ local function hashvector(vec)
 end
 
 -- Huge thanks to 7granddad for this code, i dont see a point in writing this all my self when I know exactly what it does, it would just be alot of labour and work lel.
+
 
 local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
 repeat task.wait() until Flamework.isInitialized
@@ -348,7 +346,7 @@ bedwars = {
     ["BlockPlacementController"] = KnitClient.Controllers.BlockPlacementController,
     ["BedwarsKits"] = require(game:GetService("ReplicatedStorage").TS.games.bedwars.kit["bedwars-kit-shop"]).BedwarsKitShop,
     ["BlockBreaker"] = KnitClient.Controllers.BlockBreakController.blockBreaker,
-    ["BowTable"] = KnitClient.Controllers.ProjectileController,
+    ["ProjectileController"] = KnitClient.Controllers.ProjectileController,
     ["ChestController"] = KnitClient.Controllers.ChestController,
     ["ClickHold"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out.client.ui.lib.util["click-hold"]).ClickHold,
     ["ClientHandler"] = Client,
@@ -434,6 +432,7 @@ bedwars = {
     ["VelocityUtil"]  = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].util["velocity-util"]).VelocityUtil, 
     ["ItemMeta"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.item["item-meta"]).getItemMeta, 1),
     ["PlayerVacuumRemote"] = getremote(debug.getconstants(debug.getproto(KnitClient.Controllers.PlayerVacuumController.onEnable, 4))),
+    ["PingController"] = require(lplr.PlayerScripts.TS.controllers.game.ping["ping-controller"]).PingController,
 }
 local function getblock(pos)
 	return bedwars["BlockController"]:getStore():getBlockAt(bedwars["BlockController"]:getBlockPosition(pos)), bedwars["BlockController"]:getBlockPosition(pos)
@@ -830,7 +829,7 @@ do
                     repeat skipFrame()
                         for i,v in next, getAllPlrsNear() do 
                             if v.Character and isAlive(v) and not bedwars["CheckWhitelisted"](v) then
-                                if state() ~= states.PRE and isAlive() and canBeTargeted(v, true) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
+                                if state() ~= states.PRE and isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
                                     local weapon, slot = getBestSword()
                                     local selfpos = lplr.Character.HumanoidRootPart.Position + (auradist["Value"] > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
                                     local attackArgs = {
@@ -1084,6 +1083,90 @@ end
 
 --// misc window
 
+
+
+GuiLibrary.RemoveObject("MiddleClickOptionsButton")
+do 
+    local function getPlayerFromPart(target) 
+        if not target then return end
+        for i,v in next, PLAYERS:GetPlayers() do 
+            if isAlive(v) then 
+                if target:IsDescendantOf(v.Character) then 
+                    return v
+                end
+            end
+        end
+    end
+
+    local old = debug.getproto(bedwars.PingController.onStart, 2)
+    local oldkeys = {}
+    for i,v in next, debug.getconstants(bedwars.PingController.constructor) do 
+        if typeof(v) == "EnumItem" then
+            oldkeys[#oldkeys+1] = v
+        end
+    end
+    local mcp = {Enabled = true}
+    local anti= {Enabled = true}
+    local mcf = {Enabled = true}
+    local inputconnection
+    local MiddleClick = {Enabled = false}
+    MiddleClick = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
+        Name = "MiddleClick",
+        Function = function(callback) 
+            if callback then 
+                if anti.Enabled then 
+                    game:GetService("ContextActionService"):UnbindAction("ping-location")
+                end
+                inputconnection = UIS.InputBegan:connect(function(input) 
+                    if input.UserInputType == Enum.UserInputType.MouseButton3 then 
+                        local plr = getPlayerFromPart(mouse.Target)
+                        if plr then 
+                            if mcf.Enabled then 
+                                Future.toggleFriend(plr.Name)
+                                return
+                            end
+                        end
+                        if isAlive() and mcp.Enabled then 
+                            local tp = "telepearl"
+                            if getItem(tp) then 
+                                local telepearlInstance = lplr.Character.InventoryFolder.Value:FindFirstChild(tp)
+                                local tpProjMeta = bedwars.getItemMetadata(tp).projectileSource
+                                local fireInfo = {
+                                    gravityMultiplier = 1,
+                                    drawDurationSeconds = 10,
+                                    projectile = "telepearl", 
+                                    velocityMultiplier = 0.83108,
+                                    fromPositionOffset = Vector3.new(0,2,0),
+                                    getProjectileMeta = function() return bedwars.ProjectileMeta[tp] end,
+                                }
+                                bedwars["ProjectileController"]:launchProjectile(tp, tp, fireInfo, telepearlInstance, tpProjMeta)
+                            end
+                        end
+                    end
+                end)
+            else
+                if inputconnection then inputconnection:Disconnect(); inputconnection = nil; end
+                game:GetService("ContextActionService"):BindAction("ping-location", old, false, Enum.UserInputType.MouseButton3, unpack(oldkeys))
+            end
+        end,
+    })
+    mcf = MiddleClick.CreateToggle({
+        Name = "Friend",
+        Function = function() end,
+        Default = true,
+    })
+    mcp = MiddleClick.CreateToggle({
+        Name = "Pearl", 
+        Function = function() end,
+        Default = true,
+    })
+    anti = MiddleClick.CreateToggle({
+        Name = "AntiMarker",
+        Function = function() end,
+        Default = true,
+    })
+end
+
 do
     local connections = {}
 
@@ -1152,24 +1235,28 @@ do
                     end) 
                 end)
                 for i, v in next, PLAYERS:GetPlayers() do
-                    connections[#connections+1] = v.Chatted:connect(function(msg) 
-                        if msg:find("vxpe") then
-                            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
-                        end
-                        if hasSensitiveMessage(msg) then
-                            AutoToxicFunction("Reply", v.Name)
-                        end
-                    end)
+                    if v ~= lplr then
+                        connections[#connections+1] = v.Chatted:connect(function(msg) 
+                            if msg:find("vxpe") then
+                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
+                            end
+                            if hasSensitiveMessage(msg) then
+                                AutoToxicFunction("Reply", v.Name)
+                            end
+                        end)
+                    end
                 end
                 connections[#connections+1] = PLAYERS.PlayerAdded:connect(function(v) 
-                    connections[#connections+1] = v.Chatted:connect(function(msg) 
-                        if msg:find("vxpe") then
-                            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
-                        end
-                        if hasSensitiveMessage(msg) then
-                            AutoToxicFunction("Reply", v.Name)
-                        end
-                    end)
+                    if v ~= lplr then
+                        connections[#connections+1] = v.Chatted:connect(function(msg) 
+                            if msg:find("vxpe") then
+                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
+                            end
+                            if hasSensitiveMessage(msg) then
+                                AutoToxicFunction("Reply", v.Name)
+                            end
+                        end)
+                    end
                 end)
 
             else
@@ -1675,7 +1762,7 @@ if oldisnetworkowner~=nil then do
             textlabel.BackgroundTransparency = 1
             textlabel.TextStrokeTransparency = 0.5
             textlabel.TextSize = 25
-            textlabel.Font = Enum.Font.GothamSemibold
+            textlabel.Font = GuiLibrary.Font
             textlabel.TextColor3 = Color3.fromRGB(255, 174, 0)
             textlabel.Position = UDim2.new(0, 0, 0, -70)
             textlabel.Parent = GuiLibrary["ScreenGui"]
@@ -1911,7 +1998,7 @@ do
                                 name.Visible = espnames["Enabled"]
                                 name.Name = "name"
                                 name.TextSize = 15
-                                name.Font = Enum.Font.Code
+                                name.Font = GuiLibrary.Font
                             end
 
                             local rootPos, rootVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
@@ -1978,7 +2065,9 @@ do
                             local ImageContainer
                             local ItemName
                             local raw = v.DisplayName..(tagshealth.Enabled and ' '..tostring(math.round(v.Character.Humanoid.Health)) or '')
-                            local text = '<font color="#ed4d4d">'..v.DisplayName..'</font>'..(tagshealth.Enabled and ' <font color="#'..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex())..'">'..tostring(math.round(v.Character.Humanoid.Health))..'</font>' or '')
+                            local blue = "#2a96fa"
+                            local red = "#ed4d4d"
+                            local text = '<font color="'..(Future.isFriend(v) and blue or red)..'">'..v.DisplayName..'</font>'..(tagshealth.Enabled and ' <font color="#'..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex())..'">'..tostring(math.round(v.Character.Humanoid.Health))..'</font>' or '')
                             if NametagsFolder:FindFirstChild(v.Name) then 
                                 frame = NametagsFolder:FindFirstChild(v.Name)
                                 ImageContainer = frame:FindFirstChild("ItemContainer"):FindFirstChild("ImageContainer")
@@ -2010,7 +2099,7 @@ do
                                 MainText.Position = UDim2.new(0.5, 0, 0.5, 0)
                                 MainText.AnchorPoint = Vector2.new(0.5,0.5)
                                 MainText.Size = UDim2.new(0, 300, 0, 30)
-                                MainText.Font = Enum.Font.GothamSemibold
+                                MainText.Font = GuiLibrary.Font
                                 MainText.Text = text
                                 MainText.TextSize = (18)
                                 MainText.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -2058,7 +2147,7 @@ do
                                 Amount.Position = UDim2.new(0.590909123, 0, 0.761904776, 0)
                                 Amount.Size = UDim2.new(0, 21, 0, 21)
                                 Amount.ZIndex = 10
-                                Amount.Font = Enum.Font.SourceSans
+                                Amount.Font = GuiLibrary.Font
                                 Amount.Text = ""
                                 Amount.TextColor3 = Color3.fromRGB(255, 255, 255)
                                 Amount.TextSize = 16.000
@@ -2124,7 +2213,7 @@ do
                                 ItemName.BackgroundTransparency = 1.000
                                 ItemName.Position = UDim2.new(0.389999986, 0, 0.150000006, 0)
                                 ItemName.Size = UDim2.new(0, 66, 0, 18)
-                                ItemName.Font = Enum.Font.Gotham
+                                ItemName.Font = GuiLibrary.Font
                                 ItemName.Text = "Diamond Sword"
                                 ItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
                                 ItemName.TextSize = 14.000
@@ -2651,7 +2740,7 @@ end
 do 
     local beds, luckyblocks = {Enabled = false}, {Enabled = false}
     local bedaura = {["Enabled"] = false}; bedaura = GuiLibrary.Objects.WorldWindow.API.CreateOptionsButton({
-        ["Name"] = "Nuker",
+        ["Name"] = "Fucker",
         ["Function"] = function(callback) 
             if callback then 
                 spawn(function() 
@@ -2705,6 +2794,7 @@ do
                     antivoidpart.Position = Vector3.new(0, lowestY, 0)
                     antivoidpart.Anchored = true
                     antivoidpart.Transparency = 0.75
+                    antivoidpart.CanCollide = false
                     connection = antivoidpart.Touched:connect(function(v) 
                         if isAlive() and v:IsDescendantOf(lplr.Character) then 
                             if ((lastValidPos or lplr.Character.HumanoidRootPart.CFrame).p - lplr.Character.HumanoidRootPart.Position).Magnitude <= 30 then 
@@ -2845,7 +2935,7 @@ local function PrepareSessionInfo()
     Title.BorderSizePixel = 0
     Title.Position = UDim2.new(0.0500000007, 0, 0.5, 0)
     Title.Size = UDim2.new(0, 10, 0, 23)
-    Title.Font = Enum.Font.GothamSemibold
+    Title.Font = GuiLibrary.Font
     Title.Text = "Session Info"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
     Title.TextSize = 14.000
@@ -2866,7 +2956,7 @@ local function PrepareSessionInfo()
     Playtime.BackgroundTransparency = 1.000
     Playtime.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
     Playtime.Size = UDim2.new(0, 10, 0, 23)
-    Playtime.Font = Enum.Font.Gotham
+    Playtime.Font = GuiLibrary.Font
     Playtime.Text = "Playtime"
     Playtime.TextColor3 = Color3.fromRGB(255, 255, 255)
     Playtime.TextSize = 14.000
@@ -2886,7 +2976,7 @@ local function PrepareSessionInfo()
     Lagbacks.BackgroundTransparency = 1.000
     Lagbacks.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
     Lagbacks.Size = UDim2.new(0, 10, 0, 23)
-    Lagbacks.Font = Enum.Font.Gotham
+    Lagbacks.Font = GuiLibrary.Font
     Lagbacks.Text = "Lagbacks"
     Lagbacks.TextColor3 = Color3.fromRGB(255, 255, 255)
     Lagbacks.TextSize = 14.000
@@ -2899,7 +2989,7 @@ local function PrepareSessionInfo()
     Kills.BackgroundTransparency = 1.000
     Kills.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
     Kills.Size = UDim2.new(0, 10, 0, 23)
-    Kills.Font = Enum.Font.Gotham
+    Kills.Font = GuiLibrary.Font
     Kills.Text = "Kills"
     Kills.TextColor3 = Color3.fromRGB(255, 255, 255)
     Kills.TextSize = 14.000
@@ -2912,7 +3002,7 @@ local function PrepareSessionInfo()
     Wins.BackgroundTransparency = 1.000
     Wins.Position = UDim2.new(0.0343137085, 0, -0.0584415607, 0)
     Wins.Size = UDim2.new(0, 10, 0, 23)
-    Wins.Font = Enum.Font.Gotham
+    Wins.Font = GuiLibrary.Font
     Wins.Text = "Wins"
     Wins.TextColor3 = Color3.fromRGB(255, 255, 255)
     Wins.TextSize = 14.000
@@ -2925,7 +3015,7 @@ local function PrepareSessionInfo()
     PlaytimeValue.BackgroundTransparency = 1.000
     PlaytimeValue.Position = UDim2.new(0.53125, 0, 0, 0)
     PlaytimeValue.Size = UDim2.new(0, 96, 0, 18)
-    PlaytimeValue.Font = Enum.Font.Gotham
+    PlaytimeValue.Font = GuiLibrary.Font
     PlaytimeValue.Text = "0d 0h 0m 0s"
     PlaytimeValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     PlaytimeValue.TextSize = 14.000
@@ -2938,7 +3028,7 @@ local function PrepareSessionInfo()
     LagbacksValue.BackgroundTransparency = 1.000
     LagbacksValue.Position = UDim2.new(0.53125, 0, 0, 0)
     LagbacksValue.Size = UDim2.new(0, 96, 0, 18)
-    LagbacksValue.Font = Enum.Font.Gotham
+    LagbacksValue.Font = GuiLibrary.Font
     LagbacksValue.Text = shared.FutureSavedSessionInfo and shared.FutureSavedSessionInfo.lagbacks or "0"
     LagbacksValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     LagbacksValue.TextSize = 14.000
@@ -2951,7 +3041,7 @@ local function PrepareSessionInfo()
     KillsValue.BackgroundTransparency = 1.000
     KillsValue.Position = UDim2.new(0.53125, 0, 0, 0)
     KillsValue.Size = UDim2.new(0, 96, 0, 18)
-    KillsValue.Font = Enum.Font.Gotham
+    KillsValue.Font = GuiLibrary.Font
     KillsValue.Text = shared.FutureSavedSessionInfo and shared.FutureSavedSessionInfo.kills or "0"
     KillsValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     KillsValue.TextSize = 14.000
@@ -2964,7 +3054,7 @@ local function PrepareSessionInfo()
     WinsValue.BackgroundTransparency = 1.000
     WinsValue.Position = UDim2.new(0.53125, 0, 0, 0)
     WinsValue.Size = UDim2.new(0, 96, 0, 18)
-    WinsValue.Font = Enum.Font.Gotham
+    WinsValue.Font = GuiLibrary.Font
     WinsValue.Text = shared.FutureSavedSessionInfo and shared.FutureSavedSessionInfo.wins or "0"
     WinsValue.TextColor3 = Color3.fromRGB(255, 255, 255)
     WinsValue.TextSize = 14.000
@@ -3037,7 +3127,7 @@ detectLagback()
 local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(State)
     if State == Enum.TeleportState.Started then
         local api = SessionInfoAPI
-		local stringtp = "shared.FutureSavedSessionInfo = {startTime ="..tostring(futureStartTime)..", kills = "..api.kills.Text..", wins = "..api.wins.Text..", lagbacks = "..api.lagbacks.Text.."}"
+		local stringtp = "shared.FutureSavedSessionInfo = {startTime ="..tostring(shared.futureStartTime)..", kills = "..api.kills.Text..", wins = "..api.wins.Text..", lagbacks = "..api.lagbacks.Text.."}"
 		queueteleport(stringtp)
     end
 end)
@@ -3061,7 +3151,7 @@ end)
 spawn(function()
     repeat task.wait(0.5) 
 
-        local t = math.round(WORKSPACE:GetServerTimeNow()) - math.round((shared.FutureSavedSessionInfo and tonumber(shared.FutureSavedSessionInfo.startTime)) or futureStartTime)
+        local t = math.round(WORKSPACE:GetServerTimeNow()) - math.round((shared.FutureSavedSessionInfo and tonumber(shared.FutureSavedSessionInfo.startTime)) or shared.futureStartTime)
         local seconds = tostring(t % 60)
         local minutes = tostring(math.floor(t / 60) % 60)
         local hours = tostring(math.floor(t / 3600) % 24)
@@ -3091,7 +3181,7 @@ end)
 
 GuiLibrary.Signals.onDestroy:connect(function()
     local api = SessionInfoAPI
-    shared.FutureSavedSessionInfo = {startTime = tostring(futureStartTime), kills = api.kills.Text, wins = api.wins.Text, lagbacks = api.lagbacks.Text}
+    shared.FutureSavedSessionInfo = {startTime = tostring(shared.futureStartTime), kills = api.kills.Text, wins = api.wins.Text, lagbacks = api.lagbacks.Text}
     local si = SessionInfoAPI.Instance.Position
 
     local posTable = {

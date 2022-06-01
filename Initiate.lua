@@ -1,13 +1,13 @@
 -- // credits to anyones code i used/looked at.
-if not getgenv then error("No getgenv, please use KRNL or Synapse X.") end
-getgenv()._FUTUREVERSION = "1.1.5 | "..(shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release").." build" -- // This is a cool thing yes
-getgenv()._FUTUREMOTD = "futureclient.xyz 🔥"
+shared._FUTUREVERSION = "1.1.6 | "..(true and "beta" or (shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release")).." build" -- // This is a cool thing yes
+shared._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
 if shared.Future~=nil then print("[Future] Detected future already executed, not executing!") return end
-getgenv().futureStartTime = game:GetService("Workspace"):GetServerTimeNow()
-local startTime = futureStartTime
+shared.futureStartTime = game:GetService("Workspace"):GetServerTimeNow()
+local startTime = shared.futureStartTime
 shared.Future = {}
+local Future = shared.Future
 local UIS = game:GetService("UserInputService")
 local TS = game:GetService("TweenService")
 local HTTPSERVICE = game:GetService("HttpService")
@@ -169,6 +169,45 @@ local function getplusscript(id) -- future plus moment
 end
 GuiLibrary["LoadOnlyGuiConfig"]()
 
+
+local friendstab = {pcall(function() HTTPSERVICE:JSONDecode(readfile("Future/Friends.json")) end)}
+Future.Friends = friendstab[1] and friendstab[2] or {}
+
+Future.isFriend = function(plr) 
+    return Future.Friends[plr.Name:lower()] and true or false
+end
+
+Future.addFriend = function(plrname) 
+    if not Future.Friends[plrname:lower()] then
+        Future.Friends[plrname:lower()] = true
+        GuiLibrary.CreateNotification("Successfully added "..plrname.." to your friends list!")
+    end
+end
+
+Future.delFriend = function(plrname) 
+    if Future.Friends[plrname:lower()] then
+        Future.Friends[plrname:lower()] = nil
+        GuiLibrary.CreateNotification("Successfully removed "..plrname.." from your friends list!")
+    end
+end
+Future.removeFriend = Future.delFriend
+
+Future.toggleFriend = function(plrname) 
+    if Future.Friends[plrname:lower()] then 
+        Future.removeFriend(plrname)
+    else
+        Future.addFriend(plrname)
+    end
+end
+
+Future.canBeTargeted = function(plr) 
+    if Future.isFriend(plr) then return false end
+    if not isAlive(plr) then return false end
+    if plr == lplr then return false end
+    if ((plr.Team or "plr")==(lplr.Team or "lplr")) then return false end
+    return true
+end
+
 local CombatWindow = GuiLibrary.CreateWindow({["Name"] = "Combat"})
 local ExploitsWindow = GuiLibrary.CreateWindow({["Name"] = "Exploits"})
 local MiscellaneousWindow = GuiLibrary.CreateWindow({["Name"] = "Miscellaneous"})
@@ -176,6 +215,33 @@ local MovementWindow = GuiLibrary.CreateWindow({["Name"] = "Movement"})
 local RenderWindow = GuiLibrary.CreateWindow({["Name"] = "Render"})
 local WorldWindow = GuiLibrary.CreateWindow({["Name"] = "World"})
 local OtherWindow = GuiLibrary.CreateWindow({["Name"] = "Other"})
+
+local fontButton = {}; fontButton = OtherWindow.CreateOptionsButton({
+    Name = "Font",
+    Function = function(callback) 
+        if not callback then 
+            fontButton.Toggle()
+        end
+    end,
+    Default = true,
+    NoKeybind = true,
+})
+local textSizeSlider = {}; textSizeSlider = fontButton.CreateSlider({
+    Name = "TextSize",
+    Function = function(value) 
+        GuiLibrary.TextSize = value
+        for i,v in next, GuiLibrary.ScreenGui:GetDescendants() do 
+            if pcall(function() return v.TextSize end) then 
+                v.TextSize = value
+            end
+        end
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+    end,
+    Default = 18,
+    Max = 28,
+    Min = 8,
+    Round = 0,
+})
 
 local configButton; configButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "Config",
@@ -457,22 +523,106 @@ GuiLibrary["LoadOnlyGuiConfig"]()
 local function keyconcat(t, join) 
     local new = {} 
     for i,v in next, t do new[#new+1] = i end
-
     return table.concat(new, join) 
+end
+
+local function nameconcat(t, join) 
+    local new = {}
+    for i,v in next, t do new[#new+1] = v.Name end
+    return table.concat(new, join)
 end
 
 --commands
 local commands = {}
 commands.help = {Function = function(args) 
     if #args == 1 and commands[args[1]:lower()] then
-        GuiLibrary.CreateNotification(commands[args[1]:lower()].Help or "Help has not been set for this command.")
+        GuiLibrary.CreateNotification(commands[args[1]:lower()].Help:gsub("<", "&lt;"):gsub(">", "&gt;") or "Help has not been set for this command.")
         return
     end
-    GuiLibrary.CreateNotification("commands: "..keyconcat(commands, ", "))
+    local commandcount = 0
+    for i,v in next, commands do 
+        commandcount = commandcount + 1
+    end
+    GuiLibrary.CreateNotification("Commands ("..tostring(commandcount).."): "..keyconcat(commands, ", "))
 end, Help = ".help"}
+
+commands.friend = {
+    Function = function(args) 
+        local mode,plrname = args[1]:lower(), args[2]
+        if mode == "list" then 
+            local count = 0
+            for i,v in next, Future.Friends do 
+                count = count + 1
+            end
+            return GuiLibrary.CreateNotification("Friends ("..tostring(count).."): "..keyconcat(Future.Friends, ", "))
+        end
+
+        if not plrname then return end
+
+        if mode == "add" then
+            Future.addFriend(plrname:lower())
+        elseif mode == "del" or mode == "remove" or mode == "delete" then
+            if Future.Friends[plrname:lower()] then 
+                Future.delFriend(plrname:lower())
+            else
+                GuiLibrary.CreateNotification(plrname.." is not in your friends list!")
+            end
+        end
+
+        writefile("Future/Friends.json", HTTPSERVICE:JSONEncode(Future.Friends))
+    end,
+    Help = ".friend add/del/list <player-name>"
+}
+
+commands.toggle = {
+    Function = function(args) 
+        local module,state = args[1], args[2]
+        state= (state=="off" or state == "false") and false or (state == "on" or state == "true") and true or nil
+ 
+        if GuiLibrary.Objects[module.."OptionsButton"]~=nil then 
+            local api = GuiLibrary.Objects[module.."OptionsButton"].API
+            api.Toggle(state)
+        end
+    end,
+    Help = ".toggle <module-name> <state>"
+}
+
+commands.font = {
+    Function = function(args) 
+    
+        if args[1] == "list" then 
+            GuiLibrary.CreateNotification("List of avaliable fonts:\n"..nameconcat(Enum.Font:GetEnumItems(), ", "))
+            return
+        end
+
+        local fontname = args[1]:lower()
+        local font, oldfont = nil, GuiLibrary.Font
+        for i,v in next, Enum.Font:GetEnumItems() do 
+            if v.Name:lower() == fontname then 
+               font = v 
+            end
+        end
+
+        if not font then return end
+
+        GuiLibrary.Font = font
+
+        for i,v in next, GuiLibrary.ScreenGui:GetDescendants() do 
+            if pcall(function() return v.Font end) then 
+                v.Font = font
+            end
+        end
+
+        GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+
+    end, 
+    Help = ".font <font-name>"
+}
+
 shared.Future.AddCommand = function(name, func) 
     commands[name] = func
 end
+
 
 -- Calculate Speed, FPS and Coords
 local Coords, Speed, FPS = Vector3.new(), 0, 0
@@ -627,7 +777,7 @@ spawn(function()
         textlabel.BackgroundTransparency = 1
         textlabel.TextStrokeTransparency = 0
         textlabel.TextSize = 25
-        textlabel.Font = Enum.Font.SourceSans
+        textlabel.Font = GuiLibrary.Font
         textlabel.TextColor3 = Color3.new(1, 1, 1)
         textlabel.Position = UDim2.new(0, 0, 0, -40)
         textlabel.Parent = GuiLibrary["ScreenGui"]
@@ -638,7 +788,7 @@ spawn(function()
         textlabel2.BackgroundTransparency = 1
         textlabel2.TextStrokeTransparency = 0
         textlabel2.TextSize = 25
-        textlabel2.Font = Enum.Font.SourceSans
+        textlabel2.Font = GuiLibrary.Font
         textlabel2.TextColor3 = Color3.new(1, 1, 1)
         textlabel2.Position = UDim2.new(0, 0, 0, -20)
         textlabel2.Parent = GuiLibrary["ScreenGui"]
@@ -662,5 +812,5 @@ spawn(function()
         GuiLibrary["SaveConfig"](GuiLibrary["CurrentConfig"], true)
     until not shared.Future
 end)
-fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.\nPlease join the discord for changelogs and to report bugs. \ndiscord.gg/bdjT5UmmDJ\nEnjoy using Future v".._FUTUREVERSION.."")
+fprint("Finished loading in "..tostring(math.floor((game:GetService("Workspace"):GetServerTimeNow() - startTime) * 1000) / 1000).."s\nPress "..GuiLibrary["GuiKeybind"].." to open the Gui.\nPlease join the discord for changelogs and to report bugs. \ndiscord.gg/bdjT5UmmDJ\nEnjoy using Future v"..shared._FUTUREVERSION.."")
 shared._FUTURECACHED = true

@@ -446,6 +446,7 @@ do
 end
 
 do 
+    local DISALLOWED_WHITESPACE = {"\r", "\t", "\v", "\f"} -- from roblox core scripts, removed \n due to spliting at new lines
     local spammer = {["Enabled"] = false}
     local spammerdelay = {["Value"] = 0}
     local spammerfile = {["Value"] = ""}
@@ -456,7 +457,14 @@ do
         ["Function"] = function(callback)
             if callback then
                 if spammerfile["Value"] ~= "" and isfile("Future/"..spammerfile["Value"]) then
-                    messagetable = readfile(("Future/"..spammerfile["Value"])):split("\n")
+                    messagetable = readfile(("Future/"..spammerfile["Value"]))
+
+                    for i,v in next, DISALLOWED_WHITESPACE do
+                        messagetable = messagetable:gsub(v, "")
+                    end
+
+                    messagetable = messagetable:split("\n")
+
                     if not looping then
                         spawn(function() 
                             repeat 
@@ -465,16 +473,17 @@ do
                                         math.random(1, #messagetable)
                                     ]   
                                     if v~= nil and v~="" then
-                                        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(v:gsub("%s+", ""),"All")
-                                        wait(spammerdelay["Value"])
+                                        game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(v,"All")
+                                        task.wait(spammerdelay["Value"])
                                     end
                                 else
-                                    wait()
+                                    task.wait()
                                 end
                             until shared.Future == nil
                         end)
                         looping = true
                     end
+
                 elseif spammer["Enabled"] then
                     local value = value==nil and "" or value
                     fprint("Future/"..value.." is not a valid file, please make sure it is in your workspace folder and you include the file extension")
@@ -834,6 +843,51 @@ do
         ["Default"] = 2,
         ["Round"] = 0,
         ["Function"] = function() end
+    })
+end
+
+do 
+    local FastFallTicks = {Value = 5}
+    local FallHeight = {Value = 10}
+    local FastFall = {Enabled = false}
+    FastFall = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
+        Name = "FastFall",
+        Function = function(callback) 
+            if callback then 
+                spawn(function() 
+                    repeat task.wait()
+                        if isAlive() then
+                            local params = RaycastParams.new()
+                            params.FilterDescendantsInstances = {lplr.Character}
+                            params.FilterType = Enum.RaycastFilterType.Blacklist
+                            local ray = WORKSPACE:Raycast(lplr.Character.HumanoidRootPart.Position, Vector3.new(0, -FallHeight.Value*3, 0), params)
+                            if ray and ray.Instance then 
+                                local velo = lplr.Character.HumanoidRootPart.Velocity
+                                if lplr.Character.Humanoid:GetState() == Enum.HumanoidStateType.Freefall and velo.Y < 0 then 
+                                    lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo.X, -(FastFallTicks.Value*30), velo.Z)
+                                end
+                            end
+                        end
+                    until not FastFall.Enabled
+                end)
+            end
+        end,
+    })
+    FallHeight = FastFall.CreateSlider({
+        Name = "FallHeight",
+        Min = 1, 
+        Max = 10, 
+        Default = 7,
+        Round = 1,
+        Function = function() end
+    })
+    FastFallTicks = FastFall.CreateSlider({
+        Name = "Ticks",
+        Min = 1, 
+        Max = 5, 
+        Default = 1,
+        Round = 0,
+        Function = function() end
     })
 end
 
@@ -1335,7 +1389,7 @@ do
                                 name.Visible = espnames["Enabled"]
                                 name.Name = "name"
                                 name.TextSize = 15
-                                name.Font = Enum.Font.Code
+                                name.Font = GuiLibrary.Font
                             end
 
                             local rootPos, rootVis = WORKSPACE.CurrentCamera:WorldToViewportPoint(v.Character.HumanoidRootPart.Position)
@@ -1397,8 +1451,11 @@ do
                             local frame
                             local MainText
                             local UIScale
-                            local raw = v.DisplayName..(tagshealth.Enabled and ' '..tostring(math.round(v.Character.Humanoid.Health)) or '')
-                            local text = '<font color="#ed4d4d">'..v.DisplayName..'</font>'..(tagshealth.Enabled and ' <font color="#'..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex())..'">'..tostring(math.round(v.Character.Humanoid.Health))..'</font>' or '')
+                            local raw = v.DisplayName..(tagshealth.Enabled and ' '..tostring(math.round(v.Character.Humanoid.Health)) or '') 
+                            -- blue color: rgb(89, 175, 255)
+                            local blue = "#2a96fa"
+                            local red = "#ed4d4d"
+                            local text = '<font color="'..(Future.isFriend(v) and blue or red)..'">'..v.DisplayName..'</font>'..(tagshealth.Enabled and ' <font color="#'..(convertHealthToColor(v.Character.Humanoid.Health, v.Character.Humanoid.MaxHealth):ToHex())..'">'..tostring(math.round(v.Character.Humanoid.Health))..'</font>' or '')
                             if NametagsFolder:FindFirstChild(v.Name) then 
                                 frame = NametagsFolder:FindFirstChild(v.Name)
                                 local name = v.DisplayName
@@ -1429,7 +1486,7 @@ do
                                 MainText.Position = UDim2.new(0.5, 0, 0.5, 0)
                                 MainText.AnchorPoint = Vector2.new(0.5,0.5)
                                 MainText.Size = UDim2.new(0, 300, 0, 30)
-                                MainText.Font = Enum.Font.GothamSemibold
+                                MainText.Font = GuiLibrary.Font
                                 MainText.Text = text
                                 MainText.TextSize = (18)
                                 MainText.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1771,6 +1828,143 @@ do
             if Timer.Enabled then 
                 Timer.Toggle() 
                 Timer.Toggle()
+            end
+        end
+    })
+end
+
+do 
+    local function getPlayerFromPart(target) 
+        if not target then return end
+        for i,v in next, PLAYERS:GetPlayers() do 
+            if isAlive(v) then 
+                if target:IsDescendantOf(v.Character) then 
+                    return v
+                end
+            end
+        end
+    end
+
+    local mcf = {Enabled = true}
+    local inputconnection
+    local MiddleClick = {Enabled = false}
+    MiddleClick = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
+        Name = "MiddleClick",
+        Function = function(callback) 
+            if callback then 
+                inputconnection = UIS.InputBegan:connect(function(input) 
+                    if input.UserInputType == Enum.UserInputType.MouseButton3 then 
+                        local plr = getPlayerFromPart(mouse.Target)
+                        if plr then 
+                            if mcf.Enabled then 
+                                Future.toggleFriend(plr.Name)
+                            end
+                        end
+                    end
+                end)
+            else
+                if inputconnection then inputconnection:Disconnect(); inputconnection = nil; end
+            end
+        end,
+    })
+end
+
+do
+    local connections = {}
+
+    local AutoReport = {Enabled = false}
+
+    local sensitives = {
+        ["hack"] = "Scamming",
+        ["exploit"] = "Scamming",
+        ["script"] = "Scamming",
+        ["gay"] = "Bullying",
+        ["retard"] = "Bullying",
+        ["bad"] = "Bullying",
+        ["ez"] = "Bullying",
+        ["loser"] = "Bullying",
+        ["trash"] = "Bullying",
+        ["rubbish"] = "Bullying",
+        ["garbage"] = "Bullying",
+        ["suck"] = "Bullying",
+        ["bozo"] = "Bullying",
+        ["fatherless"] = "Bullying",
+        ["adopted"] = "Bullying",
+        ["no life"] = "Bullying",
+        ["nolife"] = "Bullying", 
+        ["vxpe"] = "Bullying",
+        ["vxpe.xyz"] = "Offsite Links",
+        ["i hack"] = "Scamming",
+        ["download"] = "Offsite Links",
+        ["idiot"] = "Bullying",
+        ["special"] = "Bullying",
+        ["dumb"] = "Bullying",
+        ["hate"] = "Bullying",
+        ["kill"] = "Bullying",
+        ["kid"] = "Bullying",
+        ["die"] = "Bullying",
+        ["suicide"] = "Bullying",
+        ["fuc"] = "Swearing",
+        ["shi"] = "Swearing",
+        ["bitc"] = "Swearing",
+        ["gae"] = "Bullying",
+        ["motherless"] = "Bullying",
+    }
+
+    local function hasSensitiveMessage(msg) 
+        for i,v in next, sensitives do 
+            local found1, found2 = msg:lower():find(i)
+            if found1 then
+                return msg:sub(found1, found2)
+            end
+            local alt,alt1 =  msg:lower():gsub("1", "i"):gsub("0", "o"):gsub("6", "g"):gsub("3", "e"):gsub("4", "a"):find(i)
+            if alt then
+                return msg:sub(alt,alt1) or false 
+            end
+        end
+        return false
+    end
+
+    local function AutoReportFunction(msg, plr) 
+        if plr==lplr then return end
+        spawn(function()
+            if AutoReport.Enabled == false then return end
+            local reason = sensitives[hasSensitiveMessage(msg)]
+            if reason then 
+                GuiLibrary.CreateToast("[AR] Reported "..plr.Name, "Reason: "..reason.."\nMessage: ".."he said '"..hasSensitiveMessage(msg).."'", 10)
+                for i =1,5 do
+                    PLAYERS:ReportAbuse(plr, reason, "he said '"..hasSensitiveMessage(msg).."'")
+                    task.wait(30)
+                end
+            end
+        end)
+    end
+
+    AutoReport = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
+        Name = "AutoReport",
+        Function = function(callback)
+            if callback then 
+
+                for i, v in next, PLAYERS:GetPlayers() do
+                    connections[#connections+1] = v.Chatted:connect(function(msg) 
+                        if hasSensitiveMessage(msg) then
+                            AutoReportFunction(msg, v)
+                        end
+                    end)
+                end
+                connections[#connections+1] = PLAYERS.PlayerAdded:connect(function(v) 
+                    connections[#connections+1] = v.Chatted:connect(function(msg) 
+                        if hasSensitiveMessage(msg) then
+                            AutoReportFunction(msg, v)
+                        end
+                    end)
+                end)
+
+            else
+                for i,v in next, connections do 
+                    v:Disconnect()
+                    connections[i] = nil
+                end
             end
         end
     })

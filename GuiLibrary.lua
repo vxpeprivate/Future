@@ -55,6 +55,8 @@ local GuiLibrary = {
     ["DrawFPS"] = false,
     ["DrawPing"] = false,
     ["TargetHUDEnabled"] = false,
+    ["Font"] = Enum.Font.GothamSemibold,
+    ["TextSize"] = 19.000,
     ["TargetHUD"] = {
         ["Position"] = {
             ["X"] = {
@@ -100,7 +102,7 @@ local exclusionList = {
      "HUDOptionsButtonArrayListToggle", "HUDOptionsButtonListBackgroundToggle", "HUDOptionsButtonListLinesToggle", "HUDOptionsButtonWatermarkToggle",
      "HUDOptionsButtonWMLineToggle", "HUDOptionsButtonWMBackgroundToggle", "HUDOptionsButtonRenderingSelector",
      "HUDOptionsButtonFPSToggle", "HUDOptionsButtonSpeedToggle", "HUDOptionsButtonCoordsToggle", "HUDOptionsButtonPingToggle", "HUDOptionsButtonTargetHUDToggle",
-     "RestartOptionsButton"
+     "RestartOptionsButton", "FontOptionsButton", "FontOptionsButtonTextSizeSlider"
 }
 
 local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
@@ -327,8 +329,8 @@ local function prepareTableForArrayList(t)
         if type(b.ArrayText)=="function" then
             btext = btext.."["..tostring(b.ArrayText()).."] "
         end
-        local vec = game:GetService("TextService"):GetTextSize(atext, 20, Enum.Font.GothamSemibold, Vector2.new(99999, 99999))
-        local vec2 = game:GetService("TextService"):GetTextSize(btext, 20, Enum.Font.GothamSemibold, Vector2.new(99999, 99999))
+        local vec = game:GetService("TextService"):GetTextSize(atext, GuiLibrary.TextSize, GuiLibrary.Font, Vector2.new(99999, 99999))
+        local vec2 = game:GetService("TextService"):GetTextSize(btext, GuiLibrary.TextSize, GuiLibrary.Font, Vector2.new(99999, 99999))
         --if GuiLibrary["ArrayList"]["Bottom"] then 
             --return vec.X < vec2.X
         --else
@@ -431,20 +433,20 @@ GuiLibrary["CreateToast"] = function(title, text, showtime)
         Title.BackgroundTransparency = 1.000
         Title.Position = UDim2.new(0.0260000005, 0, 0, 0)
         Title.Size = UDim2.new(0, NotificationSize.X.Offset/1.16326531, 0, NotificationSize.Y.Offset/3.16)
-        Title.Font = Enum.Font.GothamBold
+        Title.Font = GuiLibrary.Font
         Title.Text = title
         Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Title.TextSize = 16.000
+        Title.TextSize = GuiLibrary.TextSize
         Title.TextXAlignment = Enum.TextXAlignment.Left
         Text.Name = "Text"
         Text.Parent = ToastNotification
         Text.BackgroundTransparency = 1.000
         Text.Position = UDim2.new(0.0260000005, 0, 0, Topbar.Size.Y.Offset + 5)
         Text.Size = UDim2.new(0, NotificationSize.X.Offset/1.14, 0, NotificationSize.Y.Offset/1.05333333)
-        Text.Font = Enum.Font.GothamSemibold
+        Text.Font = GuiLibrary.Font
         Text.Text = text
         Text.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Text.TextSize = 16.000
+        Text.TextSize = GuiLibrary.TextSize
         Text.TextWrapped = true
         Text.TextXAlignment = Enum.TextXAlignment.Left
         Text.TextYAlignment = Enum.TextYAlignment.Top
@@ -507,10 +509,10 @@ GuiLibrary["PrepareTargetHUD"] = function()
     Title.BorderSizePixel = 0
     Title.Position = UDim2.new(0.05, 0, 0.5, 0)
     Title.Size = UDim2.new(0, 10, 0, 23)
-    Title.Font = Enum.Font.GothamSemibold
+    Title.Font = GuiLibrary.Font
     Title.Text = "Target"
     Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.TextSize = 14.000
+    Title.TextSize = GuiLibrary.TextSize
     Title.TextXAlignment = Enum.TextXAlignment.Left
 
     MainContainer.Name = "MainContainer"
@@ -536,10 +538,10 @@ GuiLibrary["PrepareTargetHUD"] = function()
     Name.BackgroundTransparency = 1.000
     Name.Position = UDim2.new(0.328431368, 0, 0.175324678, 0)
     Name.Size = UDim2.new(0, 130, 0, 16)
-    Name.Font = Enum.Font.Gotham
+    Name.Font = GuiLibrary.Font
     Name.Text = ""
     Name.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Name.TextSize = 14.000
+    Name.TextSize = GuiLibrary.TextSize
     Name.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
     Name.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -549,10 +551,10 @@ GuiLibrary["PrepareTargetHUD"] = function()
     Health.BackgroundTransparency = 1.000
     Health.Position = UDim2.new(0.328431368, 0, 0.396103919, 0)
     Health.Size = UDim2.new(0, 130, 0, 16)
-    Health.Font = Enum.Font.Gotham
+    Health.Font = GuiLibrary.Font
     Health.Text = ""
     Health.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Health.TextSize = 14.000
+    Health.TextSize = GuiLibrary.TextSize
     Health.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
     Health.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -562,10 +564,10 @@ GuiLibrary["PrepareTargetHUD"] = function()
     Distance.BackgroundTransparency = 1.000
     Distance.Position = UDim2.new(0.328431368, 0, 0.603896141, 0)
     Distance.Size = UDim2.new(0, 130, 0, 16)
-    Distance.Font = Enum.Font.Gotham
+    Distance.Font = GuiLibrary.Font
     Distance.Text = ""
     Distance.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Distance.TextSize = 14.000
+    Distance.TextSize = GuiLibrary.TextSize
     Distance.TextStrokeColor3 = Color3.fromRGB(255, 255, 255)
     Distance.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -653,12 +655,12 @@ GuiLibrary["PrepareHUDAPI"] = function()
             Coords.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             Coords.BackgroundTransparency = 1.000
             Coords.Size = UDim2.new(0, 200, 0, 20)
-            Coords.Font = Enum.Font.GothamSemibold
+            Coords.Font = GuiLibrary.Font
             Coords.RichText = true
             Coords.Text = ""
             Coords.TextStrokeTransparency = 0
             Coords.TextColor3 = Color3.fromRGB(255,255,255)
-            Coords.TextSize = 20.000
+            Coords.TextSize = GuiLibrary.TextSize --0.000
             Coords.TextXAlignment = Enum.TextXAlignment.Right
         end
         
@@ -670,12 +672,12 @@ GuiLibrary["PrepareHUDAPI"] = function()
             Speed.BackgroundTransparency = 1.000
             Speed.Position = UDim2.new(0, 0, 0.195512831, 0)
             Speed.Size = UDim2.new(0, 200, 0, 20)
-            Speed.Font = Enum.Font.GothamSemibold
+            Speed.Font = GuiLibrary.Font
             Speed.RichText = true
             Speed.Text = ""
             Speed.TextStrokeTransparency = 0.2
             Speed.TextColor3 = Color3.fromRGB(255,255,255)
-            Speed.TextSize = 20.000
+            Speed.TextSize = GuiLibrary.TextSize --0.000
             Speed.TextXAlignment = Enum.TextXAlignment.Right
         end
 
@@ -687,12 +689,12 @@ GuiLibrary["PrepareHUDAPI"] = function()
             Ping.BackgroundTransparency = 1.000
             Ping.Position = UDim2.new(0, 0, 0.391025662, 0)
             Ping.Size = UDim2.new(0, 200, 0, 20)
-            Ping.Font = Enum.Font.GothamSemibold
+            Ping.Font = GuiLibrary.Font
             Ping.RichText = true
             Ping.Text = ""
             Ping.TextStrokeTransparency = 0
             Ping.TextColor3 = Color3.fromRGB(255,255,255)
-            Ping.TextSize = 20.000
+            Ping.TextSize = GuiLibrary.TextSize --0.000
             Ping.TextXAlignment = Enum.TextXAlignment.Right
         end
         
@@ -704,12 +706,12 @@ GuiLibrary["PrepareHUDAPI"] = function()
             FPS.BackgroundTransparency = 1.000
             FPS.Position = UDim2.new(0, 0, 0.391025662, 0)
             FPS.Size = UDim2.new(0, 200, 0, 20)
-            FPS.Font = Enum.Font.GothamSemibold
+            FPS.Font = GuiLibrary.Font
             FPS.RichText = true
             FPS.Text = ""
             FPS.TextStrokeTransparency = 0
             FPS.TextColor3 = Color3.fromRGB(255,255,255)
-            FPS.TextSize = 20.000
+            FPS.TextSize = GuiLibrary.TextSize --0.000
             FPS.TextXAlignment = Enum.TextXAlignment.Right
         end
 
@@ -776,10 +778,10 @@ GuiLibrary["PrepareWatermark"] = function()
         Watermark.BackgroundTransparency = 1.000
         Watermark.Position = UDim2.new(0, 110, 0, -27)
         Watermark.Size = UDim2.new(0, 0, 0, 20)
-        Watermark.Font = Enum.Font.GothamSemibold
-        Watermark.Text = "Future"..(isfolder("Future/plus") and "+" or "").." v"..tostring(_FUTUREVERSION).." | "..tostring(_FUTUREMOTD)
+        Watermark.Font = GuiLibrary.Font
+        Watermark.Text = "Future"..(isfolder("Future/plus") and "+" or "").." v"..tostring(shared._FUTUREVERSION).." | "..tostring(shared._FUTUREMOTD)
         Watermark.BorderSizePixel = 0
-        Watermark.TextSize = 20.000
+        Watermark.TextSize = GuiLibrary.TextSize --0.000
         Watermark.TextStrokeTransparency = 0.4
         Watermark.TextXAlignment = Enum.TextXAlignment.Center
         Watermark.TextColor3 = GuiLibrary["GetColor"]()
@@ -794,11 +796,11 @@ GuiLibrary["PrepareWatermark"] = function()
         Shadow.AnchorPoint = Vector2.new(0.5,0.5)
         local vec = Watermark.AbsoluteSize + Vector2.new(5, 0)
         Shadow.Size = UDim2.new(0, vec.X, 0, vec.Y)
-        Shadow.Font = Enum.Font.GothamSemibold
+        Shadow.Font = GuiLibrary.Font
         Shadow.Text = ""
         Shadow.BorderSizePixel = 0
         Shadow.ZIndex = -1
-        Shadow.TextSize = 20.000
+        Shadow.TextSize = GuiLibrary.TextSize --0.000
         Shadow.TextXAlignment = Enum.TextXAlignment.Center
 
         Line = Instance.new("TextLabel")
@@ -809,10 +811,10 @@ GuiLibrary["PrepareWatermark"] = function()
         Line.Position = UDim2.new(0, -5, 0.5, 0)
         Line.AnchorPoint = Vector2.new(0, 0.5)
         Line.Size = UDim2.new(0, 3, 0, 20)
-        Line.Font = Enum.Font.GothamSemibold
+        Line.Font = GuiLibrary.Font
         Line.Text = ""
         Line.BorderSizePixel = 0
-        Line.TextSize = 20.000
+        Line.TextSize = GuiLibrary.TextSize --0.000
         Line.TextXAlignment = Enum.TextXAlignment.Center
 
         connection = GuiLibrary["Signals"]["UpdateColor"]:connect(function() 
@@ -898,7 +900,7 @@ GuiLibrary["CreateArrayList"] = function()
         ArrayObject.BackgroundTransparency = 1.000
         ArrayObject.Position = UDim2.new(-0.0152284261, 0, 0, 0)
         ArrayObject.Size = UDim2.new(0, 0, 0, 20)
-        ArrayObject.Font = Enum.Font.GothamSemibold
+        ArrayObject.Font = GuiLibrary.Font
         ArrayObject.RichText = true
         local text = name.." "
         if type(label)=="function" then
@@ -914,7 +916,7 @@ GuiLibrary["CreateArrayList"] = function()
         end)
         connections[name] = insertme
         local connectionTextbound = textbound(ArrayObject)
-        ArrayObject.TextSize = 20.000
+        ArrayObject.TextSize = GuiLibrary.TextSize --0.000
         ArrayObject.TextXAlignment = Enum.TextXAlignment.Center
         arrayobjects[name] = ArrayObject
 
@@ -926,7 +928,7 @@ GuiLibrary["CreateArrayList"] = function()
         Shadow.AnchorPoint = Vector2.new(0.5,0.5)
         local vec = ArrayObject.AbsoluteSize + Vector2.new(5, 0)
         Shadow.Size = UDim2.new(0, vec.X, 0, vec.Y)
-        Shadow.Font = Enum.Font.GothamSemibold
+        Shadow.Font = GuiLibrary.Font
         Shadow.Text = ""
         Shadow.BorderSizePixel = 0
         Shadow.ZIndex = -1
@@ -935,7 +937,7 @@ GuiLibrary["CreateArrayList"] = function()
             Shadow.Size = UDim2.new(0, vec.X, 0, vec.Y)
         end)
         connections["Shadow"..name] = insertme
-        Shadow.TextSize = 20.000
+        Shadow.TextSize = GuiLibrary.TextSize --0.000
         Shadow.TextXAlignment = Enum.TextXAlignment.Center
         shadows[name] = Shadow
 
@@ -946,10 +948,10 @@ GuiLibrary["CreateArrayList"] = function()
         Line.Position = UDim2.new(1, 1, 0.5, 0)
         Line.AnchorPoint = Vector2.new(-1, 0.5)
         Line.Size = UDim2.new(0, 3, 0, 20)
-        Line.Font = Enum.Font.GothamSemibold
+        Line.Font = GuiLibrary.Font
         Line.Text = ""
         Line.BorderSizePixel = 0
-        Line.TextSize = 20.000
+        Line.TextSize = GuiLibrary.TextSize --0.000
         Line.TextXAlignment = Enum.TextXAlignment.Center
         lines[name] = Line
 
@@ -1042,7 +1044,7 @@ GuiLibrary["SaveConfig"] = function(name, isAutosave)
         elseif v.Type == "Toggle" and --[[not table.find(exclusionList, v.OptionsButton) and]] not table.find(exclusionList, i) then
             config[i] = {["Enabled"] = v.API.Enabled, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
         elseif v.Type == "Slider" and not table.find(exclusionList, v.OptionsButton) then
-            config[i] = {["Value"] = v.API.Value, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
+            config[i] = {["Value"] = v.API.Value==math.huge and "inf" or v.API.Value, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
         elseif v.Type == "Selector" and not table.find(exclusionList, v.OptionsButton) then
             config[i] = {["Value"] = v.API.Value, ["Type"] = v.Type, ["OptionsButton"] = v.OptionsButton, ["Window"] = v.Window}
         elseif v.Type == "Textbox" and not table.find(exclusionList, v.OptionsButton) then
@@ -1072,6 +1074,8 @@ GuiLibrary["SaveConfig"] = function(name, isAutosave)
         ["TargetHUDEnabled"] = GuiLibrary.TargetHUDEnabled,
         ["ArrayListInfo"] = GuiLibrary.ArrayListInfo,
         ["HUDElements"] = GuiLibrary.HUDElements,
+        ["Font"] = GuiLibrary.Font.Name,
+        ["TextSize"] = GuiLibrary.TextSize,
     }
     local path = "Future/configs/"..tostring(shared.FuturePlaceId or game.PlaceId).."/"..name..".json"
     makefolder("Future/configs")
@@ -1212,6 +1216,23 @@ GuiLibrary["LoadOnlyGuiConfig"] = function()
             if type(config.HUDElements) == "table" then
                 GuiLibrary["HUDAPI"].setPosition(config.HUDElements.Position)
             end
+            if type(config.Font) == "string" then
+                GuiLibrary.Font = Enum.Font[config.Font]
+                for i,v in next, GuiLibrary.ScreenGui:GetDescendants() do 
+                    if pcall(function() return v.Font end) then 
+                        v.Font = config.Font
+                    end
+                end
+                GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+            end
+            if type(config.TextSize) == "number" then 
+                for i,v in next, GuiLibrary.ScreenGui:GetDescendants() do 
+                    if pcall(function() return v.TextSize end) then 
+                        v.TextSize = config.TextSize
+                    end
+                end
+                GuiLibrary["Signals"]["HUDUpdate"]:Fire()
+            end
         else
             warn("[Future] Failed to load GUIconfig.json config file")
         end
@@ -1245,12 +1266,13 @@ GuiLibrary["LoadConfig"] = function(name)
             print("[Future] Success loading configuration "..name)
             -- // turn off all modules incase they are switching configs (to prevent the old configs settings staying)
             for i,v in next, GuiLibrary.Objects do 
-                if v.Type == "Toggle" and not table.find(exclusionList, i) then 
+                local check = config[i] and (config[i].Enabled~=nil and true or false) or false
+                if v.Type == "Toggle" and not table.find(exclusionList, i) and check then 
                     if v.API.Enabled then 
                         v.API.Toggle(false, true)
                     end
                 end
-                if v.Type == "OptionsButton" and not table.find(exclusionList, i) then 
+                if v.Type == "OptionsButton" and not table.find(exclusionList, i) and check then 
                     if v.API.Enabled then 
                         v.API.Toggle(false)
                     end
@@ -1267,7 +1289,7 @@ GuiLibrary["LoadConfig"] = function(name)
                         end
                         API.SetKeybind(v.Keybind)
                     elseif v.Type == "Slider" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and not table.find(exclusionList, v.OptionsButton) then
-                        API.Set(v.Value, true)
+                        API.Set(tonumber(v.Value), true)
                     elseif v.Type == "Selector" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
                         API.Select(v.Value)
                     elseif v.Type == "Textbox" and GuiLibrary["Objects"][i].OptionsButton == v.OptionsButton and  not table.find(exclusionList, v.OptionsButton) then
@@ -1327,10 +1349,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
     Window_2.Position = UDim2.new(-0.000213969834, 0, -0.00245500472, 0)
     Window_2.Size = UDim2.new(0, 176, 0, 27)
     Window_2.AutoButtonColor = false
-    Window_2.Font = Enum.Font.SourceSans
     Window_2.Text = ""
     Window_2.TextColor3 = Color3.fromRGB(0, 0, 0)
-    Window_2.TextSize = 14.000
+    Window_2.TextSize = GuiLibrary.TextSize --4.000
     WindowTitle.Name = "WindowTitle"
     WindowTitle.Parent = Window_2
     WindowTitle.AnchorPoint = Vector2.new(0, 0.5)
@@ -1339,10 +1360,10 @@ GuiLibrary["CreateWindow"] = function(argstable)
     WindowTitle.BorderSizePixel = 0
     WindowTitle.Position = UDim2.new(0, 6, 0.5, 0)
     WindowTitle.Size = UDim2.new(0, 130, 0, 20)
-    WindowTitle.Font = Enum.Font.GothamBold
+    WindowTitle.Font = GuiLibrary.Font
     WindowTitle.Text = argstable.Name
     WindowTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    WindowTitle.TextSize = 19.000
+    WindowTitle.TextSize = GuiLibrary.TextSize
     WindowTitle.TextWrapped = true
     WindowTitle.TextXAlignment = Enum.TextXAlignment.Left
     Expand.Name = "Expand"
@@ -1395,10 +1416,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
         OptionsButton.Position = UDim2.new(0.5, 0, 0, 0)
         OptionsButton.Size = UDim2.new(0, 168, 0, 30)
         OptionsButton.AutoButtonColor = false
-        OptionsButton.Font = Enum.Font.SourceSans
         OptionsButton.Text = ""
         OptionsButton.TextColor3 = Color3.fromRGB(0, 0, 0)
-        OptionsButton.TextSize = 14.000
+        OptionsButton.TextSize = GuiLibrary.TextSize --4.000
         OptionsButton.TextXAlignment = Enum.TextXAlignment.Left
         Name.Name = "Name"
         Name.Parent = OptionsButton
@@ -1408,10 +1428,10 @@ GuiLibrary["CreateWindow"] = function(argstable)
         Name.BorderSizePixel = 0
         Name.Position = UDim2.new(0.0350000001, 0, 0.5, 0)
         Name.Size = UDim2.new(0, 114, 0, 23)
-        Name.Font = Enum.Font.GothamSemibold
+        Name.Font = GuiLibrary.Font
         Name.Text = argstable.Name
         Name.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Name.TextSize = 19.000
+        Name.TextSize = GuiLibrary.TextSize
         Name.TextXAlignment = Enum.TextXAlignment.Left
         Gear.Name ="Gear"
         Gear.Parent = OptionsButton
@@ -1453,10 +1473,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Keybind.Position = UDim2.new(0.0171428565, 0, 0, 0)
             Keybind.Size = UDim2.new(0, 168, 0, 30)
             Keybind.AutoButtonColor = true
-            Keybind.Font = Enum.Font.SourceSans
             Keybind.Text = ""
             Keybind.TextColor3 = Color3.fromRGB(0, 0, 0)
-            Keybind.TextSize = 14.000
+            Keybind.TextSize = GuiLibrary.TextSize --4.000
             Keybind.TextXAlignment = Enum.TextXAlignment.Left
             Keybind.BackgroundColor3 = Color3.fromHSV(GuiLibrary["ColorTheme"].H, GuiLibrary["ColorTheme"].S, GuiLibrary["ColorTheme"].V)
             GuiLibrary["Signals"]["UpdateColor"]:connect(function(color) 
@@ -1482,11 +1501,11 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Name_5.BorderSizePixel = 0
             Name_5.Position = UDim2.new(0, 0, 0.5, 0)
             Name_5.Size = UDim2.new(0, 76, 0, 23)
-            Name_5.Font = Enum.Font.GothamSemibold
+            Name_5.Font = GuiLibrary.Font
             Name_5.RichText = true
             Name_5.Text = "Keybind <font color='rgb(170,170,170)'>NONE</font>"
             Name_5.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Name_5.TextSize = 19.000
+            Name_5.TextSize = GuiLibrary.TextSize
             Name_5.TextXAlignment = Enum.TextXAlignment.Left
         end
 
@@ -1595,10 +1614,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Toggle.Position = UDim2.new(0.0171428565, 0, 0, 0)
             Toggle.Size = UDim2.new(0, 168, 0, 30)
             Toggle.AutoButtonColor = false
-            Toggle.Font = Enum.Font.SourceSans
             Toggle.Text = ""
             Toggle.TextColor3 = Color3.fromRGB(0, 0, 0)
-            Toggle.TextSize = 14.000
+            Toggle.TextSize = GuiLibrary.TextSize --4.000
             Toggle.TextXAlignment = Enum.TextXAlignment.Left
             Name_4.Name = "Name"
             Name_4.Parent = Toggle
@@ -1608,10 +1626,10 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Name_4.BorderSizePixel = 0
             Name_4.Position = UDim2.new(0.0350000001, 0, 0.5, 0)
             Name_4.Size = UDim2.new(0, 114, 0, 23)
-            Name_4.Font = Enum.Font.GothamSemibold
+            Name_4.Font = GuiLibrary.Font
             Name_4.Text = argstable.Name
             Name_4.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Name_4.TextSize = 19.000
+            Name_4.TextSize = GuiLibrary.TextSize
             Name_4.TextXAlignment = Enum.TextXAlignment.Left
 
             toggleapi["Toggle"] = function(boolean, skipclick) 
@@ -1676,10 +1694,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Selector.Position = UDim2.new(0.0171428565, 0, 0, 0)
             Selector.Size = UDim2.new(0, 168, 0, 30)
             Selector.AutoButtonColor = true
-            Selector.Font = Enum.Font.SourceSans
             Selector.Text = ""
             Selector.TextColor3 = Color3.fromRGB(0, 0, 0)
-            Selector.TextSize = 14.000
+            Selector.TextSize = GuiLibrary.TextSize --4.000
             Selector.TextXAlignment = Enum.TextXAlignment.Left
             SelectorContainer.Name = "SelectorContainer"
             SelectorContainer.Parent = Selector
@@ -1701,11 +1718,11 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Name_5.BorderSizePixel = 0
             Name_5.Position = UDim2.new(0, 0, 0.5, 0)
             Name_5.Size = UDim2.new(0, 76, 0, 23)
-            Name_5.Font = Enum.Font.GothamSemibold
+            Name_5.Font = GuiLibrary.Font
             Name_5.RichText = true
             Name_5.Text = argstable.Name.." <font color='rgb(170,170,170)'>"..tostring(selectorapi.Value).."</font>"
             Name_5.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Name_5.TextSize = 19.000
+            Name_5.TextSize = GuiLibrary.TextSize
             Name_5.TextXAlignment = Enum.TextXAlignment.Left
 
             selectorapi["Select"] = function(_select) 
@@ -1762,10 +1779,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Slider.Position = UDim2.new(0.0171428565, 0, 0, 0)
             Slider.Size = UDim2.new(0, 168, 0, 30)
             Slider.AutoButtonColor = false
-            Slider.Font = Enum.Font.SourceSans
             Slider.Text = ""
             Slider.TextColor3 = Color3.fromRGB(0, 0, 0)
-            Slider.TextSize = 14.000
+            Slider.TextSize = GuiLibrary.TextSize --4.000
             Slider.TextXAlignment = Enum.TextXAlignment.Left
             SliderFill.Name = "SliderFill"
             SliderFill.Parent = Slider
@@ -1798,10 +1814,10 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Name_3.RichText = true
             Name_3.Position = UDim2.new(0, 0, 0.5, 0)
             Name_3.Size = UDim2.new(0, 61, 0, 23)
-            Name_3.Font = Enum.Font.GothamSemibold
+            Name_3.Font = GuiLibrary.Font
             Name_3.Text = argstable.Name.."<font color='rgb(170,170,170)'>"..tostring(sliderapi["Value"]).."</font>"
             Name_3.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Name_3.TextSize = 19.000
+            Name_3.TextSize = GuiLibrary.TextSize
             Name_3.TextXAlignment = Enum.TextXAlignment.Left
             Textbox.Name = "InputTextbox"
             Textbox.Parent = ModuleContainer
@@ -1810,10 +1826,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Textbox.Position = UDim2.new(0.0171428565, 0, 0, 0)
             Textbox.Size = UDim2.new(0, 168, 0, 30)
             Textbox.AutoButtonColor = false
-            Textbox.Font = Enum.Font.SourceSans
             Textbox.Text = ""
             Textbox.TextColor3 = Color3.fromRGB(0, 0, 0)
-            Textbox.TextSize = 14.000
+            Textbox.TextSize = GuiLibrary.TextSize --4.000
             Textbox.TextXAlignment = Enum.TextXAlignment.Left
             Textbox.Visible = false
             RealTextbox.Name = "RealTextbox"
@@ -1824,12 +1839,12 @@ GuiLibrary["CreateWindow"] = function(argstable)
             RealTextbox.Position = UDim2.new(0.51767838, 0, 0.5, 0)
             RealTextbox.Size = UDim2.new(0, 162, 0, 30)
             RealTextbox.ClearTextOnFocus = false
-            RealTextbox.Font = Enum.Font.GothamSemibold
+            RealTextbox.Font = GuiLibrary.Font
             RealTextbox.PlaceholderColor3 = Color3.fromRGB(170, 170, 170)
             RealTextbox.PlaceholderText = "Input Value"
             RealTextbox.Text = ""
             RealTextbox.TextColor3 = Color3.fromRGB(255, 255, 255)
-            RealTextbox.TextSize = 19.000
+            RealTextbox.TextSize = GuiLibrary.TextSize
             RealTextbox.TextXAlignment = Enum.TextXAlignment.Left
             RealTextbox.FocusLost:connect(function() 
                 if tonumber(RealTextbox.Text) then 
@@ -1909,10 +1924,9 @@ GuiLibrary["CreateWindow"] = function(argstable)
             Textbox.Position = UDim2.new(0.0171428565, 0, 0, 0)
             Textbox.Size = UDim2.new(0, 168, 0, 30)
             Textbox.AutoButtonColor = false
-            Textbox.Font = Enum.Font.SourceSans
             Textbox.Text = ""
             Textbox.TextColor3 = Color3.fromRGB(0, 0, 0)
-            Textbox.TextSize = 14.000
+            Textbox.TextSize = GuiLibrary.TextSize --4.000
             Textbox.TextXAlignment = Enum.TextXAlignment.Left
             RealTextbox.Name = "RealTextbox"
             RealTextbox.Parent = Textbox
@@ -1922,12 +1936,12 @@ GuiLibrary["CreateWindow"] = function(argstable)
             RealTextbox.Position = UDim2.new(0.51767838, 0, 0.5, 0)
             RealTextbox.Size = UDim2.new(0, 162, 0, 30)
             RealTextbox.ClearTextOnFocus = false
-            RealTextbox.Font = Enum.Font.GothamSemibold
+            RealTextbox.Font = GuiLibrary.Font
             RealTextbox.PlaceholderColor3 = Color3.fromRGB(170, 170, 170)
             RealTextbox.PlaceholderText = argstable.Name
             RealTextbox.Text = ""
             RealTextbox.TextColor3 = Color3.fromRGB(255, 255, 255)
-            RealTextbox.TextSize = 19.000
+            RealTextbox.TextSize = GuiLibrary.TextSize
             RealTextbox.TextXAlignment = Enum.TextXAlignment.Left
 
             textboxapi["Set"] = function(value, skipfunction) 
