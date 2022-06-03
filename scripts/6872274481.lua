@@ -433,6 +433,7 @@ bedwars = {
     ["ItemMeta"] = debug.getupvalue(require(game:GetService("ReplicatedStorage").TS.item["item-meta"]).getItemMeta, 1),
     ["PlayerVacuumRemote"] = getremote(debug.getconstants(debug.getproto(KnitClient.Controllers.PlayerVacuumController.onEnable, 4))),
     ["PingController"] = require(lplr.PlayerScripts.TS.controllers.game.ping["ping-controller"]).PingController,
+    ["RaiseShieldRemote"] = getremote(debug.getconstants(KnitClient.Controllers.InfernalShieldController.constructor)),
 }
 local function getblock(pos)
 	return bedwars["BlockController"]:getStore():getBlockAt(bedwars["BlockController"]:getBlockPosition(pos)), bedwars["BlockController"]:getBlockPosition(pos)
@@ -1060,7 +1061,6 @@ do
     })
 end
 
-
 do 
     local shopbypass = {["Enabled"] = false}
     local old = bedwars["ShopItems"]
@@ -1074,6 +1074,39 @@ do
                 end
             else
                 bedwars["ShopItems"] = old
+            end
+        end,
+    })
+end
+
+do 
+    local effect = game:GetService("ReplicatedStorage").Assets.Effects.InfernalShields
+    local oldparent = effect.Parent
+    local oldProto = debug.getproto(KnitClient.Controllers.InfernalShieldController.onEnable, 1)
+    local FPSCrasher = {Enabled = false}
+    FPSCrasher = GuiLibrary.Objects.ExploitsWindow.API.CreateOptionsButton({
+        Name = "FPSCrashShield",
+        Function = function(callback) 
+            if callback then 
+
+                if not getItem("infernal_shield") then return end
+
+                effect.Parent = nil
+                game:GetService("ContextActionService"):UnbindAction("infernal-shield-click")
+
+                spawn(function() 
+                    repeat task.wait()
+                        for i = 1,10000000 do
+                            if FPSCrasher.Enabled then
+                                bedwars.ClientHandler:Get(bedwars.RaiseShieldRemote).instance:FireServer({raised = true})
+                            end
+                        end
+                    until not FPSCrasher.Enabled
+                end)
+
+            else
+                game:GetService("ContextActionService"):BindAction("infernal-shield-click", oldProto, false, Enum.UserInputType.MouseButton1);
+                effect.Parent = oldparent
             end
         end,
     })

@@ -1,5 +1,5 @@
 -- // credits to anyones code i used/looked at.
-shared._FUTUREVERSION = "1.1.6 | "..(true and "beta" or (shared.FutureDeveloper and "dev" or shared.FutureTester and  "test" or "release")).." build" -- // This is a cool thing yes
+shared._FUTUREVERSION = "1.1.6a | "..((shared.FutureDeveloper and "dev" or "release")).." build" -- // This is a cool thing yes
 shared._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
 repeat wait() until game:IsLoaded()
