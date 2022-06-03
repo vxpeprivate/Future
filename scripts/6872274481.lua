@@ -1096,7 +1096,7 @@ do
 
                 spawn(function() 
                     repeat task.wait()
-                        for i = 1,10000000 do
+                        for i = 1,100 do
                             if FPSCrasher.Enabled then
                                 bedwars.ClientHandler:Get(bedwars.RaiseShieldRemote).instance:FireServer({raised = true})
                             end
