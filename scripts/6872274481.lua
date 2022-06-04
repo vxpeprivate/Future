@@ -1097,7 +1097,7 @@ do
                 spawn(function() 
                     for i = 1, 300 do
                         spawn(function()
-                            for i = 1,100 do
+                            for i = 1,100000 do
                                 task.wait()
                                 if not FPSCrasher.Enabled then break end
                                 bedwars.ClientHandler:Get(bedwars.RaiseShieldRemote).instance:FireServer({raised = true})
