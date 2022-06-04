@@ -1095,13 +1095,16 @@ do
                 game:GetService("ContextActionService"):UnbindAction("infernal-shield-click")
 
                 spawn(function() 
-                    repeat task.wait()
-                        for i = 1,100 do
-                            if FPSCrasher.Enabled then
+                    for i = 1, 300 do
+                        spawn(function()
+                            for i = 1,100 do
+                                task.wait()
+                                if not FPSCrasher.Enabled then break end
                                 bedwars.ClientHandler:Get(bedwars.RaiseShieldRemote).instance:FireServer({raised = true})
                             end
-                        end
-                    until not FPSCrasher.Enabled
+                        end)
+                        if not FPSCrasher.Enabled then break end
+                    end
                 end)
 
             else
