@@ -24,6 +24,28 @@ local betterisfile = function(file)
 	return suc and res ~= nil
 end
 
+spawn(function() 
+    pcall(function() 
+        if getconnections then 
+
+            repeat -- turn off connections every 5s
+
+                for i,v in pairs(getconnections(game:GetService("ScriptContext").Error)) do
+                    v:Disable()
+                end
+
+                task.wait(5)
+
+            until not shared.Future
+
+            for i,v in pairs(getconnections(game:GetService("ScriptContext").Error)) do
+                v:Enable() -- enable connections since future is not injected, thus we dont care.
+            end
+
+        end
+    end)
+end)
+
 local function requesturl(url, bypass) 
     if betterisfile(url) and shared.FutureDeveloper then 
         return readfile(url)
