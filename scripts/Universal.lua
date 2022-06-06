@@ -1931,6 +1931,8 @@ do
         ["bitc"] = "Swearing",
         ["gae"] = "Bullying",
         ["motherless"] = "Bullying",
+        ["/lobby"] = "Bullying",
+        ["/hub"] = "Bullying",
     }
 
     local function hasSensitiveMessage(msg) 

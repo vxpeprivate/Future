@@ -50,6 +50,8 @@ local function requesturl(url, bypass)
     return req.Body
 end 
 local shalib = loadstring(requesturl("lib/sha.lua"))()
+local savedc0 = game:GetService("ReplicatedStorage"):WaitForChild("Assets"):WaitForChild("Viewmodel"):WaitForChild("RightHand"):WaitForChild("RightWrist").C0
+local setc0
 
 local function getasset(path)
 	if not betterisfile(path) then
@@ -196,12 +198,14 @@ local function getPlrNearMouse(max)
     return nearestval
 end
 
-local function getAllPlrsNear()
+local function getAllPlrsNear(max)
     if not isAlive() then return {} end
     local t = {}
     for i,v in next, PLAYERS:GetPlayers() do 
         if isAlive(v) and v~=lplr then 
-            if v.Character.HumanoidRootPart then table.insert(t, (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude, v) end
+            if v.Character.HumanoidRootPart and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude <= max then 
+                table.insert(t, v)
+            end
         end
     end
     return t
@@ -271,10 +275,9 @@ end
 
 -- Huge thanks to 7granddad for this code, i dont see a point in writing this all my self when I know exactly what it does, it would just be alot of labour and work lel.
 
-
 local Flamework = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@flamework"].core.out).Flamework
 repeat task.wait() until Flamework.isInitialized
-local KnitClient = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"].knit.src).KnitClient
+local KnitClient = debug.getupvalue(require(lplr.PlayerScripts.TS.controllers.game["block-break-controller"]).BlockBreakController.onEnable, 1)
 local Client = require(game:GetService("ReplicatedStorage").TS.remotes).default.Client
 local InventoryUtil = require(game:GetService("ReplicatedStorage").TS.inventory["inventory-util"]).InventoryUtil
 local OldClientGet = getmetatable(Client).Get
@@ -292,7 +295,7 @@ getmetatable(Client).Get = function(Self, remotename)
                 end
                 local suc, plr = pcall(function() return PLAYERS:GetPlayerFromCharacter(tab.entityInstance) end)
                 if suc and plr then
-                    if plr and bedwars["CheckWhitelisted"](plr) then
+                    if plr and (bedwars["CheckWhitelisted"](plr) and bedwars["CheckWhitelisted"](lplr) == nil) then
                         return nil
                     end
                 end
@@ -803,129 +806,152 @@ local convertHealthToColor = function(health, maxHealth)
     return Color3.fromRGB(96, 253, 48)
 end
 
+local cancelViewmodel = false
+local currentTarget
+local isAuraTweening = false
+
 -- // combat window
 
-local function ViewmodelC0() 
-    if ViewModel.Enabled then 
-        return cam and cam.Viewmodel.RightHand.RightWrist.C0 or game.ReplicatedStorage.Assets.Viewmodel.RightHand.RightWrist.C0
-    end
-    return game.ReplicatedStorage.Assets.Viewmodel.RightHand.RightWrist.C0
-end
 do 
-    local origC0
-    local stopTween = false
-    local aura = {["Enabled"] = false}
-    local auradist = {["Value"] = 14 }
-    local auraanim = {["Value"] = "Slow"}
-    local hitremote = bedwars["ClientHandler"]:Get(bedwars["AttackRemote"])["instance"]
-    aura = GuiLibrary.Objects.CombatWindow.API.CreateOptionsButton({
-        ["Name"] = "Aura",
-        ["Function"] = function(callback) 
-            if callback then
-                origC0 = origC0 or cam.Viewmodel.RightHand.RightWrist.C0
-                if auraanim.Value == "Dong" then 
-                    cam.Viewmodel.RightHand.RightWrist.C0 = origC0 * CFrame.new(Vector3.new(-1.78,0.5,0), Vector3.new(7, -100, 0))
-                end
-                spawn(function()
-                    repeat skipFrame()
-                        for i,v in next, getAllPlrsNear() do 
-                            if v.Character and isAlive(v) and not bedwars["CheckWhitelisted"](v) then
-                                if state() ~= states.PRE and isAlive() and canBeTargeted(v) and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude < auradist["Value"] then 
-                                    local weapon, slot = getBestSword()
-                                    local selfpos = lplr.Character.HumanoidRootPart.Position + (auradist["Value"] > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
-                                    local attackArgs = {
-                                        ["weapon"] = weapon~=nil and weapon.tool,
-                                        ["entityInstance"] = v.Character,
-                                        ["validate"] = {
-                                            ["raycast"] = {
-                                                ["cameraPosition"] = hashvector(cam.CFrame.p), 
-                                                ["cursorDirection"] = hashvector(Ray.new(cam.CFrame.p, v.Character.HumanoidRootPart.Position).Unit.Direction)
-                                            },
-                                            ["targetPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
-                                            ["selfPosition"] = hashvector(selfpos),
-                                        }, 
-                                        ["chargedAttack"] = {["chargeRatio"] = 1},
-                                    }
-                                    spawn(function()
-                                        hitremote:InvokeServer(attackArgs)
-                                    end)
 
-                                    GuiLibrary["TargetHUDAPI"].update(v, math.floor(v.Character:GetAttribute("Health")))
+    local AuraAnimationList = {
 
-                                    playanimation("rbxassetid://4947108314")
+        Normal = {
+            Animation = {
+                {CFrame = CFrame.new(0.69, -0.7, 0.6) * CFrame.Angles(math.rad(295), math.rad(55), math.rad(290)), Time = 0.2},
+                {CFrame = CFrame.new(0.69, -0.71, 0.6) * CFrame.Angles(math.rad(200), math.rad(60), math.rad(1)), Time = 0.2}
+            },  
+            TweenTo = {CFrame = CFrame.new(0.69, -0.7, 0.6) * CFrame.Angles(math.rad(295), math.rad(55), math.rad(290)), Time = 0.2}
+		},
 
-                                    local origC0 = ViewmodelC0() or origC0
-                                    if not stopTween then
-                                        local Tween
-                                        if auraanim["Value"] == "Slow" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                        elseif auraanim["Value"] == "Medium" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                        elseif auraanim["Value"] == "Fast" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 0.6) * CFrame.Angles(-math.rad(65), math.rad(55), -math.rad(70))})
-                                        elseif auraanim["Value"] == "Slice" then 
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, true, 0), 
-                                            {C0 = origC0 * CFrame.new(0.7, -0.7, 1) * CFrame.Angles(-math.rad(100), math.rad(0), -math.rad(0))})
-                                        elseif auraanim["Value"] == "Dong" then 
-                                            cam.Viewmodel.RightHand.RightWrist.C0 = origC0 * CFrame.new(Vector3.new(-1.78,0.5,0), Vector3.new(7, -100, 0))
-                                            Tween = TS:Create(cam.Viewmodel.RightHand.RightWrist,
-                                            TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In, 0, true, 0), 
-                                            { C0 = origC0 * CFrame.new(Vector3.new(-1.78,-1.5,0), Vector3.new(7, -100, 0)) })
-                                        end
-                                        if auraanim["Value"] ~= "None" then
-                                            spawn(function()
-                                                stopTween = true
-                                                Tween:Play()
-                                                Tween.Completed:Wait()
-                                                if auraanim.Value ~= "Dong" then
-                                                    cam.Viewmodel.RightHand.RightWrist.C0 = origC0
-                                                end
-                                                stopTween = false
-                                            end)
-                                        end
-                                    end
+    }
 
-                                    task.wait(0.03)
+    local AuraAnimations = {}
+    for i,v in next, AuraAnimationList do 
+        AuraAnimations[#AuraAnimations+1] = i
+    end
 
-                                end
-                            else
-                                GuiLibrary["TargetHUDAPI"].clear()
+    local AttackEntityRemote = bedwars.ClientHandler:Get(bedwars.AttackRemote).instance
+    local AuraDistance = {Value = 18}
+    local AuraAnimation = {Value = ""}
+    local Aura = {Enabled = false}
+    Aura = GuiLibrary.Objects.CombatWindow.API.CreateOptionsButton({
+        Name = "Aura",
+        Function = function(callback) 
+            if callback then 
+                spawn(function() -- Begin main attack loop
+                    repeat task.wait()
+
+                        local plrs = getAllPlrsNear(AuraDistance.Value-0.01)
+                        if #plrs == 0 then
+                            currentTarget = nil
+                        end
+
+                        for i,v in next, plrs do 
+                            if canBeTargeted(v) and not bedwars.CheckWhitelisted(v) then    
+                                currentTarget = v
+                                local weapon = getBestSword()
+                                local selfpos = lplr.Character.HumanoidRootPart.Position + (AuraDistance.Value > 14 and (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).magnitude > 14 and (CFrame.lookAt(lplr.Character.HumanoidRootPart.Position, v.Character.HumanoidRootPart.Position).lookVector * 4) or Vector3.new(0, 0, 0))
+                                local attackArgs = {
+                                    ["weapon"] = weapon~=nil and weapon.tool,
+                                    ["entityInstance"] = v.Character,
+                                    ["validate"] = {
+                                        ["raycast"] = {
+                                            ["cameraPosition"] = hashvector(cam.CFrame.p), 
+                                            ["cursorDirection"] = hashvector(Ray.new(cam.CFrame.p, v.Character.HumanoidRootPart.Position).Unit.Direction)
+                                        },
+                                        ["targetPosition"] = hashvector(v.Character.HumanoidRootPart.Position),
+                                        ["selfPosition"] = hashvector(selfpos),
+                                    }, 
+                                    ["chargedAttack"] = {["chargeRatio"] = 1},
+                                }
+                                spawn(function()
+                                    AttackEntityRemote:InvokeServer(attackArgs)
+                                end)
+                                task.wait(0.03)
                             end
                         end
-                    until aura["Enabled"] == false
+    
+                    until not Aura.Enabled
                 end)
-            else
-                cam.Viewmodel.RightHand.RightWrist.C0 = origC0
-            end
-        end,
-    })
-    auradist = aura.CreateSlider({
-        ["Name"] = "Range",
-        ["Function"] = function() end,
-        ["Min"] = 1,
-        ["Round"] = 0,
-        ["Max"] = 18,
-        ["Default"] = 18
-    })
-    auraanim = aura.CreateSelector({
-        ["Name"] = "Anim",
-        ["Function"] = function()
-            if aura.Enabled then 
-                aura.Toggle()
-                aura.Toggle()
-            end
-        end,
-        ["List"] = {"Slow", "Medium", "Fast", "Slice", "Dong", "None"},
-        ["Default"] = "Slow",
-    })
 
+                spawn(function() -- Begin asynchronous background task loop
+                    repeat task.wait()
+
+                        setc0 = setc0 or savedc0
+
+                        if currentTarget then
+
+                            playanimation("rbxassetid://4947108314")
+
+                            spawn(function() -- Animation asynchronous thread
+                                cancelViewmodel = true
+
+                                if not tweenedTo then 
+                                    print("Tweening to")
+                                    tweenedTo = true
+                                    local v = AuraAnimationList[AuraAnimation.Value].TweenTo
+                                    local Tween = game:GetService("TweenService"):Create(cam.Viewmodel.RightHand.RightWrist, TweenInfo.new(v.Time), {C0 = setc0 * v.CFrame})
+                                    Tween:Play()
+                                    task.wait(v.Time)
+                                end
+
+                                if not isAuraTweening then 
+                                    isAuraTweening = true
+                                    for i,v in next, AuraAnimationList[AuraAnimation.Value].Animation do 
+                                        if not Aura.Enabled or not currentTarget then break end
+                                        print("Tweening to",i)
+                                        local Tween = game:GetService("TweenService"):Create(cam.Viewmodel.RightHand.RightWrist, TweenInfo.new(v.Time), {C0 = setc0 * v.CFrame})
+                                        Tween:Play()
+                                        task.wait(v.Time)
+                                    end
+                                    isAuraTweening = false
+                                end
+                            end)
+                            
+
+                            GuiLibrary["TargetHUDAPI"].update(currentTarget, math.floor(currentTarget.Character:GetAttribute("Health")))
+
+                        else
+                            GuiLibrary["TargetHUDAPI"].clear()
+                            if tweenedTo then
+                                cancelViewmodel = true
+                                print("Tweening to undo")
+                                tweenedTo = false
+                                local v = AuraAnimationList[AuraAnimation.Value].TweenTo
+                                local Tween = game:GetService("TweenService"):Create(cam.Viewmodel.RightHand.RightWrist, TweenInfo.new(v.Time), {C0 = setc0})
+                                Tween:Play()
+                                task.wait(v.Time - 0.01)
+                                cancelViewmodel = false
+                            end
+                        end
+
+                    until not Aura.Enabled
+                end)
+
+            else
+                local Tween = game:GetService("TweenService"):Create(cam.Viewmodel.RightHand.RightWrist, TweenInfo.new(0.2), {C0 = setc0})
+                Tween:Play()
+                tweenedTo = false
+                isAuraTweening = false
+                currentTarget = nil
+
+            end
+        end,
+    })
+    AuraDistance = Aura.CreateSlider({
+        Name = "Range",
+        Function = function(value) end,
+        Min = 1,
+        Max = 18,
+        Default = 18,
+        Round = 1,
+    })
+    AuraAnimation = Aura.CreateSelector({
+        Name = "Anim",
+        Function = function(value) end,
+        List = AuraAnimations
+    })
 end
 
 do 
@@ -1581,6 +1607,10 @@ do
                         lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
                     end
                 end)
+
+                if not GuiLibrary.Objects.AutoReportOptionsButton.API.Enabled then 
+                    GuiLibrary.Objects.AutoReportOptionsButton.API.Toggle()
+                end
             else
                 lplr.Character.Humanoid.WalkSpeed = 16
                 UnbindFromStepped("Speed")
@@ -2367,10 +2397,9 @@ do
 end
 
 do 
-    local savedc0
     local mult = function(val) 
-        if savedc0 then 
-            return savedc0 * val
+        if setc0 then 
+            return setc0 * val
         end
     end
     local val = function(x,y,z,xr,yr,zr) 
@@ -2408,15 +2437,19 @@ do
         Function = function(callback) 
             if callback then 
                 spawn(function()
-                    if not isAlive() then repeat task.wait() until isAlive() end
-                    savedc0 = savedc0 or cam.Viewmodel.RightHand.RightWrist.C0
-                    if not ViewModel.Enabled then return end
                     BindToStepped("ViewModel", function()
                         if isAlive() and cam~=nil and cam:FindFirstChild("Viewmodel") and cam.Viewmodel:FindFirstChildWhichIsA("Accessory") then 
-                            pcall(function()
-                                cam.Viewmodel.RightHand.RightWrist.C0 = savedc0 * val(X.Value, Y.Value, Z.Value, Xr.Value, Yr.Value, Zr.Value)
-                                cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name) * true_scale(Xs.Value+1, Ys.Value+1, Zs.Value+1)
-                            end)
+                            if not setc0 then 
+                                setc0 = savedc0
+                            end
+                            if not cancelViewmodel then
+                                pcall(function()
+                                    local toset = savedc0 * val(X.Value, Y.Value, Z.Value, Xr.Value, Yr.Value, Zr.Value)
+                                    cam.Viewmodel.RightHand.RightWrist.C0 = toset
+                                    setc0 = toset
+                                    cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name) * true_scale(Xs.Value+1, Ys.Value+1, Zs.Value+1)
+                                end)
+                            end
                             pcall(function() 
                                 if not Colored.Enabled then  
                                     cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").TextureID = original_id(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name) 
@@ -2430,7 +2463,7 @@ do
                 end)
             else
                 UnbindFromStepped("ViewModel")
-                cam.Viewmodel.RightHand.RightWrist.C0 = (savedc0 or game:GetService("ReplicatedStorage").Assets.Viewmodel.RightHand.RightWrist.C0)
+                cam.Viewmodel.RightHand.RightWrist.C0 = savedc0
                 if cam.Viewmodel:FindFirstChildWhichIsA("Accessory") then 
                     cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildOfClass("MeshPart").TextureID = original_id(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name)
                     cam.Viewmodel:FindFirstChildWhichIsA("Accessory"):FindFirstChildWhichIsA("MeshPart").Size = original_scale(cam.Viewmodel:FindFirstChildWhichIsA("Accessory").Name)
@@ -3242,6 +3275,9 @@ GuiLibrary.Signals.onDestroy:connect(function()
     else
         error(value)
     end
+
+    getmetatable(Client).Get = OldClientGet
+    getmetatable(Client).WaitFor = OldClientWaitFor
 end)
 
 
