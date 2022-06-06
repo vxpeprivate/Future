@@ -24,6 +24,7 @@ local betterisfile = function(file)
 	local suc, res = pcall(function() return readfile(file) end)
 	return suc and res ~= nil
 end
+Future.SignalLib = true
 
 
 local function requesturl(url, bypass) 

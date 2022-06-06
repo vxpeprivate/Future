@@ -1340,6 +1340,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
     GuiLibrary["WindowX"] = GuiLibrary["WindowX"] + (176 + 3)
     Window.Size = UDim2.new(0, 176, 0, 222)
     Window_2.Name = "WindowTopbar"
+    Window_2.Modal = true
     Window_2.Parent = Window
     Window_2.BackgroundColor3 = Color3.fromHSV(GuiLibrary["ColorTheme"].H, GuiLibrary["ColorTheme"].S, GuiLibrary["ColorTheme"].V)
     GuiLibrary["Signals"]["UpdateColor"]:connect(function(color) 
