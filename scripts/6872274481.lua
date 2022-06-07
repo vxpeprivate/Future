@@ -888,7 +888,6 @@ do
                                 cancelViewmodel = true
 
                                 if not tweenedTo then 
-                                    print("Tweening to")
                                     tweenedTo = true
                                     local v = AuraAnimationList[AuraAnimation.Value].TweenTo
                                     local Tween = game:GetService("TweenService"):Create(cam.Viewmodel.RightHand.RightWrist, TweenInfo.new(v.Time), {C0 = setc0 * v.CFrame})
@@ -900,7 +899,6 @@ do
                                     isAuraTweening = true
                                     for i,v in next, AuraAnimationList[AuraAnimation.Value].Animation do 
                                         if not Aura.Enabled or not currentTarget then break end
-                                        print("Tweening to",i)
                                         local Tween = game:GetService("TweenService"):Create(cam.Viewmodel.RightHand.RightWrist, TweenInfo.new(v.Time), {C0 = setc0 * v.CFrame})
                                         Tween:Play()
                                         task.wait(v.Time)
@@ -916,7 +914,6 @@ do
                             GuiLibrary["TargetHUDAPI"].clear()
                             if tweenedTo then
                                 cancelViewmodel = true
-                                print("Tweening to undo")
                                 tweenedTo = false
                                 local v = AuraAnimationList[AuraAnimation.Value].TweenTo
                                 local Tween = game:GetService("TweenService"):Create(cam.Viewmodel.RightHand.RightWrist, TweenInfo.new(v.Time), {C0 = setc0})

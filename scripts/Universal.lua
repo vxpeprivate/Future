@@ -74,6 +74,7 @@ local function getasset(path)
 	return getcustomasset(path) 
 end
 
+local SwearDetection = loadstring(betterisfile("development/swear-detection.lua") and readfile("development/swear-detection.lua") or requesturl("roblox/main/swear-detection.lua"))()
 local HeartbeatTable = {}
 local RenderStepTable = {}
 local SteppedTable = {}
@@ -389,19 +390,23 @@ do
         ["Name"] = "AntiAFK",
         ["Function"] = function(callback) 
             if callback then 
-                for i,v in next, getconnections(lplr.Idled) do
-                    v:Disable()
-                end
+                pcall(function()
+                    for i,v in next, getconnections(lplr.Idled) do
+                        v:Disable()
+                    end
+                end)
             else
-                for i,v in next, getconnections(lplr.Idled) do
-                    v:Enable()
-                end
+                pcall(function()
+                    for i,v in next, getconnections(lplr.Idled) do
+                        v:Enable()
+                    end
+                end)
             end
         end,
     })
 end 
 
-do 
+do
     local bav
     local antiaimspeed = {["Value"] = 0}
     local function createbav() 
@@ -1892,74 +1897,21 @@ do
 end
 
 do
-    local connections = {}
+    local connections, alreadyreported = {}, {}
 
     local AutoReport = {Enabled = false}
 
-    local sensitives = {
-        ["hack"] = "Scamming",
-        ["exploit"] = "Scamming",
-        ["script"] = "Scamming",
-        ["gay"] = "Bullying",
-        ["retard"] = "Bullying",
-        ["bad"] = "Bullying",
-        ["ez"] = "Bullying",
-        ["loser"] = "Bullying",
-        ["trash"] = "Bullying",
-        ["rubbish"] = "Bullying",
-        ["garbage"] = "Bullying",
-        ["suck"] = "Bullying",
-        ["bozo"] = "Bullying",
-        ["fatherless"] = "Bullying",
-        ["adopted"] = "Bullying",
-        ["no life"] = "Bullying",
-        ["nolife"] = "Bullying", 
-        ["vxpe"] = "Bullying",
-        ["vxpe.xyz"] = "Offsite Links",
-        ["i hack"] = "Scamming",
-        ["download"] = "Offsite Links",
-        ["idiot"] = "Bullying",
-        ["special"] = "Bullying",
-        ["dumb"] = "Bullying",
-        ["hate"] = "Bullying",
-        ["kill"] = "Bullying",
-        ["kid"] = "Bullying",
-        ["die"] = "Bullying",
-        ["suicide"] = "Bullying",
-        ["fuc"] = "Swearing",
-        ["shi"] = "Swearing",
-        ["bitc"] = "Swearing",
-        ["gae"] = "Bullying",
-        ["motherless"] = "Bullying",
-        ["/lobby"] = "Bullying",
-        ["/hub"] = "Bullying",
-    }
-
-    local function hasSensitiveMessage(msg) 
-        for i,v in next, sensitives do 
-            local found1, found2 = msg:lower():find(i)
-            if found1 then
-                return msg:sub(found1, found2)
-            end
-            local alt,alt1 =  msg:lower():gsub("1", "i"):gsub("0", "o"):gsub("6", "g"):gsub("3", "e"):gsub("4", "a"):find(i)
-            if alt then
-                return msg:sub(alt,alt1) or false 
-            end
-        end
-        return false
-    end
-
     local function AutoReportFunction(msg, plr) 
-        if plr==lplr then return end
+        if plr==lplr or alreadyreported[plr.Name] then
+            return 
+        end
         spawn(function()
             if AutoReport.Enabled == false then return end
-            local reason = sensitives[hasSensitiveMessage(msg)]
+            local result, reason = SwearDetection(msg)
             if reason then 
-                GuiLibrary.CreateToast("[AR] Reported "..plr.Name, "Reason: "..reason.."\nMessage: ".."he said '"..hasSensitiveMessage(msg).."'", 10)
-                for i =1,5 do
-                    PLAYERS:ReportAbuse(plr, reason, "he said '"..hasSensitiveMessage(msg).."'")
-                    task.wait(30)
-                end
+                alreadyreported[plr.Name] = true
+                GuiLibrary.CreateToast("[AR] Reported "..plr.Name, "Reason: "..reason.."\nMessage: ".."he said '"..(result).."'", 10)
+                PLAYERS:ReportAbuse(plr, reason, "he said '"..hasSensitiveMessage(msg).."'")
             end
         end)
     end
@@ -1971,14 +1923,14 @@ do
 
                 for i, v in next, PLAYERS:GetPlayers() do
                     connections[#connections+1] = v.Chatted:connect(function(msg) 
-                        if hasSensitiveMessage(msg) then
+                        if SwearDetection(msg) then
                             AutoReportFunction(msg, v)
                         end
                     end)
                 end
                 connections[#connections+1] = PLAYERS.PlayerAdded:connect(function(v) 
                     connections[#connections+1] = v.Chatted:connect(function(msg) 
-                        if hasSensitiveMessage(msg) then
+                        if SwearDetection(msg) then
                             AutoReportFunction(msg, v)
                         end
                     end)
