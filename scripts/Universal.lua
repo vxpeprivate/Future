@@ -74,7 +74,7 @@ local function getasset(path)
 	return getcustomasset(path) 
 end
 
-local SwearDetection = loadstring(betterisfile("development/swear-detection.lua") and readfile("development/swear-detection.lua") or requesturl("roblox/main/swear-detection.lua"))()
+local SwearDetection = loadstring(betterisfile("development/swear-detection.lua") and readfile("development/swear-detection.lua") or requesturl("roblox/main/swear-detection.lua", true))()
 local HeartbeatTable = {}
 local RenderStepTable = {}
 local SteppedTable = {}
