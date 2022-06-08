@@ -587,7 +587,7 @@ GuiLibrary["PrepareTargetHUD"] = function()
 
     function api.update(plr, health, distance) 
         api.target = plr
-        --TargetHUD.Visible = true
+        TargetHUD.Visible = true
         Headshot.Image = "rbxthumb://type=AvatarHeadShot&id="..tostring(plr.UserId).."&w=420&h=420"
         Name.Text = plr.Name
         Health.Text = tostring(health or plr.Character:FindFirstChildOfClass("Humanoid").Health).." HP"
@@ -595,12 +595,12 @@ GuiLibrary["PrepareTargetHUD"] = function()
     end
 
     function api.clear() 
-        --[[
         api.target = nil
         Headshot.Image = ""
         Name.Text = ""
         Health.Text = ""
-        Distance.Text = ""]]
+        Distance.Text = ""
+        TargetHUD.Visible = GuiLibrary.ClickGUI.Visible
     end
 
     function api.setPosition(pos) 
@@ -2031,12 +2031,6 @@ hudUpdate:Connect(function()
             GuiLibrary["HUDAPI"].undraw()
             GuiLibrary["HUDAPI"].draw(GuiLibrary.DrawCoords, GuiLibrary.DrawSpeed, GuiLibrary.DrawFPS, GuiLibrary.DrawPing)
             override = false
-        end
-
-        if GuiLibrary.TargetHUDEnabled then 
-            GuiLibrary["TargetHUDAPI"].draw()
-        else
-            GuiLibrary["TargetHUDAPI"].undraw()
         end
 
         oldC, oldS, oldF, oldP = GuiLibrary.DrawCoords, GuiLibrary.DrawSpeed, GuiLibrary.DrawFPS, GuiLibrary.DrawPing

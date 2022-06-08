@@ -74,7 +74,7 @@ local function getasset(path)
 	return getcustomasset(path) 
 end
 
-local SwearDetection = loadstring(betterisfile("development/swear-detection.lua") and readfile("development/swear-detection.lua") or requesturl("roblox/main/swear-detection.lua", true))()
+local SwearDetection = loadstring(requesturl("Future/lib/swear-detection.lua"))()
 local HeartbeatTable = {}
 local RenderStepTable = {}
 local SteppedTable = {}
@@ -154,7 +154,7 @@ local function fprint(...)
 end
 
 setreadonly(getgenv().table, false)
-getgenv().table.combine = function(...) 
+local table_combine = function(...) 
     local args = {...}
     local MasterTable = {}
     for i,v in next, args do 
@@ -602,7 +602,7 @@ do
                 BindToStepped("Step", function(time, dt)
                     if isAlive(lplr, true) then
                         local param = RaycastParams.new()
-                        param.FilterDescendantsInstances = table.combine(getCharacters(), cam:GetDescendants())
+                        param.FilterDescendantsInstances = table_combine(getCharacters(), cam:GetDescendants())
                         param.FilterType = Enum.RaycastFilterType.Blacklist
                         local ray = WORKSPACE:Raycast(lplr.Character.Head.Position-Vector3.new(0, 4, 0), lplr.Character.Humanoid.MoveDirection*3, param)
                         local ray2 = WORKSPACE:Raycast(lplr.Character.Head.Position, lplr.Character.Humanoid.MoveDirection*3, param)
@@ -1897,23 +1897,40 @@ do
 end
 
 do
-    local connections, alreadyreported = {}, {}
+    local lastReport = -999
+    local connections, queue = {}, {}
 
     local AutoReport = {Enabled = false}
 
-    local function AutoReportFunction(msg, plr) 
-        if plr==lplr or alreadyreported[plr.Name] then
+    local function isqueued(tab) 
+        for i,v in next, queue do 
+            if v.result == tab.result and v.plr == tab.plr and v.reason == tab.reason and v.msg == tab.msg then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function addtoqueue(msg, plr)
+        if plr==lplr then
             return 
         end
-        spawn(function()
-            if AutoReport.Enabled == false then return end
-            local result, reason = SwearDetection(msg)
-            if reason then 
-                alreadyreported[plr.Name] = true
-                GuiLibrary.CreateToast("[AR] Reported "..plr.Name, "Reason: "..reason.."\nMessage: ".."he said '"..(result).."'", 10)
-                PLAYERS:ReportAbuse(plr, reason, "he said '"..hasSensitiveMessage(msg).."'")
-            end
-        end)
+
+        if AutoReport.Enabled == false then 
+            return
+        end
+
+        local result, reason = SwearDetection(msg)
+        local tab = {result = result, reason = reason, plr = plr, msg = msg, tick = tick()}
+        if result and reason and (not isqueued(tab)) then 
+            table.insert(queue, tab)
+        end
+    end
+
+    local function getnextqueue() 
+        local nextInQueue = queue[1]
+        table.remove(queue, 1)
+        return {queue = queue, nextInQueue = nextInQueue, amt = #queue}
     end
 
     AutoReport = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
@@ -1924,16 +1941,36 @@ do
                 for i, v in next, PLAYERS:GetPlayers() do
                     connections[#connections+1] = v.Chatted:connect(function(msg) 
                         if SwearDetection(msg) then
-                            AutoReportFunction(msg, v)
+                            addtoqueue(msg, v)
                         end
                     end)
                 end
                 connections[#connections+1] = PLAYERS.PlayerAdded:connect(function(v) 
                     connections[#connections+1] = v.Chatted:connect(function(msg) 
                         if SwearDetection(msg) then
-                            AutoReportFunction(msg, v)
+                            addtoqueue(msg, v)
                         end
                     end)
+                end)
+
+                spawn(function()
+                    repeat task.wait(0.1)
+
+                        if tick() - lastReport >= 10 then
+                            local nextqueue = getnextqueue()
+                            local tab = nextqueue.nextInQueue
+
+                            if nextqueue and tab then 
+                                local message = "he said '"..tab.result.."' !!! pls ban him!!"
+
+                                PLAYERS:ReportAbuse(tab.plr, tab.reason, message)
+                                GuiLibrary.CreateToast("[AR] Reported "..tab.plr.DisplayName, "Reason: "..tab.reason.."\n"..message, 9.5)
+
+                                lastReport = tick()
+                            end
+                        end
+
+                    until not AutoReport.Enabled
                 end)
 
             else

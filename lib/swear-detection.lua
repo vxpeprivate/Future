@@ -95,6 +95,7 @@ local DETECTIONS = {
         "noboline",
         "vape",
         "vxpe",
+        "auto"
     },
     ["Scamming"] = {
         "sell",

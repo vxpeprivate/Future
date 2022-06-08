@@ -907,8 +907,9 @@ do
                                 end
                             end)
                             
-
-                            GuiLibrary["TargetHUDAPI"].update(currentTarget, math.floor(currentTarget.Character:GetAttribute("Health")))
+                            if currentTarget.Character then
+                                GuiLibrary["TargetHUDAPI"].update(currentTarget, math.floor(currentTarget.Character:GetAttribute("Health")))
+                            end
 
                         else
                             GuiLibrary["TargetHUDAPI"].clear()
@@ -1816,8 +1817,8 @@ if oldisnetworkowner~=nil then do
     local notifyfunc
     notifyfunc = function() 
         if not isAlive() then repeat task.wait() until isAlive() end
-        repeat task.wait() until not isnetworkowner(lplr.Character.HumanoidRootPart) or not isAlive()
-        if isAlive() and LagBackNotify["Enabled"] then 
+        repeat task.wait() until not lplr.Character:FindFirstChild("HumanoidRootPart") or not isnetworkowner(lplr.Character.HumanoidRootPart) or not isAlive()
+        if isAlive() and LagBackNotify["Enabled"] and lplr.Character:FindFirstChild("HumanoidRootPart") then 
             textlabel = textlabel or Instance.new("TextLabel")
             textlabel.Size = UDim2.new(1, 0, 0, 36)
             textlabel.RichText = true
@@ -2620,7 +2621,7 @@ do
     }
 
     local teampriolist = {
-        "armory",
+        --"armory",
         "damage",
         "armor"
     }
