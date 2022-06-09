@@ -69,6 +69,8 @@ local DETECTIONS = {
         "year old",
         "age",
         "kid",
+        "report",
+
     },
     ["Cheating/Exploiting"] = {
         "hack",
