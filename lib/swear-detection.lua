@@ -70,7 +70,7 @@ local DETECTIONS = {
         "age",
         "kid",
         "report",
-
+        "ez",
     },
     ["Cheating/Exploiting"] = {
         "hack",
@@ -111,6 +111,15 @@ local DETECTIONS = {
         "eur",
         "btc",
     },
+    ["Offsite Links"] = {
+        "discord",
+        "disco",
+        "disc",
+        "google",
+        "youtube",
+        "yt", 
+        "site"
+    }
 }
 
 local TLDS = {
@@ -1473,8 +1482,23 @@ local SIMILAR_CHARS = {
     ["z"] = ("ʐ ż"):split(" "),
 }
 
+local SIMILAR_NUMBS = {
+    ["i"] = {"1"},
+    ["a"] = {"4"},
+    ["b"] = {"6"},
+    ["g"] = {"9"},
+    ["o"] = {"0"},
+    ["s"] = {"5", "2"},
+    ["e"] = {"3"},
+    ["r"] = {"7"},
+}
+
 local WHITELIST = {
     "häte", -- german word used alot apparently.
+}
+
+DETECTIONS.Exact = {
+    "L",
 }
 
 
@@ -1485,7 +1509,15 @@ local function parse(data)
     end
     for i,v in next, SIMILAR_CHARS do 
         for _, similar_char in next, v do 
-            if data:find(similar_char) then 
+            if data:match(similar_char) then 
+                data = data:gsub(similar_char, i)
+            end
+        end
+    end
+    data = data:gsub("([^A-Za-z0-9])", "")
+    for i,v in next, SIMILAR_NUMBS do 
+        for _, similar_char in next, v do 
+            if data:match(similar_char) then 
                 data = data:gsub(similar_char, i)
             end
         end
@@ -1500,13 +1532,18 @@ function detection.domaincheck(data)
             return {Reason = "Offsite Links", Result = data:match("%."..v:lower())}
         end
     end
+    for i,v in next, DETECTIONS["Offsite Links"] do
+        if data:match(v:lower()) then 
+            return {Reason = "Offsite Links", Result = data:match("%."..v:lower())}
+        end
+    end
 end
 
 function detection.swearcheck(data) 
     local data = parse(data)
     for i,v in next, DETECTIONS["Swearing"] do 
-        if data:find(v:lower()) then 
-            return {Reason = "Swearing", Result = data:sub(data:find(v:lower()))}
+        if data:match(v:lower()) then 
+            return {Reason = "Swearing", Result = data:match(v:lower())}
         end
     end
 end
@@ -1514,8 +1551,8 @@ end
 function detection.bullyingcheck(data) 
     local data = parse(data)
     for i,v in next, DETECTIONS["Bullying"] do 
-        if data:find(v:lower()) then 
-            return {Reason = "Bullying", Result = data:sub(data:find(v:lower()))}
+        if data:match(v:lower()) then 
+            return {Reason = "Bullying", Result = data:match(v:lower())}
         end
     end
 end
@@ -1523,8 +1560,8 @@ end
 function detection.cheatingcheck(data) 
     local data = parse(data)
     for i,v in next, DETECTIONS["Cheating/Exploiting"] do 
-        if data:find(v:lower()) then 
-            return {Reason = "Cheating/Exploiting", Result = data:sub(data:find(v:lower()))}
+        if data:match(v:lower()) then 
+            return {Reason = "Cheating/Exploiting", Result = data:match(v:lower())}
         end
     end
 end
@@ -1532,8 +1569,17 @@ end
 function detection.scammingcheck(data) 
     local data = parse(data)
     for i,v in next, DETECTIONS["Scamming"] do 
-        if data:find(v:lower()) then 
-            return {Reason = "Scamming", Result = data:sub(data:find(v:lower()))}
+        if data:match(v:lower()) then 
+            return {Reason = "Scamming", Result = data:match(v:lower())}
+        end
+    end
+end
+
+function detection.exact(data) 
+    local data = parse(data)
+    for i,v in next, DETECTIONS.Exact do 
+        if data == v:lower() then 
+            return {Reason = i, Result = v:lower()}
         end
     end
 end
