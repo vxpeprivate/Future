@@ -1498,7 +1498,7 @@ local WHITELIST = {
 }
 
 DETECTIONS.Exact = {
-    "L",
+    ["Bullying"] = "L",
 }
 
 
