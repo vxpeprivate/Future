@@ -1897,6 +1897,14 @@ do
 end
 
 do
+    local function addtofile(plr, reason, result) 
+        if not betterisfile("Future/reported.txt") then 
+            writefile("Future/reported.txt", "-- FutureClient.xyz AutoReport logs.\n-- by engo#0320\n\n--LOG BEGIN --\n")
+        end
+
+        appendfile("Future/reported.txt", "reported "..plr.Name.." ("..tostring(plr.UserId)..") for "..reason.." for saying '"..result.."'\n")
+    end
+
     local lastReport = -999
     local connections, queue = {}, {}
 
@@ -1924,6 +1932,10 @@ do
         local tab = {result = result, reason = reason, plr = plr, msg = msg, tick = tick()}
         if result and reason and (not isqueued(tab)) then 
             table.insert(queue, tab)
+            local suc, ret = pcall(addtofile, plr, reason, result)
+            if not suc and shared.FutureDeveloper then 
+                warn(ret)
+            end
         end
     end
 
