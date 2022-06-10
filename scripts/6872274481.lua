@@ -1229,13 +1229,12 @@ end
 
 do
     local connections = {}
-
     local AutoToxic = {Enabled = false}
     local AutoToxicKillMessage = {Value = ""}
     local AutoToxicReplyMessage = {Value = ""}
     local AutoToxicDeathMessage = {Value = ""}
     local AutoToxicBedMessage = {Value = ""}
-
+    local suffix = " | futureclient.xyz"
     local sensitives = {
         "hack",
         "exploit",
@@ -1259,16 +1258,16 @@ do
             if AutoToxic.Enabled == false then return end
             if oftype == "Kill" then 
                 local message = AutoToxicKillMessage.Value:gsub("<plr>", name)
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
             elseif oftype == "Death" then
                 local message = AutoToxicDeathMessage.Value
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
             elseif oftype == "Reply" then
                 local message = AutoToxicReplyMessage.Value:gsub("<plr>", name)
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
             elseif oftype == "Bed" then
                 local message = AutoToxicBedMessage.Value:gsub("<team>", name)
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
             end
         end)
     end
