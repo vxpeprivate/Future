@@ -31,6 +31,10 @@ local DETECTIONS = {
         "tit",
         "arse",   
         "paki",
+        "lxst",
+        "lust",
+        "nsfw",
+        "18+"
     },
     ["Bullying"] = {
         "gay",
@@ -71,12 +75,15 @@ local DETECTIONS = {
         "kid",
         "report",
         "ez",
+        "heck",
     },
     ["Cheating/Exploiting"] = {
         "hack",
         "hac",
         "hax",
         "hak",
+        "hecker",
+        "hecks",
         "script",
         "exploit",
         "synapse",
@@ -97,7 +104,7 @@ local DETECTIONS = {
         "noboline",
         "vape",
         "vxpe",
-        "auto"
+        "auto",
     },
     ["Scamming"] = {
         "sell",

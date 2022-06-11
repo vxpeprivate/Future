@@ -6,6 +6,7 @@ local TS = game:GetService("TweenService")
 local WORKSPACE = game:GetService("Workspace")
 local PLAYERS = game:GetService("Players")
 local HTTPSERVICE = game:GetService("HttpService")
+local COLLECTION = game:GetService("CollectionService")
 local lplr = PLAYERS.LocalPlayer
 local mouse = lplr:GetMouse()
 local cam = WORKSPACE.CurrentCamera
@@ -783,13 +784,10 @@ end, function(i, v)
     end
 end
 spawn(function()
-    WORKSPACE:WaitForChild("Map"):WaitForChild("Blocks")
-    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.ChildAdded:connect(addNukerFunc)
-    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.ChildRemoved:connect(removeNukerFunc)
-    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.Map.Blocks.ChildAdded:connect(addNukerFunc)
-    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = WORKSPACE.Map.Blocks.ChildRemoved:connect(removeNukerFunc)
-    table.foreach(WORKSPACE.Map.Blocks:GetChildren(), addNukerFunc)
-    table.foreach(WORKSPACE:GetChildren(), addNukerFunc)
+    WORKSPACE:WaitForChild("Map")
+    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = COLLECTION:GetInstanceAddedSignal("block"):connect(addNukerFunc)
+    GuiLibrary.Connections[#GuiLibrary.Connections + 1] = COLLECTION:GetInstanceRemovedSignal("block"):connect(removeNukerFunc)
+    table.foreach(COLLECTION:GetTagged("block"), addNukerFunc)
 end)
 
 local function colorToRichText(color) 
@@ -1783,7 +1781,7 @@ do
                 spawn(function()
                     repeat task.wait(1) 
                         if WORKSPACE:FindFirstChild("Map") and isAlive() then
-                            game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.GroundHit:FireServer(WORKSPACE.Map.Blocks,999999999999999.00069)
+                            game:GetService("ReplicatedStorage").rbxts_include.node_modules.net.out._NetManaged.GroundHit:FireServer(WORKSPACE.Map,999999999999999.00069)
                         end
                     until nofall.Enabled == false
                 end)
