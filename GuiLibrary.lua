@@ -105,7 +105,7 @@ local exclusionList = {
      "RestartOptionsButton", "FontOptionsButton", "FontOptionsButtonTextSizeSlider"
 }
 
-local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI)
+local ScreenGui = Instance.new("ScreenGui", gethui and gethui() or COREGUI:FindFirstChild("RobloxGui") or COREGUI)
 ScreenGui.Name = tostring("RobloxVRGui")
 local ClickGUI = Instance.new("Frame", ScreenGui)
 ClickGUI.Size = UDim2.new(1,0,1,0)

@@ -135,7 +135,7 @@ local function getremote(t)
 end
 
 local function getPlrNear(max)
-    local returning, nearestnum = nil,max
+    local nearestval, nearestnum = nil,max
     for i,v in next, PLAYERS:GetPlayers() do 
         if isAlive(v) and v~=lplr then 
             local diff = (lplr.Character.HumanoidRootPart.Position - v.Character.HumanoidRootPart.Position).Magnitude
@@ -145,7 +145,7 @@ local function getPlrNear(max)
             end
         end
     end
-    return returning
+    return nearestval
 end
 
 local function getPlrNearMouse(max)
@@ -197,7 +197,7 @@ if shared.FutureSavedSessionInfo~= nil then
     queueteleport(stringtp)
 end
 
-do 
+do
 
     local function getQueueFromName(name)
         for i,v in pairs(bedwars.QueueMeta) do 
@@ -211,16 +211,16 @@ do
     local QueueTypes = {}
     for i,v in pairs(bedwars["QueueMeta"]) do 
         if v.title:find("Test") == nil then
-            table.insert(QueueTypes, v.title..(i:find("voice") and " (VOICE)" or "")) 
+            table.insert(QueueTypes, v.title..(i:find("voice") and " (VOICE)" or ""))
         end
     end
     local selectedQueue = {["Value"] = "Solo"}
     local AutoQueue = {["Enabled"] = false}; AutoQueue = GuiLibrary["Objects"]["MiscellaneousWindow"]["API"].CreateOptionsButton({
         ["Name"] = "AutoQueue",
         ["Function"] = function(callback) 
-            if callback then 
-                spawn(function() 
-                    repeat 
+            if callback then
+                spawn(function()
+                    repeat
                         game:GetService("ReplicatedStorage")["events-@easy-games/lobby:shared/event/lobby-events@getEvents.Events"].joinQueue:FireServer({["queueType"] = getQueueFromName(selectedQueue["Value"])})
                         task.wait(30)
                     until AutoQueue["Enabled"] == false
@@ -231,12 +231,11 @@ do
     selectedQueue = AutoQueue.CreateSelector({
         ["Name"] = "",
         ["Function"] = function()
-            if AutoQueue["Enabled"] then 
+            if AutoQueue["Enabled"] then
                 AutoQueue.Toggle()
                 AutoQueue.Toggle()
             end
-        end, 
+        end,
         ["List"] = QueueTypes
     })
-    
 end

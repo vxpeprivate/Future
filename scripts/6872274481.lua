@@ -218,7 +218,7 @@ end
 
 local function getMoveDirection(plr) 
     if not isAlive(plr) then return Vector3.new() end
-    local velocity = part:GetVelocityAtPosition(part.Position)
+    local velocity = plr.Character.HumanoidRootPart:GetVelocityAtPosition(plr.Character.HumanoidRootPart.Position)
     local velocityDirection = velocity.Magnitude > 0 and velocity.Unit or Vector3.new()
     return velocityDirection
 end

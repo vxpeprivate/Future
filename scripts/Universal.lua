@@ -512,7 +512,7 @@ do
                     end
 
                 elseif spammer["Enabled"] then
-                    local value = value==nil and "" or value
+                    local value = spammerfile.Value==nil and "" or spammerfile.Value
                     fprint("Future/"..value.." is not a valid file, please make sure it is in your workspace folder and you include the file extension")
                 end
             end

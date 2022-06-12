@@ -26,7 +26,6 @@ local betterisfile = function(file)
 end
 Future.SignalLib = true
 
-
 local function requesturl(url, bypass) 
     if betterisfile(url) and shared.FutureDeveloper then 
         return readfile(url)
