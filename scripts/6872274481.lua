@@ -1588,7 +1588,7 @@ do
         ["Function"] = function(callback)
             if callback then
                 local i = 0
-                BindToHeartbeat("Speed", function(time, dt)
+                BindToHeartbeat("Speed", function(dt)
                     if isAlive() and not stopSpeed then
                         lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
                         local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*((isnetworkowner and isnetworkowner(lplr.Character.HumanoidRootPart)) and speedsettings.factor or 0)) * dt
