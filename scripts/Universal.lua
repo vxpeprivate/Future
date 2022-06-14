@@ -639,7 +639,7 @@ do
         ["ArrayText"] = function() return speedval["Value"] end,
         ["Function"] = function(callback)
             if callback then
-                BindToStepped("Speed", function(time, dt)
+                BindToHeartbeat("Speed", function(time, dt)
                     if isAlive() then
                         local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*(5)) * dt
                         velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
@@ -1334,6 +1334,7 @@ do
         end,
     })
 end
+
 
 
 --[[ 

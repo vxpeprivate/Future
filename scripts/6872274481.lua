@@ -906,7 +906,9 @@ do
                             end)
                             
                             if currentTarget.Character then
-                                GuiLibrary["TargetHUDAPI"].update(currentTarget, math.floor(currentTarget.Character:GetAttribute("Health")))
+                                pcall(function()
+                                    GuiLibrary["TargetHUDAPI"].update(currentTarget, math.floor(currentTarget.Character:GetAttribute("Health")))
+                                end)
                             end
 
                         else
@@ -971,6 +973,7 @@ do
                 bedwars["KnockbackTable"]["kbUpwardStrength"] = oldvelov
             end
         end,
+        ArrayText = function() return "H"..tostring(veloh.Value).."%|V"..tostring(velov.Value).."%" end
     })
     veloh = velocity.CreateSlider({
         ["Name"] = "Horizontal",
@@ -1585,7 +1588,7 @@ do
         ["Function"] = function(callback)
             if callback then
                 local i = 0
-                BindToStepped("Speed", function(time, dt)
+                BindToHeartbeat("Speed", function(time, dt)
                     if isAlive() and not stopSpeed then
                         lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
                         local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*((isnetworkowner and isnetworkowner(lplr.Character.HumanoidRootPart)) and speedsettings.factor or 0)) * dt
@@ -1786,7 +1789,8 @@ do
                     until nofall.Enabled == false
                 end)
             end
-        end
+        end,
+        ArrayText = function() return "Packet" end
     })
 end
 
@@ -1805,6 +1809,7 @@ do
             end
         end
     })
+    ArrayText = function() return "Legit" end
 end
 
 -- // render window 
