@@ -1868,7 +1868,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             end
             local sliding
             Slider.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
                         Textbox.Visible = true
                         Slider.Visible = false
@@ -1882,7 +1882,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             end)
 
             Slider.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                     if argstable["OnInputEnded"] then
                         argstable.Function(sliderapi.Value)
                     end
