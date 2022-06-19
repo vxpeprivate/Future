@@ -1618,10 +1618,11 @@ do
     speedval = speed.CreateSlider({
         ["Name"] = "Speed",
         ["Min"] = 1,
-        ["Max"] = 45,
-        ["Default"] = 45,
-        ["Round"] = 0,
-        ["Function"] = function() end
+        ["Max"] = 41.5,
+        ["Default"] = 41.5,
+        ["Round"] = 1,
+        ["Function"] = function() end,
+	RealMax = 42
     })
     hop = speed.CreateToggle({
         Name = "Hop",
