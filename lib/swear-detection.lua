@@ -105,6 +105,12 @@ local DETECTIONS = {
         "vape",
         "vxpe",
         "auto",
+        "ha k",
+        "ha c",
+        "h a c k",
+        "ha ck",
+        "h a k",
+        "heck"
     },
     ["Scamming"] = {
         "sell",
