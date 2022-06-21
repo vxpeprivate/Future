@@ -147,12 +147,12 @@ local function fprint(...)
 end
 
 local function betterfind(tab, obj)
-	for i,v in pairs(tab) do
-		if v == obj then
-			return i
-		end
-	end
-	return nil
+    for i,v in next, (tab) do
+        if v == obj or type(v) == "table" and v.hash == obj then
+            return v
+        end
+    end
+    return nil
 end
 
 local function getColorFromPlayer(v) 
