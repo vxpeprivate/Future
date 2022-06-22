@@ -1334,7 +1334,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
     Window.Name = argstable.Name.."Window"
     Window.Parent = ClickGUI
     Window.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    Window.BackgroundTransparency = 0.250
+    Window.BackgroundTransparency = 0.45
     Window.BorderSizePixel = 0
     Window.Position = UDim2.new(0, GuiLibrary["WindowX"], 0, 25)
     GuiLibrary["WindowX"] = GuiLibrary["WindowX"] + (176 + 3)
@@ -1401,17 +1401,13 @@ GuiLibrary["CreateWindow"] = function(argstable)
         local UIListLayout_2 = Instance.new("UIListLayout")
         local ModuleContainer = Instance.new("Frame")
         local UIListLayout_3 = Instance.new("UIListLayout")
-        local Keybind = Instance.new("TextButton")
-        local KeybindContainer = Instance.new("Frame")
-        local UIListLayout_6 = Instance.new("UIListLayout")
-        local Name_5 = Instance.new("TextLabel")
         OptionsButton.Name = argstable.Name.."OptionsButton"
         OptionsButton.Parent = ButtonContainer
         OptionsButton.BackgroundColor3 = Color3.fromHSV(GuiLibrary["ColorTheme"].H, GuiLibrary["ColorTheme"].S, GuiLibrary["ColorTheme"].V)
         GuiLibrary["Signals"]["UpdateColor"]:connect(function(color) 
             OptionsButton.BackgroundColor3 = Color3.fromHSV(color.H, color.S, color.V)
         end)
-        OptionsButton.BackgroundTransparency = 0.700
+        OptionsButton.BackgroundTransparency = 0.85
         OptionsButton.BorderSizePixel = 0
         OptionsButton.AnchorPoint = Vector2.new(0.5, 0)
         OptionsButton.Position = UDim2.new(0.5, 0, 0, 0)
@@ -1466,7 +1462,15 @@ GuiLibrary["CreateWindow"] = function(argstable)
         UIListLayout_3.Parent = ModuleContainer
         UIListLayout_3.HorizontalAlignment = Enum.HorizontalAlignment.Center
         UIListLayout_3.SortOrder = Enum.SortOrder.LayoutOrder
+        local Keybind
+        local KeybindContainer
+        local UIListLayout_6
+        local Name_5
         if not argstable.NoKeybind then
+            Keybind = Instance.new("TextButton")
+            KeybindContainer = Instance.new("Frame")
+            UIListLayout_6 = Instance.new("UIListLayout")
+            Name_5 = Instance.new("TextLabel")
             Keybind.Name = "Keybind"
             Keybind.Parent = ChildrenContainer
             Keybind.BackgroundTransparency = 1.000
@@ -1532,7 +1536,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
         buttonapi["Toggle"] = function(boolean, stopclick, isConfigLoad) 
             local doToggle, stopclick, isConfigLoad = boolean, not stopclick, not isConfigLoad
             if boolean==nil then doToggle = not buttonapi.Enabled end
-            OptionsButton.BackgroundTransparency = doToggle and 0 or 0.7
+            OptionsButton.BackgroundTransparency = doToggle and 0.35 or 0.85
             buttonapi.Enabled = doToggle
             argstable.Function(doToggle)
             if argstable.Name == "ClickGui" and windowargs.Name == "Other" then 
@@ -1636,7 +1640,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             toggleapi["Toggle"] = function(boolean, skipclick) 
                 local doToggle = boolean
                 if boolean==nil then doToggle = not toggleapi.Enabled end
-                Toggle.BackgroundTransparency = doToggle and 0 or 1
+                Toggle.BackgroundTransparency = doToggle and 0.35 or 1
                 argstable.Function(doToggle)
                 toggleapi.Enabled = doToggle
                 if not skipclick then
@@ -1690,7 +1694,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             GuiLibrary["Signals"]["UpdateColor"]:connect(function(color) 
                 Selector.BackgroundColor3 = Color3.fromHSV(color.H, color.S, color.V)
             end)
-            Selector.BackgroundTransparency = 0
+            Selector.BackgroundTransparency = 0.35
             Selector.BorderSizePixel = 0
             Selector.Position = UDim2.new(0.0171428565, 0, 0, 0)
             Selector.Size = UDim2.new(0, 168, 0, 30)
@@ -1791,6 +1795,7 @@ GuiLibrary["CreateWindow"] = function(argstable)
             GuiLibrary["Signals"]["UpdateColor"]:connect(function(color) 
                 SliderFill.BackgroundColor3 = Color3.fromHSV(color.H, color.S, color.V)
             end)
+            SliderFill.BackgroundTransparency = 0.35
             SliderFill.BorderSizePixel = 0
             SliderFill.Position = UDim2.new(0, 0, 0.5, 0)
             SliderFill.Size = UDim2.new(0, 50, 0, 30)

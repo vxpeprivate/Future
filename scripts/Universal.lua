@@ -80,7 +80,7 @@ local RenderStepTable = {}
 local SteppedTable = {}
 local function isAlive(plr, headCheck)
     local plr = plr or lplr
-    if plr and plr.Character and ((plr.Character:FindFirstChild("Humanoid") and plr.Character:FindFirstChild("Humanoid").Health > 0) and (plr.Character:FindFirstChild("HumanoidRootPart")) and (headCheck and plr.Character:FindFirstChild("Head") or not headCheck)) then
+    if plr and plr.Character and ((plr.Character:FindFirstChildOfClass("Humanoid")) and (plr.Character:FindFirstChild("HumanoidRootPart")) and (headCheck and plr.Character:FindFirstChild("Head") or not headCheck)) then
         return true
     end
 end
@@ -214,10 +214,7 @@ local function aimAt(pos,smooth)
 end
 
 local function canBeTargeted(plr, doTeamCheck) 
-    if isAlive(plr) and plr~=lplr and (doTeamCheck and plr.Team ~=lplr.Team or not doTeamCheck) then 
-        return true
-    end
-    return false
+    return Future.canBeTargeted(plr)
 end
 
 local function colorToRichText(color) 
@@ -233,6 +230,48 @@ local convertHealthToColor = function(health, maxHealth)
     end
     return Color3.fromRGB(96, 253, 48)
 end
+
+local function table_invert(t) 
+    local new = {}
+    for i,v in next, t do 
+        new[tostring(v)] = i
+    end
+    return new
+end
+
+do 
+    Future.AddCommand("vclip", {
+        Function = function(args) 
+            if not args[1] or not tonumber(args[1]) then 
+                return
+            end
+
+            if not isAlive() then
+                return
+            end
+
+            local distance = tonumber(args[1])
+            lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -distance)
+        end,
+        Help = ".vclip <distance>"
+    })
+    Future.AddCommand("hclip", {
+        Function = function(args) 
+            if not args[1] or not tonumber(args[1]) then 
+                return
+            end
+
+            if not isAlive() then
+                return
+            end
+
+            local distance = tonumber(args[1])
+            lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, distance, 0)
+        end,
+        Help = ".hclip <distance>"
+    })
+end
+
 
 -- // CombatWindow
 
@@ -333,7 +372,7 @@ end
 do
     local fakelagsend = {["Enabled"] = false}
     local fakelagreceive = {["Enabled"] = false}
-    local fakelag = GuiLibrary["Objects"]["ExploitsWindow"]["API"].CreateOptionsButton({
+    local fakelag = GuiLibrary["Objects"]["MovementWindow"]["API"].CreateOptionsButton({
         ["Name"] = "FakeLag",
         ["Function"] = function(callback) 
             if callback then
@@ -647,7 +686,7 @@ do
                     end
                 end)
             else
-                UnbindFromStepped("Speed")
+                UnbindFromHeartbeat("Speed")
             end
         end
     })
@@ -919,6 +958,46 @@ do
 end
 
 -- // renderwindow
+
+do 
+    local MouseIconTable = {
+        CSGO = "rbxassetid://9942607125",
+        Dot = "rbxassetid://9943092654",
+        Three = "rbxassetid://9943167055",
+        Tri = "rbxassetid://9948357128",
+        Cross = "rbxassetid://9943168532",
+        Chevron = "rbxassetid://9948124812",
+    }
+    local Connection
+    local MouseIcon = {Value = "CSGO"}
+    local Crosshair = {Enabled = false}
+    Crosshair = GuiLibrary.Objects.RenderWindow.API.CreateOptionsButton({
+        Name = "Crosshair",
+        Function = function(callback) 
+            if callback then 
+                mouse.Icon = MouseIconTable[MouseIcon.Value]
+                Connection = mouse:GetPropertyChangedSignal("Icon"):Connect(function()
+                    local mouseicon = MouseIconTable[MouseIcon.Value]
+                    if mouse.Icon ~= mouseicon then 
+                        mouse.Icon = mouseicon
+                    end
+                end)
+            else
+                Connection:Disconnect()
+                mouse.Icon = ""
+            end
+        end
+    })
+    MouseIcon = Crosshair.CreateSelector({
+        Name = "Ico",
+        List = table_invert(MouseIconTable),
+        Function = function(value) 
+            if Crosshair.Enabled then
+                mouse.Icon = MouseIconTable[value]
+            end
+        end
+    })
+end
 
 do 
     local searchfor, connections, objects = {}, {}, {}
@@ -1344,7 +1423,11 @@ end
 
 ]]
 do 
+    local lastUpdate = os.clock()
+    local renderRate = {Value = 60}
+    local doRenderRate = {Enabled = false}
     local esp = {["Enabled"] = false}
+    local esphealth = {Enabled = false}
     local espfolder = Instance.new("Folder", GuiLibrary["ScreenGui"])
     espfolder.Name = "ESP"
     local espnames= {["Enabled"] = false}
@@ -1353,7 +1436,15 @@ do
         ["Name"] = "ESP",
         ["Function"] = function(callback) 
             if callback then 
-                BindToStepped("ESP", function() 
+                BindToRenderStepped("ESP", function() 
+
+                    if doRenderRate.Enabled then
+                        if (os.clock() - lastUpdate < 1 / renderRate.Value) then
+                            return
+                        end
+                        lastUpdate = os.clock()
+                    end
+
                     for i,v in next, PLAYERS:GetPlayers() do 
                         if v~=lplr and isAlive(v) then
                             local plrespframe
@@ -1440,7 +1531,7 @@ do
                     end
                 end)
             else
-                UnbindFromStepped("ESP")
+                UnbindFromRenderStepped("ESP")
                 espfolder:ClearAllChildren()
             end
         end
@@ -1459,9 +1550,24 @@ do
         ["Name"] = "Health",
         ["Function"] = function() end,
     })
+    doRenderRate = esp.CreateToggle({
+        Name = "RenderRate",
+        Function = function() end
+    })
+    renderRate = esp.CreateSlider({
+        Name = "RenderRate",
+        Function = function() end,
+        Min = 10,
+        Max = 240,
+        Default = 60,
+    })
+
 end
 
 do 
+    local lastUpdate = os.clock()
+    local renderRate = {Value = 60}
+    local doRenderRate = {Enabled = false}
     local nametags = {["Enabled"] = false}
     local NametagsFolder = Instance.new("Folder", GuiLibrary["ScreenGui"])
     NametagsFolder.Name = "Nametags"
@@ -1474,6 +1580,15 @@ do
         ["Function"] = function(callback) 
             if callback then 
                 BindToStepped("Nametags", function() 
+                    debug.profilebegin("Future Nametags Loop")
+
+                    if doRenderRate.Enabled then
+                        if (os.clock() - lastUpdate < 1 / renderRate.Value) then
+                            return
+                        end
+                        lastUpdate = os.clock()
+                    end
+
                     for i,v in next, PLAYERS:GetPlayers() do 
                         if v~=lplr and isAlive(v) then
                             local frame
@@ -1535,6 +1650,7 @@ do
                             v:Destroy()
                         end
                     end
+                    debug.profileend()
                 end)
             else
                 UnbindFromStepped("Nametags")
@@ -1564,6 +1680,17 @@ do
     tagshealth = nametags.CreateToggle({
         ["Name"] = "Health",
         ["Function"] = function() end,
+    })
+    doRenderRate = nametags.CreateToggle({
+        Name = "RenderRate",
+        Function = function() end
+    })
+    renderRate = nametags.CreateSlider({
+        Name = "RenderRate",
+        Function = function() end,
+        Min = 10,
+        Max = 240,
+        Default = 60,
     })
 end
 
@@ -1856,6 +1983,49 @@ do
             if Timer.Enabled then 
                 Timer.Toggle() 
                 Timer.Toggle()
+            end
+        end
+    })
+end
+
+do
+    local Heaven = {}
+    local connection
+
+    local function onStateFunc(old, new)
+        if new == Enum.HumanoidStateType.Dead then 
+            repeat task.wait() 
+                lplr.Character.HumanoidRootPart.Anchored = true
+                lplr.Character.HumanoidRootPart.CFrame = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 1,0)
+            until ({pcall(function() return not lplr.Character.Humanoid:GetState() == Enum.HumanoidStateType.Dead end)})[2]==true
+        end
+    end
+
+    local function setupConnection() 
+        local hum = lplr.Character:FindFirstChildWhichIsA("Humanoid")
+        if not hum then 
+            repeat task.wait() until lplr.Character:FindFirstChildWhichIsA("Humanoid")
+            hum = lplr.Character:FindFirstChildWhichIsA("Humanoid")
+        end
+        connection = hum.StateChanged:Connect(function(old, new) 
+            if Heaven.Enabled then
+                pcall(onStateFunc,old, new)
+                connection:Disconnect()
+                setupConnection()
+            end
+        end)
+    end
+
+    Heaven = GuiLibrary.Objects.MiscellaneousWindow.API.CreateOptionsButton({
+        Name = "Heaven",
+        Function = function(callback)
+            if callback then 
+                spawn(function() 
+                    if not isAlive() then repeat task.wait() until isAlive() end
+                    pcall(setupConnection)
+                end)
+            else
+                connection:Disconnect()
             end
         end
     })

@@ -13,6 +13,8 @@ local cam = WORKSPACE.CurrentCamera
 local getcustomasset = --[[getsynasset or getcustomasset or]] GuiLibrary.getRobloxAsset
 local requestfunc = syn and syn.request or http and http.request or http_request or fluxus and fluxus.request or getgenv().request or request
 local queueteleport = syn and syn.queue_on_teleport or queue_on_teleport or fluxus and fluxus.queue_on_teleport
+local setthreadidentityfunc = syn and syn.set_thread_identity or set_thread_identity or setidentity or setthreadidentity
+local getthreadidentityfunc = syn and syn.get_thread_identity or get_thread_identity or getidentity or getthreadidentity
 local spawn = function(func) 
     return coroutine.wrap(func)()
 end
@@ -147,13 +149,29 @@ local function fprint(...)
 end
 
 local function betterfind(tab, obj)
-	for i,v in pairs(tab) do
-		if v == obj then
-			return i
-		end
-	end
-	return nil
+    for i,v in pairs(tab) do
+        if v == obj or type(v) == "table" and v.hash == obj then
+            return v
+        end
+    end
+    return nil
 end
+
+local function getconnectionproto(func, level, con) 
+    local proto = debug.getproto(func, level)
+    local info = debug.getinfo(proto)
+    
+    local old = getthreadidentityfunc and getthreadidentityfunc() or 8
+    setthreadidentityfunc(2)
+    for i,v in next, getconnections(con) do 
+        local coninfo = debug.getinfo(v.Function)
+        if v.Function and coninfo.src == info.src and coninfo.numparams == info.numparams and coninfo.currentline == info.currentline then 
+            return v.Function
+        end
+    end
+    setthreadidentityfunc(old)
+end
+
 
 local function getColorFromPlayer(v) 
     if v.Team ~= nil then return v.TeamColor.Color end
@@ -350,6 +368,7 @@ bedwars = {
     ["BlockPlacementController"] = KnitClient.Controllers.BlockPlacementController,
     ["BedwarsKits"] = require(game:GetService("ReplicatedStorage").TS.games.bedwars.kit["bedwars-kit-shop"]).BedwarsKitShop,
     ["BlockBreaker"] = KnitClient.Controllers.BlockBreakController.blockBreaker,
+    ["BowTable"] = KnitClient.Controllers.ProjectileController,
     ["ProjectileController"] = KnitClient.Controllers.ProjectileController,
     ["ChestController"] = KnitClient.Controllers.ChestController,
     ["ClickHold"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out.client.ui.lib.util["click-hold"]).ClickHold,
@@ -362,8 +381,9 @@ bedwars = {
     ["ConsumeSoulRemote"] = getremote(debug.getconstants(KnitClient.Controllers.GrimReaperController.consumeSoul)),
     ["ConstantManager"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out["shared"].constant["constant-manager"]).ConstantManager,
     ["CooldownController"] = KnitClient.Controllers.CooldownController,
-    ["damageTable"] = KnitClient.Controllers.DamageController,
+    ["damageTable"] = KnitClient.Controllers.DamageController,  
     ["DetonateRavenRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.RavenController).detonateRaven)),
+    ["DefaultProjectileSourceController"] = require(lplr.PlayerScripts.TS.controllers.global.combat.projectile["default-projectile-source-controller"]).DefaultProjectileSourceController,
     ["DropItem"] = getmetatable(KnitClient.Controllers.ItemDropController).dropItemInHand,
     ["DropItemRemote"] = getremote(debug.getconstants(getmetatable(KnitClient.Controllers.ItemDropController).dropItemInHand)),
     ["EatRemote"] = getremote(debug.getconstants(debug.getproto(getmetatable(KnitClient.Controllers.ConsumeController).onEnable, 1))),
@@ -409,6 +429,7 @@ bedwars = {
     ["QueryUtil"] = require(game:GetService("ReplicatedStorage")["rbxts_include"]["node_modules"]["@easy-games"]["game-core"].out).GameQueryUtil,
     ["prepareHashing"] = require(game:GetService("ReplicatedStorage").TS["remote-hash"]["remote-hash-util"]).RemoteHashUtil.prepareHashVector3,
     ["ProjectileRemote"] = getremote(debug.getconstants(debug.getupvalues(getmetatable(KnitClient.Controllers.ProjectileController)["launchProjectileWithValues"])[2])),
+    ["ProjectileSourceController"] = require(lplr.PlayerScripts.TS.controllers.global.combat.projectile["projectile-source-controller"]).ProjectileSourceController,
     ["RavenTable"] = KnitClient.Controllers.RavenController,
     ["RespawnController"] = KnitClient.Controllers.BedwarsRespawnController,
     ["RespawnTimer"] = require(lplr.PlayerScripts.TS.controllers.games.bedwars.respawn.ui["respawn-timer"]).RespawnTimerWrapper,
@@ -461,6 +482,22 @@ bedwars["placeBlock"] = function(newpos, customblock)
     if bedwars["BlockController"]:isAllowedPlacement(lplr, placeblocktype, Vector3.new(newpos.X/3, newpos.Y/3, newpos.Z/3)) and getItem(placeblocktype) then
         return blocktable:placeBlock(Vector3.new(newpos.X/3, newpos.Y/3, newpos.Z/3))
     end
+end
+
+local function getBow()
+	local bestsword, bestswordslot, bestswordnum = nil, nil, 0
+	for i5, v5 in pairs(bedwars["getInventory"](lplr).items) do
+		if v5.itemType:find("bow") then
+			local tab = bedwars["ItemTable"][v5.itemType].projectileSource.ammoItemTypes
+			local tab2 = tab[#tab]
+			if bedwars["ProjectileMeta"][tab2].combat.damage > bestswordnum then
+				bestswordnum = bedwars["ProjectileMeta"][tab2].combat.damage
+				bestswordslot = i5
+				bestsword = v5
+			end
+		end
+	end
+	return bestsword, bestswordslot
 end
 
 local function getItem(itemName)
@@ -829,7 +866,6 @@ do
         AuraAnimations[#AuraAnimations+1] = i
     end
 
-    local AttackEntityRemote = bedwars.ClientHandler:Get(bedwars.AttackRemote).instance
     local AuraDistance = {Value = 18}
     local AuraAnimation = {Value = ""}
     local Aura = {Enabled = false}
@@ -864,7 +900,7 @@ do
                                     ["chargedAttack"] = {["chargeRatio"] = 1},
                                 }
                                 spawn(function()
-                                    AttackEntityRemote:InvokeServer(attackArgs)
+                                    bedwars.ClientHandler:Get(bedwars["AttackRemote"]):CallServer(attackArgs)
                                 end)
                                 task.wait(0.03)
                             end
@@ -1019,6 +1055,37 @@ do
         end
     })
 end
+
+-- TODO: make this work on tripleshot, and other projectiles
+
+if setthreadidentityfunc and getconnections and debug.getproto and debug.getinfo then
+    local oldMax = bedwars.ProjectileSourceController.onMaxCharge
+    local AutoBowRelease = {}
+    AutoBowRelease = GuiLibrary.Objects.CombatWindow.API.CreateOptionsButton({
+        Name = "AutoBowRelease",
+        Function = function(callback) 
+            if callback then 
+                bedwars.DefaultProjectileSourceController.onMaxCharge = function(...) 
+                    local func = getconnectionproto(bedwars.ProjectileSourceController.onEnable, 4, UIS.InputEnded)
+                    local func2 = getconnectionproto(bedwars.ProjectileSourceController.onEnable, 3, UIS.InputBegan)
+                    func({
+                        UserInputType = Enum.UserInputType.MouseButton1,
+                    })
+                    if UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then
+                        func2({
+                            UserInputType = Enum.UserInputType.MouseButton1,
+                        })
+                    end
+
+                    return oldMax(...)
+                end
+            else
+                bedwars.DefaultProjectileSourceController.onMaxCharge = oldMax
+            end
+        end 
+    })
+end
+
 -- // exploits window 
 
 do
@@ -1050,6 +1117,55 @@ do
         Min = 0,
         Max = 20,
         Round = 0
+    })
+end
+
+do 
+    
+    local old = {}
+    local func = debug.getupvalue(bedwars["BowTable"].launchProjectileWithValues, 2)
+    local old2 =  debug.getupvalue(func, 10)
+    local FastProjectile = {}
+    FastProjectile = GuiLibrary.Objects.ExploitsWindow.API.CreateOptionsButton({
+        Name = "FastProjectile",
+        Function = function(callback) 
+            if callback then 
+                for i, v in next, bedwars["ItemMeta"] do 
+                    if v.projectileSource then 
+                        old[i] = old[i] or {multiShotChargeTime = v.projectileSource.multiShotChargeTime, fireDelaySec = v.projectileSource.fireDelaySec, maxStrengthChargeSec = v.projectileSource.maxStrengthChargeSec}
+                        v.projectileSource.multiShotChargeTime = 0.0000000000000001
+                        v.projectileSource.fireDelaySec = 0.6
+                        v.projectileSource.maxStrengthChargeSec = 0.0000000000000001
+                    end
+                end
+                debug.setupvalue(func, 10, {    
+                    Client = {
+                        WaitFor = function(self6, remote)
+                            local res = Client:Get(remote)
+                            return {
+                                andThen = function(self5, func) 
+                                    return func({
+                                        CallServerAsync = function(self,shooting, proj, proj2, launchpos1, launchpos2, launchvelo,uid,tab, ...) 
+                                            tab.drawDurationSeconds = 10
+                                            return res:CallServerAsync(shooting, proj, proj2, launchpos1, launchpos2, launchvelo,uid,tab, ...)
+                                        end
+                                    })
+                                end
+                            }
+                        end
+                    }
+                })
+            else
+                for i, v in next, bedwars["ItemMeta"] do 
+                    if v.projectileSource and old[i] then 
+                        v.projectileSource.multiShotChargeTime = old[i].multiShotChargeTime
+                        v.projectileSource.fireDelaySec = old[i].fireDelaySec
+                        v.projectileSource.maxStrengthChargeSec = old[i].maxStrengthChargeSec
+                    end
+                end
+                debug.setupvalue(func, 10, old2)
+            end
+        end
     })
 end
 
@@ -1235,7 +1351,7 @@ do
     local AutoToxicReplyMessage = {Value = ""}
     local AutoToxicDeathMessage = {Value = ""}
     local AutoToxicBedMessage = {Value = ""}
-    local suffix = " | futureclient.xyz"
+    local suffix = function() return math.random(1,2)==1 and " | futureclient.xyz" or " | d\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145і\240\144\140\145s\240\144\140\145\240\144\140\145\240\144\140\145c\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145\240\144\140\145o\240\144\140\145r\240\144\140\145d.gg/fxture" end
     local sensitives = {
         "hack",
         "exploit",
@@ -1259,16 +1375,16 @@ do
             if AutoToxic.Enabled == false then return end
             if oftype == "Kill" then 
                 local message = AutoToxicKillMessage.Value:gsub("<plr>", name)
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix(), "All")
             elseif oftype == "Death" then
                 local message = AutoToxicDeathMessage.Value
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix(), "All")
             elseif oftype == "Reply" then
                 local message = AutoToxicReplyMessage.Value:gsub("<plr>", name)
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix(), "All")
             elseif oftype == "Bed" then
                 local message = AutoToxicBedMessage.Value:gsub("<team>", name)
-                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix, "All")
+                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(message..suffix(), "All")
             end
         end)
     end
@@ -1298,7 +1414,7 @@ do
                     if v ~= lplr then
                         connections[#connections+1] = v.Chatted:connect(function(msg) 
                             if msg:find("vxpe") then
-                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
+                                --game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
                             end
                             if hasSensitiveMessage(msg) then
                                 AutoToxicFunction("Reply", v.Name)
@@ -1310,7 +1426,7 @@ do
                     if v ~= lplr then
                         connections[#connections+1] = v.Chatted:connect(function(msg) 
                             if msg:find("vxpe") then
-                                game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
+                                --game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer("vxpe < futureclient.xyz", "All")
                             end
                             if hasSensitiveMessage(msg) then
                                 AutoToxicFunction("Reply", v.Name)
@@ -1365,6 +1481,10 @@ do
                 if AutoLeaveStaffMode.Value == "Destruct" then 
                     GuiLibrary.SaveConfig(GuiLibrary.CurrentConfig)
                     GuiLibrary.Signals.onDestroy:Fire()
+                    game:GetService("StarterGui"):SetCore("SendNotification", {
+                        Title = plr.Name.." is Staff!",
+                        Text = "Future has detected a staff member.\nWe are destructing the client!"
+                    })
                 elseif AutoLeaveStaffMode.Value == "Requeue" then
                     local tpdata = game:GetService("TeleportService"):GetLocalPlayerTeleportData()
                     if tpdata and tpdata.match then 
@@ -1513,12 +1633,12 @@ do
                                 end
                             end
 
-                            lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
                             local movedir = lplr.Character.Humanoid.MoveDirection~=Vector3.new() and lplr.Character.Humanoid.MoveDirection or lplr.Character.HumanoidRootPart.CFrame.lookVector
                             local velo = movedir * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
                             velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
                             lplr.Character:TranslateBy(velo)
-                            local velo2 = (movedir * speedval["Value"]) / speedsettings.velocitydivfactor
+                            --local velo2 = (movedir * speedval["Value"]) / speedsettings.velocitydivfactor
+                            local velo2={X=0,Z=0}
                             lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, 1, velo2.Z)
                         end
                     until not LongJump.Enabled
@@ -1590,9 +1710,8 @@ do
                 local i = 0
                 BindToHeartbeat("Speed", function(dt)
                     if isAlive() and not stopSpeed then
-                        lplr.Character.Humanoid.WalkSpeed = speedsettings.wsvalue
-                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"]*((isnetworkowner and isnetworkowner(lplr.Character.HumanoidRootPart)) and speedsettings.factor or 0)) * dt
-                        velo = Vector3.new(velo.x / 11, 0, velo.z / 11)
+                        local velo = lplr.Character.Humanoid.MoveDirection * (speedval["Value"] - lplr.Character.Humanoid.WalkSpeed) * dt
+                        velo = Vector3.new(velo.x, 0, velo.z)
                         lplr.Character:TranslateBy(velo)
 
                         if hop.Enabled then 
@@ -1601,8 +1720,8 @@ do
                             end
                         end
 
-                        local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
-                        lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
+                        --local velo2 = (lplr.Character.Humanoid.MoveDirection * speedval["Value"]) / speedsettings.velocitydivfactor
+                        --lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, lplr.Character.HumanoidRootPart.Velocity.Y, velo2.Z)
                     end
                 end)
 
@@ -1610,8 +1729,7 @@ do
                     GuiLibrary.Objects.AutoReportOptionsButton.API.Toggle()
                 end
             else
-                lplr.Character.Humanoid.WalkSpeed = 16
-                UnbindFromStepped("Speed")
+                UnbindFromHeartbeat("Speed")
             end
         end
     })
@@ -1622,13 +1740,14 @@ do
         ["Default"] = 41.5,
         ["Round"] = 1,
         ["Function"] = function() end,
-	RealMax = 42
+	    RealMax = 47
     })
     hop = speed.CreateToggle({
         Name = "Hop",
         Function = function() end,
     })
 end
+
 
 GuiLibrary["RemoveObject"]("FlightOptionsButton")
 do
@@ -1992,6 +2111,10 @@ end
 
 GuiLibrary["RemoveObject"]("ESPOptionsButton")
 do 
+    local lastUpdate = os.clock()
+    local renderRate = {Value = 60}
+    local doRenderRate = {Enabled = false}
+    local esphealth = {Enabled = false}
     local esp = {["Enabled"] = false}
     local espfolder = GuiLibrary["ScreenGui"]:FindFirstChild("ESP") or Instance.new("Folder", GuiLibrary["ScreenGui"])
     espfolder.Name = "ESP"
@@ -2002,6 +2125,14 @@ do
         ["Function"] = function(callback) 
             if callback then 
                 BindToStepped("ESP", function() 
+
+                    if doRenderRate.Enabled then
+                        if (os.clock() - lastUpdate < 1 / renderRate.Value) then
+                            return
+                        end
+                        lastUpdate = os.clock()
+                    end
+
                     for i,v in next, PLAYERS:GetPlayers() do 
                         if v~=lplr and isAlive(v) then
                             local plrespframe
@@ -2107,10 +2238,24 @@ do
         ["Name"] = "Health",
         ["Function"] = function() end,
     })
+    doRenderRate = esp.CreateToggle({
+        Name = "RenderRate",
+        Function = function() end
+    })
+    renderRate = esp.CreateSlider({
+        Name = "RenderRate",
+        Function = function() end,
+        Min = 10,
+        Max = 240,
+        Default = 60,
+    })
 end
 
 GuiLibrary.RemoveObject("NametagsOptionsButton")
 do 
+    local lastUpdate = os.clock()
+    local renderRate = {Value = 60}
+    local doRenderRate = {Enabled = false}
     local nametags = {["Enabled"] = false}
     local NametagsFolder = Instance.new("Folder", GuiLibrary["ScreenGui"])
     NametagsFolder.Name = "Nametags"
@@ -2122,6 +2267,14 @@ do
         ["Name"] = "Nametags",
         ["Function"] = function(callback) 
             if callback then 
+
+                if doRenderRate.Enabled then
+                    if (os.clock() - lastUpdate < 1 / renderRate.Value) then
+                        return
+                    end
+                    lastUpdate = os.clock()
+                end
+
                 BindToStepped("Nametags", function() 
                     for i,v in next, PLAYERS:GetPlayers() do 
                         if lplr~=v and isAlive(v) then
@@ -2371,6 +2524,17 @@ do
         ["Name"] = "Health",
         ["Function"] = function() end,
     })
+    doRenderRate = nametags.CreateToggle({
+        Name = "RenderRate",
+        Function = function() end
+    })
+    renderRate = nametags.CreateSlider({
+        Name = "RenderRate",
+        Function = function() end,
+        Min = 10,
+        Max = 240,
+        Default = 60,
+    })
 end
 
 do 
@@ -2599,6 +2763,7 @@ do
             "leather_chestplate",
             "iron_chestplate",
             "diamond_chestplate",
+            "void_chestplate", -- void is worse then emerald
             "emerald_chestplate",
         },
         [2] = {

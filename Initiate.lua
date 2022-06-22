@@ -1,10 +1,10 @@
 -- // credits to anyones code i used/looked at.
-shared._FUTUREVERSION = "1.1.6a | "..((shared.FutureDeveloper and "dev" or "release")).." build" -- // This is a cool thing yes
-shared._FUTUREMOTD = "futureclient.xyz 🔥"
 print("[Future] Loading!")
-repeat wait() until game:IsLoaded()
+repeat task.wait() until game:IsLoaded()
 if shared.Future~=nil then print("[Future] Detected future already executed, not executing!") return end
 shared.futureStartTime = game:GetService("Workspace"):GetServerTimeNow()
+shared._FUTUREVERSION = "1.1.7a | "..((shared.FutureDeveloper and "dev" or "release")).." build" -- // This is a cool thing yes
+shared._FUTUREMOTD = "futureclient.xyz 🔥"
 local startTime = shared.futureStartTime
 shared.Future = {}
 local Future = shared.Future
@@ -265,7 +265,7 @@ local configBox; configBox = configButton.CreateTextbox({
 if betterisfile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId or game.PlaceId)..".txt") then 
     GuiLibrary.CurrentConfig = readfile("Future/configs/!SelectedConfigs/"..tostring(shared.FuturePlaceId or game.PlaceId)..".txt") 
     configBox.Set(GuiLibrary.CurrentConfig, true)
-    print("[Future] Detected config "..GuiLibrary.CurrentConfig.." used last time!")
+    print("[Future] Detected config ",GuiLibrary.CurrentConfig," used last time!")
 end
 local clickGuiButton = OtherWindow.CreateOptionsButton({
     ["Name"] = "ClickGui",
@@ -653,7 +653,7 @@ BindToRenderStep("stats", function(dt)
         end
         local ping = tonumber(game:GetService("Stats"):FindFirstChild("PerformanceStats").Ping:GetValue())
         GuiLibrary["Signals"]["statsUpdate"]:Fire(Coords, math.round(Speed*100)/100, FPS, ping)
-        Tick = tick() + 0.2
+        Tick = tick() + 0.1
     end
 end)
 
