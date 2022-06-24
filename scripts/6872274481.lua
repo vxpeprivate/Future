@@ -1479,6 +1479,7 @@ do
         pcall(function()
             if plr and plr:IsInGroup(5774246) and plr:GetRankInGroup(5774246) >= 100 then 
                 if AutoLeaveStaffMode.Value == "Destruct" then 
+                    repeat task.wait() until shared._FUTURECACHED
                     GuiLibrary.SaveConfig(GuiLibrary.CurrentConfig)
                     GuiLibrary.Signals.onDestroy:Fire()
                     game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -1595,7 +1596,7 @@ local stopSpeed = false
 GuiLibrary["RemoveObject"]("LongJumpOptionsButton")
 do 
     local doRay = false
-    local speedval, timeval,distance = {["Value"] = 0},{["Value"] = 0},{["Value"] = 0}
+    local speedval, timeval,distance, delayval = {["Value"] = 0},{["Value"] = 0},{["Value"] = 0}, {["Value"] = 0}
     local LongJump = {["Enabled"] = false}; LongJump = GuiLibrary.Objects.MovementWindow.API.CreateOptionsButton({
         ["Name"] = "LongJump",
         ["Function"] = function(callback) 
@@ -1612,11 +1613,8 @@ do
                     end
                 end)
                 spawn(function()
-                    local i = 0
                     repeat 
-                        local bt = WORKSPACE:GetServerTimeNow()
-                        skipFrame()
-                        local dt = WORKSPACE:GetServerTimeNow() - bt
+                        local dt = skipFrame()
                         if isAlive() then
                             stopSpeed = true
                             if doRay then
@@ -1633,20 +1631,21 @@ do
                                 end
                             end
 
-                            local movedir = lplr.Character.Humanoid.MoveDirection~=Vector3.new() and lplr.Character.Humanoid.MoveDirection or lplr.Character.HumanoidRootPart.CFrame.lookVector
-                            local velo = movedir * (speedval["Value"]*(isnetworkowner(lplr.Character.HumanoidRootPart) and speedsettings.factor or 0)) * dt
-                            velo = Vector3.new(velo.x / 10, 0, velo.z / 10)
+                            local moveDir = lplr.Character.Humanoid.MoveDirection ~= Vector3.zero and lplr.Character.Humanoid.MoveDirection or lplr.Character.HumanoidRootPart.CFrame.lookVector
+                            local velo = moveDir * (speedval["Value"] - lplr.Character.Humanoid.WalkSpeed) * dt
+                            velo = Vector3.new(velo.x, 0, velo.z)
                             lplr.Character:TranslateBy(velo)
                             --local velo2 = (movedir * speedval["Value"]) / speedsettings.velocitydivfactor
-                            local velo2={X=0,Z=0}
-                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(velo2.X, 1, velo2.Z)
+                            lplr.Character.HumanoidRootPart.Velocity = Vector3.new(0, 1, 0)
                         end
                     until not LongJump.Enabled
                     stopSpeed = false
                 end)
                 spawn(function() 
-                    for i = 1, math.round(timeval["Value"])*4 do 
-                        task.wait(0.25) 
+                    local num = delayval.Value
+
+                    for i = 1, math.round(timeval["Value"]) * num do 
+                        task.wait(1/num) 
                         if not LongJump.Enabled then break end
                         if isAlive() then 
                             local newCframe = lplr.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -distance.Value)
@@ -1671,10 +1670,10 @@ do
     })
     speedval = LongJump.CreateSlider({
         ["Name"] = "Speed",
-        ["Default"] = 44, 
+        ["Default"] = 42, 
         ["Min"] = 10,
         ["Round"] = 0,
-        ["Max"] = 44,
+        ["Max"] = 42,
         ["Function"] = function(value) end,
     })
     timeval = LongJump.CreateSlider({
@@ -1693,7 +1692,17 @@ do
         Max = 7,
         Function = function() end
     })
+    delayval = LongJump.CreateSlider({
+        Name = "BypassSpeed",
+        Default = 4,
+        Min = 1,
+        Max = 10,
+        Round = 0,
+        Function = function() end, 
+    })
 end
+
+-- 
 
 
 GuiLibrary["RemoveObject"]("SpeedOptionsButton")

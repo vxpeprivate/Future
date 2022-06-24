@@ -167,6 +167,23 @@ local function getplusscript(id) -- future plus moment
         --fwarn("[Future] invalid script (error "..tostring(req)..")") -- game is not supported
     end
 end
+
+local function getcustomscripts(id) 
+    local id = id or shared.FuturePlaceId or game.PlaceId
+    id = tostring(id)
+    if not isfolder("Future/custom-scripts/"..id) then 
+        return
+    end
+    local files = listfiles("Future/custom-scripts/"..id)
+    for i,v in next, files do 
+        local req = readfile(v)
+        if type(req) == "string" then
+            print("[Future] Loading script ", v)
+            loadstring(req)()
+        end
+    end
+end
+
 GuiLibrary["LoadOnlyGuiConfig"]()
 
 
@@ -636,7 +653,7 @@ spawn(function()
             lastPos = lastPos or lplr.Character.PrimaryPart.Position
             local distance = (lastPos - lplr.Character.PrimaryPart.Position).Magnitude
             local meters = distance / (25 / 7) --//there is 25 / 7 studs in a meter
-            Speed = meters * 3.6
+            Speed = meters * 3.6 --//meters per second to kmh
             lastPos = lplr.Character.PrimaryPart.Position
         else
             Speed = 0
@@ -692,6 +709,7 @@ end
 local success, _error = pcall(getscript, "Universal")
 local success2, _error2 = pcall(getscript)
 local success3, _error3 = pcall(getplusscript)
+local success4, _error4 = pcall(getcustomscripts)
 if success then 
     print("[Future] Successfully retrieved Universal script!")
 else
@@ -713,6 +731,15 @@ else
     GuiLibrary.Signals.onDestroy:Fire()
     return
 end
+if success4 then 
+    print("[Future] Successfully loaded all custom scripts!")
+else
+    fwarn("Unsuccessful attempt at loading custom scripts!\n (".._error4..")")
+    GuiLibrary.Signals.onDestroy:Fire()
+    return
+end
+
+
 GuiLibrary["LoadConfig"](GuiLibrary["CurrentConfig"])
 
 -- Future command system
