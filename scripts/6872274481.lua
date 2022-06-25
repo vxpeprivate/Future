@@ -990,6 +990,7 @@ do
     InstantKill = Aura.CreateToggle({
         Name = "InstantKill",
         Function = function(value) end,
+        Default = true, --:troll:
     })
 end
 
