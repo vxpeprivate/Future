@@ -30,7 +30,7 @@ local function requesturl(url, bypass)
     if betterisfile(url) and shared.FutureDeveloper then 
         return readfile(url)
     end
-    local repourl = bypass and "https://raw.githubusercontent.com/joeengo/" or "https://raw.githubusercontent.com/joeengo/Future/main/"
+    local repourl = bypass and "https://raw.githubusercontent.com/vxpeprivate/" or "https://raw.githubusercontent.com/vxpeprivate/Future/main/"
     local url = url:gsub("Future/", "")
     local req = requestfunc({
         Url = repourl..url,
@@ -134,7 +134,7 @@ end
 local function getasset(path)
 	if not betterisfile(path) then
 		local req = requestfunc({
-			Url = "https://raw.githubusercontent.com/joeengo/Future/main/"..path:gsub("Future/assets", "assets"),
+			Url = "https://raw.githubusercontent.com/vxpeprivate/Future/main/"..path:gsub("Future/assets", "assets"),
 			Method = "GET"
 		})
         print("[Future] downloading "..path.." asset.")
@@ -529,7 +529,7 @@ local restartButton; restartButton = OtherWindow.CreateOptionsButton({
                 if shared.FutureDeveloper then 
                     loadfile("Future/Initiate.lua")()
                 else
-                    loadstring(game:HttpGet('https://raw.githubusercontent.com/joeengo/Future/main/loadstring.lua', true))()
+                    loadstring(game:HttpGet('https://raw.githubusercontent.com/vxpeprivate/Future/main/loadstring.lua', true))()
                 end
             end)
         end
@@ -681,7 +681,7 @@ local ontp = game:GetService("Players").LocalPlayer.OnTeleport:Connect(function(
         if shared.FutureDeveloper then 
             loadfile("Future/Initiate.lua")() 
         else 
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/joeengo/Future/main/Initiate.lua", true))() 
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/vxpeprivate/Future/main/Initiate.lua", true))() 
         end
         ]]
 		queueteleport(stringtp)
